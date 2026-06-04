@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 
-namespace LifeRpg.Infrastructure.Identity;
+namespace LifeRpg.Application.Identity;
 
 public class ApplicationUser : IdentityUser<Guid>
 {

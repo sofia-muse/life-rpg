@@ -17,3 +17,8 @@ coverage.cobertura.xml
 # Local secrets
 appsettings.*.local.json
 *.Development.local.json
+
+# Local SQLite dev/test databases
+*.db
+*.db-shm
+*.db-wal

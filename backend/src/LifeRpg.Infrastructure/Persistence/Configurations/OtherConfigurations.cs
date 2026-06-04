@@ -1,6 +1,6 @@
 using LifeRpg.Domain.Entities;
 using LifeRpg.Domain.ValueObjects;
-using LifeRpg.Infrastructure.Identity;
+using LifeRpg.Application.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -17,7 +17,7 @@ public class QuestConfiguration : IEntityTypeConfiguration<Quest>
         b.Property(q => q.Type).HasConversion<string>().HasMaxLength(10);
         b.Property(q => q.Difficulty).HasConversion<string>().HasMaxLength(12);
         b.Property(q => q.Stat).HasConversion<string>().HasMaxLength(20);
-        b.Property(q => q.RowVersion).IsRowVersion();
+        // RowVersion promoted to rowversion for SQL Server in OnModelCreating (SQLite-safe otherwise).
         b.HasIndex(q => new { q.HeroId, q.Type, q.IsActive });
     }
 }

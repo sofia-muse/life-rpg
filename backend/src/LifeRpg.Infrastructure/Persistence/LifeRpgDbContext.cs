@@ -1,13 +1,14 @@
+using LifeRpg.Application.Common;
+using LifeRpg.Application.Identity;
 using LifeRpg.Domain.Common;
 using LifeRpg.Domain.Entities;
-using LifeRpg.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace LifeRpg.Infrastructure.Persistence;
 
-public class LifeRpgDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>
+public class LifeRpgDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>, IAppDbContext
 {
     public LifeRpgDbContext(DbContextOptions<LifeRpgDbContext> options)
         : base(options) { }
@@ -25,19 +26,12 @@ public class LifeRpgDbContext : IdentityDbContext<ApplicationUser, IdentityRole<
         base.OnModelCreating(builder);
         builder.ApplyConfigurationsFromAssembly(typeof(LifeRpgDbContext).Assembly);
 
-        // SQLite (used in tests) has no SQL Server `rowversion`. Demote RowVersion to a plain,
-        // non-concurrency column there so the same model runs on both providers.
-        if (Database.IsSqlite())
+        // RowVersion is a SQL Server `rowversion` concurrency token in production. SQLite (tests)
+        // has no equivalent, so promote it only for SQL Server; elsewhere it's a plain byte[] column.
+        if (Database.IsSqlServer())
         {
-            foreach (var entityType in builder.Model.GetEntityTypes())
-            {
-                var rowVersion = entityType.FindProperty("RowVersion");
-                if (rowVersion is not null)
-                {
-                    rowVersion.IsConcurrencyToken = false;
-                    rowVersion.ValueGenerated = Microsoft.EntityFrameworkCore.Metadata.ValueGenerated.Never;
-                }
-            }
+            builder.Entity<Hero>().Property(h => h.RowVersion).IsRowVersion();
+            builder.Entity<Quest>().Property(q => q.RowVersion).IsRowVersion();
         }
     }
 

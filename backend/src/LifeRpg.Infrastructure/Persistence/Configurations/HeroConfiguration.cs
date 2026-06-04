@@ -30,7 +30,8 @@ public class HeroConfiguration : IEntityTypeConfiguration<Hero>
         b.Property(h => h.Settings).HasConversion(JsonValue.Converter<HeroSettings>())
             .Metadata.SetValueComparer(JsonValue.Comparer<HeroSettings>());
 
-        b.Property(h => h.RowVersion).IsRowVersion();
+        // RowVersion is promoted to a SQL Server rowversion concurrency token in OnModelCreating;
+        // on SQLite (tests) it stays a plain byte[] column.
 
         b.HasMany(h => h.Quests).WithOne(q => q.Hero!).HasForeignKey(q => q.HeroId).OnDelete(DeleteBehavior.Cascade);
         b.HasMany(h => h.UnlockedSkills).WithOne(s => s.Hero!).HasForeignKey(s => s.HeroId).OnDelete(DeleteBehavior.Cascade);

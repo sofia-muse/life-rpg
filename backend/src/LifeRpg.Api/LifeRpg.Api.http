@@ -1,6 +1,0 @@
-@LifeRpg.Api_HostAddress = http://localhost:5014
-
-GET {{LifeRpg.Api_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###
