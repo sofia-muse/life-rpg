@@ -1,0 +1,73 @@
+export const colors = {
+  // Backgrounds
+  bgPrimary: '#0F0F1A',
+  bgSecondary: '#1A1A2E',
+  bgCard: '#16213E',
+  bgInput: '#1E2A4A',
+  bgModal: '#0D0D1A',
+
+  // Text
+  textPrimary: '#E8E8F0',
+  textSecondary: '#9CA3AF',
+  textMuted: '#6B7280',
+  textAccent: '#C4A962',
+
+  // Accents
+  gold: '#C4A962',
+  goldLight: '#D4B872',
+  goldDark: '#A48942',
+
+  // Stat colors
+  strength: '#EF4444',
+  vitality: '#22C55E',
+  intelligence: '#3B82F6',
+  charisma: '#F59E0B',
+  dexterity: '#8B5CF6',
+  willpower: '#EC4899',
+
+  // UI
+  border: '#2A2A4A',
+  borderLight: '#3A3A5A',
+  success: '#22C55E',
+  error: '#EF4444',
+  warning: '#F59E0B',
+
+  // Tab bar
+  tabActive: '#C4A962',
+  tabInactive: '#6B7280',
+  tabBg: '#0A0A14',
+};
+
+export const fonts = {
+  heading: 'Cinzel',
+  body: 'Inter',
+  journal: 'Lora',
+};
+
+export const spacing = {
+  xs: 4,
+  sm: 8,
+  md: 16,
+  lg: 24,
+  xl: 32,
+  xxl: 48,
+};
+
+export const radius = {
+  sm: 6,
+  md: 12,
+  lg: 16,
+  xl: 24,
+  full: 999,
+};
+
+export const fontSize = {
+  xs: 10,
+  sm: 12,
+  md: 14,
+  lg: 16,
+  xl: 20,
+  xxl: 24,
+  title: 28,
+  hero: 36,
+};
