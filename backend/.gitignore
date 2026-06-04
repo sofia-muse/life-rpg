@@ -1,0 +1,19 @@
+# .NET build output
+bin/
+obj/
+*.user
+
+# Test results / coverage
+TestResults/
+[Cc]overage/
+*.trx
+*.coverage
+coverage.cobertura.xml
+
+# Rider / VS
+.idea/
+.vs/
+
+# Local secrets
+appsettings.*.local.json
+*.Development.local.json
