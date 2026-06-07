@@ -21,8 +21,14 @@ public static class Mapping
         j.Id, j.Date, j.Narrative, j.QuestsCompleted, j.SkillsUnlocked, j.XpGained, j.LevelsGained, j.Milestones);
 
     public static SettingsDto ToSettingsDto(this Hero h) => new(
-        h.Settings.NotificationsEnabled, h.Settings.HapticEnabled, h.Settings.ReminderTime);
+        h.Settings.NotificationsEnabled,
+        h.Settings.HapticEnabled,
+        h.Settings.ReminderTime,
+        h.Settings.AiSkillsEnabled);
 
     public static SkillDto ToDto(this SkillDefinition s) => new(
         s.Id, s.Name, s.Description, s.Category.ToString().ToLowerInvariant(), s.Icon, s.Effect);
+
+    public static SkillDto ToDto(this GeneratedSkill s) => new(
+        $"forged-{s.Id}", s.Name, s.Description, s.Stat.ToString().ToLowerInvariant(), s.Icon, s.Effect);
 }

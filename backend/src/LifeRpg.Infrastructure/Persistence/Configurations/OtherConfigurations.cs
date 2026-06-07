@@ -33,6 +33,21 @@ public class UnlockedSkillConfiguration : IEntityTypeConfiguration<UnlockedSkill
     }
 }
 
+public class GeneratedSkillConfiguration : IEntityTypeConfiguration<GeneratedSkill>
+{
+    public void Configure(EntityTypeBuilder<GeneratedSkill> b)
+    {
+        b.ToTable("GeneratedSkills");
+        b.HasKey(s => s.Id);
+        b.Property(s => s.Name).HasMaxLength(40).IsRequired();
+        b.Property(s => s.Description).HasMaxLength(160);
+        b.Property(s => s.Icon).HasMaxLength(8);
+        b.Property(s => s.Effect).HasMaxLength(80);
+        b.Property(s => s.Stat).HasConversion<string>().HasMaxLength(20);
+        b.HasIndex(s => s.HeroId);
+    }
+}
+
 public class JournalEntryConfiguration : IEntityTypeConfiguration<JournalEntry>
 {
     public void Configure(EntityTypeBuilder<JournalEntry> b)

@@ -104,6 +104,7 @@ public class QuestService
     {
         var hero = await _db.Heroes
             .Include(h => h.UnlockedSkills)
+            .Include(h => h.GeneratedSkills)
             .FirstOrDefaultAsync(h => _user.UserId != null && h.UserId == _user.UserId, ct);
         if (hero is null)
         {
@@ -132,7 +133,8 @@ public class QuestService
         // 1. Reward: streak multiplier × skill bonus, computed server-side.
         var unlockedIds = hero.UnlockedSkills.Select(s => s.SkillId).ToList();
         var streakMultiplier = StreakCalculator.GetMultiplier(hero.CurrentStreak);
-        var skillBonus = SkillResolver.GetSkillBonusForStat(quest.Stat, unlockedIds);
+        var skillBonus = SkillResolver.GetSkillBonusForStat(quest.Stat, unlockedIds)
+            + SkillResolver.GetForgedBonusForStat(quest.Stat, hero.GeneratedSkills);
         var reward = XpCalculator.CalculateXpReward(quest.Difficulty, streakMultiplier, skillBonus);
 
         // 2. Apply XP and recompute progression.

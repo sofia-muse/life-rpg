@@ -10,6 +10,7 @@ public interface IAppDbContext
     DbSet<Hero> Heroes { get; }
     DbSet<Quest> Quests { get; }
     DbSet<UnlockedSkill> UnlockedSkills { get; }
+    DbSet<GeneratedSkill> GeneratedSkills { get; }
     DbSet<JournalEntry> JournalEntries { get; }
     DbSet<QuestCompletion> QuestCompletions { get; }
     DbSet<SyncRequestLog> SyncRequestLogs { get; }
@@ -42,4 +43,26 @@ public interface ITokenService
     (string AccessToken, DateTimeOffset ExpiresAt) CreateAccessToken(Guid userId, string email);
     string CreateRefreshToken();
     string HashRefreshToken(string rawToken);
+}
+
+/// <summary>Context handed to the LLM when forging a personalized skill.</summary>
+public sealed record SkillForgePrompt(
+    string HeroName,
+    string ClassName,
+    string DominantStat,
+    int HeroLevel,
+    IReadOnlyList<string> ExistingForgedNames);
+
+/// <summary>Raw structured fields returned by the LLM (validated/clamped by the forge service).</summary>
+public sealed record ForgedSkillDraft(
+    string Name,
+    string Description,
+    string Icon,
+    string Stat,
+    int BonusPercent);
+
+/// <summary>Generates skill flavor via an LLM (implemented in Infrastructure; stubbed in tests).</summary>
+public interface ILlmClient
+{
+    Task<ForgedSkillDraft> ForgeSkillAsync(SkillForgePrompt prompt, CancellationToken ct = default);
 }

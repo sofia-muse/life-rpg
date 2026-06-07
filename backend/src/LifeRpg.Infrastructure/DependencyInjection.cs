@@ -1,6 +1,7 @@
 using LifeRpg.Application.Common;
 using LifeRpg.Application.Identity;
 using LifeRpg.Application.Services;
+using LifeRpg.Infrastructure.Ai;
 using LifeRpg.Infrastructure.Identity;
 using LifeRpg.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
@@ -47,11 +48,20 @@ public static class DependencyInjection
         services.AddScoped<ITokenService, TokenService>();
         services.AddSingleton<IClock, SystemClock>();
 
+        // LLM (Gemini) client for AI-forged skills.
+        services.Configure<LlmOptions>(configuration.GetSection(LlmOptions.SectionName));
+        services.AddHttpClient<ILlmClient, GeminiClient>(client =>
+        {
+            client.BaseAddress = new Uri("https://generativelanguage.googleapis.com");
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
+
         // Application services.
         services.AddScoped<AuthService>();
         services.AddScoped<HeroService>();
         services.AddScoped<QuestService>();
         services.AddScoped<SyncService>();
+        services.AddScoped<SkillForgeService>();
 
         return services;
     }

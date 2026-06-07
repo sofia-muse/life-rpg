@@ -16,6 +16,7 @@ public class LifeRpgDbContext : IdentityDbContext<ApplicationUser, IdentityRole<
     public DbSet<Hero> Heroes => Set<Hero>();
     public DbSet<Quest> Quests => Set<Quest>();
     public DbSet<UnlockedSkill> UnlockedSkills => Set<UnlockedSkill>();
+    public DbSet<GeneratedSkill> GeneratedSkills => Set<GeneratedSkill>();
     public DbSet<JournalEntry> JournalEntries => Set<JournalEntry>();
     public DbSet<QuestCompletion> QuestCompletions => Set<QuestCompletion>();
     public DbSet<SyncRequestLog> SyncRequestLogs => Set<SyncRequestLog>();

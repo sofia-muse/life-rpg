@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using LifeRpg.Domain.Entities;
 using LifeRpg.Domain.Enums;
 using LifeRpg.Domain.GameConfig;
 using LifeRpg.Domain.ValueObjects;
@@ -45,6 +46,10 @@ public static partial class SkillResolver
         return skill.RequiredStat is { } stat
             && XpTable.LevelFromXp(statXp[stat]) >= skill.RequiredLevel;
     }
+
+    /// <summary>Total XP bonus percentage for a stat from AI-forged skills.</summary>
+    public static int GetForgedBonusForStat(StatName stat, IEnumerable<GeneratedSkill> forged) =>
+        forged.Where(s => s.Stat == stat).Sum(s => s.BonusPercent);
 
     /// <summary>Total XP bonus percentage for a stat from all unlocked skills.</summary>
     public static int GetSkillBonusForStat(StatName stat, IEnumerable<string> unlockedSkillIds)

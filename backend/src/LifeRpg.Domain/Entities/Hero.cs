@@ -46,6 +46,7 @@ public class Hero : Entity
     // Navigations.
     public List<Quest> Quests { get; set; } = new();
     public List<UnlockedSkill> UnlockedSkills { get; set; } = new();
+    public List<GeneratedSkill> GeneratedSkills { get; set; } = new();
     public List<JournalEntry> JournalEntries { get; set; } = new();
     public List<QuestCompletion> QuestCompletions { get; set; } = new();
 }

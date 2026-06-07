@@ -17,6 +17,10 @@ param sqlAdminPassword string
 @secure()
 param jwtSigningKey string
 
+@description('Free Google Gemini (AI Studio) API key for AI-forged skills. Stored in Key Vault.')
+@secure()
+param llmApiKey string = ''
+
 var appServicePlanName = '${namePrefix}-plan'
 var webAppName = '${namePrefix}-api'
 var sqlServerName = '${namePrefix}-sql-${uniqueString(resourceGroup().id)}'
@@ -108,6 +112,10 @@ resource webApp 'Microsoft.Web/sites@2023-12-01' = {
           name: 'Jwt__SigningKey'
           value: '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=JwtSigningKey)'
         }
+        {
+          name: 'Llm__ApiKey'
+          value: '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=LlmApiKey)'
+        }
       ]
     }
   }
@@ -148,6 +156,14 @@ resource jwtSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   name: 'JwtSigningKey'
   properties: {
     value: jwtSigningKey
+  }
+}
+
+resource llmSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  parent: keyVault
+  name: 'LlmApiKey'
+  properties: {
+    value: llmApiKey
   }
 }
 

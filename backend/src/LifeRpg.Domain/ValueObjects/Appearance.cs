@@ -31,4 +31,7 @@ public sealed class HeroSettings
     public bool NotificationsEnabled { get; set; } = true;
     public bool HapticEnabled { get; set; } = true;
     public string ReminderTime { get; set; } = "09:00";
+
+    /// <summary>Opt-in to AI-forged skills (off by default; online-only).</summary>
+    public bool AiSkillsEnabled { get; set; }
 }

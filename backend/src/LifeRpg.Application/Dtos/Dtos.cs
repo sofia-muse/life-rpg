@@ -94,4 +94,8 @@ public record JournalEntryDto(
     List<string> LevelsGained,
     List<string> Milestones);
 
-public record SettingsDto(bool NotificationsEnabled, bool HapticEnabled, string ReminderTime);
+public record SettingsDto(
+    bool NotificationsEnabled,
+    bool HapticEnabled,
+    string ReminderTime,
+    bool AiSkillsEnabled);

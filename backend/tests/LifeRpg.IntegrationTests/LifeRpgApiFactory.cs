@@ -1,3 +1,4 @@
+using LifeRpg.Application.Common;
 using LifeRpg.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -5,6 +6,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 
 namespace LifeRpg.IntegrationTests;
@@ -16,6 +18,9 @@ namespace LifeRpg.IntegrationTests;
 public class LifeRpgApiFactory : WebApplicationFactory<Program>
 {
     private readonly SqliteConnection _connection = new("DataSource=:memory:");
+
+    /// <summary>Configurable fake LLM used by forge tests (set NextDraft per test).</summary>
+    public FakeLlmClient Llm { get; } = new();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -40,6 +45,11 @@ public class LifeRpgApiFactory : WebApplicationFactory<Program>
 
             _connection.Open();
             services.AddDbContext<LifeRpgDbContext>(o => o.UseSqlite(_connection));
+
+            // Replace the real Gemini client with a configurable fake — no network in tests.
+            services.RemoveAll(typeof(ILlmClient));
+            services.AddSingleton(Llm);
+            services.AddSingleton<ILlmClient>(sp => sp.GetRequiredService<FakeLlmClient>());
         });
     }
 

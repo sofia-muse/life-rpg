@@ -35,6 +35,7 @@ public class HeroConfiguration : IEntityTypeConfiguration<Hero>
 
         b.HasMany(h => h.Quests).WithOne(q => q.Hero!).HasForeignKey(q => q.HeroId).OnDelete(DeleteBehavior.Cascade);
         b.HasMany(h => h.UnlockedSkills).WithOne(s => s.Hero!).HasForeignKey(s => s.HeroId).OnDelete(DeleteBehavior.Cascade);
+        b.HasMany(h => h.GeneratedSkills).WithOne(s => s.Hero!).HasForeignKey(s => s.HeroId).OnDelete(DeleteBehavior.Cascade);
         b.HasMany(h => h.JournalEntries).WithOne(j => j.Hero!).HasForeignKey(j => j.HeroId).OnDelete(DeleteBehavior.Cascade);
         b.HasMany(h => h.QuestCompletions).WithOne(c => c.Hero!).HasForeignKey(c => c.HeroId).OnDelete(DeleteBehavior.Cascade);
     }
