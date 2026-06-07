@@ -38,5 +38,11 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 16,
     paddingTop: Platform.OS === 'web' ? 16 : 48,
+    // On web (the hosted demo, viewed on desktop) keep the app phone-shaped and centered
+    // instead of stretching edge-to-edge.
+    ...Platform.select({
+      web: { width: '100%', maxWidth: 480, alignSelf: 'center' as const },
+      default: {},
+    }),
   },
 });

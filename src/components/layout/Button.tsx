@@ -64,6 +64,9 @@ export function Button({
         onPressOut={handlePressOut}
         disabled={disabled || loading}
         activeOpacity={0.8}
+        accessibilityRole="button"
+        accessibilityLabel={title}
+        accessibilityState={{ disabled: disabled || loading, busy: loading }}
       >
         {loading ? (
           <ActivityIndicator color={variant === 'primary' ? colors.bgPrimary : colors.gold} />

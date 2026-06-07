@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, FlatList } from 'react-native';
 import { ScreenWrapper } from '../../src/components/layout/ScreenWrapper';
 import { Card } from '../../src/components/layout/Card';
+import { EmptyState } from '../../src/components/layout/EmptyState';
 import { useJournalStore } from '../../src/store/journalStore';
 import { colors, spacing, fontSize, radius } from '../../src/config/theme';
 import { STAT_ICONS, STAT_COLORS, StatName } from '../../src/types';
@@ -70,11 +71,11 @@ export default function JournalScreen() {
         )}
         contentContainerStyle={styles.list}
         ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={styles.emptyIcon}>📖</Text>
-            <Text style={styles.emptyText}>Your journal awaits...</Text>
-            <Text style={styles.emptyHint}>Complete quests to fill its pages.</Text>
-          </View>
+          <EmptyState
+            icon="📖"
+            title="Your journal awaits..."
+            message="Complete quests to fill its pages with the story of your adventures."
+          />
         }
       />
     </ScreenWrapper>
@@ -145,24 +146,6 @@ const styles = StyleSheet.create({
   },
   skillUnlock: {
     color: colors.textAccent,
-    fontSize: fontSize.sm,
-    marginTop: spacing.xs,
-  },
-  empty: {
-    alignItems: 'center',
-    paddingTop: spacing.xxl * 2,
-  },
-  emptyIcon: {
-    fontSize: 64,
-    marginBottom: spacing.md,
-  },
-  emptyText: {
-    color: colors.textSecondary,
-    fontSize: fontSize.xl,
-    fontStyle: 'italic',
-  },
-  emptyHint: {
-    color: colors.textMuted,
     fontSize: fontSize.sm,
     marginTop: spacing.xs,
   },
