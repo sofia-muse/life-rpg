@@ -1,20 +1,43 @@
-// Quest API stubs — unused until Supabase is configured
+// Quest API — online calls to the .NET backend.
+import { apiFetch } from './client';
+import { ApiQuest, ApiHero } from './dto';
+import { QuestType, QuestDifficulty, StatName } from '../types';
 
-import { Quest } from '../types';
-
-export async function fetchQuests(_heroId: string): Promise<Quest[]> {
-  // TODO: supabase.from('quests').select().eq('hero_id', heroId)
-  return [];
+export interface CompleteQuestResult {
+  stat: StatName;
+  xpAwarded: number;
+  baseXp: number;
+  streakBonus: number;
+  skillBonus: number;
+  oldLevel: number;
+  newLevel: number;
+  didLevelUp: boolean;
+  tierUp: { newTier: number; newClass: string } | null;
+  newSkills: { id: string; name: string; icon: string; effect: string }[];
+  hero: ApiHero;
 }
 
-export async function saveQuest(_quest: Quest): Promise<void> {
-  // TODO: supabase.from('quests').upsert(quest)
-}
+export const questApi = {
+  list: (type?: QuestType, active?: boolean) => {
+    const params = new URLSearchParams();
+    if (type) params.set('type', type);
+    if (active !== undefined) params.set('active', String(active));
+    const qs = params.toString();
+    return apiFetch<ApiQuest[]>(`/api/v1/quests${qs ? `?${qs}` : ''}`);
+  },
 
-export async function deleteQuest(_questId: string): Promise<void> {
-  // TODO: supabase.from('quests').delete().eq('id', questId)
-}
+  create: (input: {
+    title: string;
+    description: string;
+    type: QuestType;
+    difficulty: QuestDifficulty;
+    stat: StatName;
+    totalSteps?: number | null;
+  }) => apiFetch<ApiQuest>('/api/v1/quests', { method: 'POST', body: input }),
 
-export async function recordCompletion(_questId: string, _xpGained: number): Promise<void> {
-  // TODO: supabase.from('quest_completions').insert(...)
-}
+  remove: (id: string) => apiFetch<void>(`/api/v1/quests/${id}`, { method: 'DELETE' }),
+
+  /** Server-authoritative completion — returns the recomputed progression + modal payload. */
+  complete: (id: string) =>
+    apiFetch<CompleteQuestResult>(`/api/v1/quests/${id}/complete`, { method: 'POST' }),
+};

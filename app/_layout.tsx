@@ -5,7 +5,10 @@ import { Stack, Redirect } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { View, ActivityIndicator } from 'react-native';
 import { useHeroStore } from '../src/store/heroStore';
+import { useAuthStore } from '../src/store/authStore';
 import { GlobalModals } from '../src/components/game/GlobalModals';
+import { syncManager } from '../src/api/syncManager';
+import { env } from '../src/config/env';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -33,10 +36,18 @@ export default function RootLayout() {
   });
   const hasHydrated = useHeroStore((s) => s._hasHydrated);
   const isOnboarded = useHeroStore((s) => s.isOnboarded);
+  const authStatus = useAuthStore((s) => s.status);
+  const bootstrap = useAuthStore((s) => s.bootstrap);
 
   useEffect(() => {
     if (error) throw error;
   }, [error]);
+
+  // Resolve the auth session and start the offline sync queue once on mount.
+  useEffect(() => {
+    void bootstrap();
+    void syncManager.init();
+  }, [bootstrap]);
 
   useEffect(() => {
     if (loaded && hasHydrated) {
@@ -44,7 +55,7 @@ export default function RootLayout() {
     }
   }, [loaded, hasHydrated]);
 
-  if (!loaded || !hasHydrated) {
+  if (!loaded || !hasHydrated || authStatus === 'loading') {
     return (
       <View
         style={{
@@ -59,15 +70,20 @@ export default function RootLayout() {
     );
   }
 
+  // Gating: outside demo mode an unauthenticated user signs in first; then onboarding gates on
+  // hero creation. In demo mode auth is skipped and we go straight to the local-first experience.
+  const mustSignIn = !env.demoMode && authStatus === 'guest';
+
   return (
     <ThemeProvider value={rpgDarkTheme}>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="(auth)" options={{ gestureEnabled: false }} />
         <Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal', headerShown: false }} />
         <Stack.Screen name="customize" options={{ presentation: 'modal', headerShown: false }} />
       </Stack>
-      {!isOnboarded && <Redirect href="/onboarding" />}
+      {mustSignIn ? <Redirect href="/login" /> : !isOnboarded && <Redirect href="/onboarding" />}
       <GlobalModals />
     </ThemeProvider>
   );

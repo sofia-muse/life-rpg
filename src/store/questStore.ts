@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { generateId } from '../utils/id';
 import { Quest } from '../types';
+import { syncManager } from '../api/syncManager';
 
 interface QuestState {
   quests: Quest[];
@@ -41,6 +42,7 @@ export const useQuestStore = create<QuestState>()(
           daysCompleted: 0,
         };
         set((state) => ({ quests: [...state.quests, quest] }));
+        syncManager.enqueue('quest', 'upsert', quest);
       },
 
       completeQuest: (questId) => {
@@ -59,6 +61,7 @@ export const useQuestStore = create<QuestState>()(
         set((state) => ({
           quests: state.quests.map((q) => (q.id === questId ? updated : q)),
         }));
+        syncManager.enqueue('quest', 'upsert', updated);
 
         return updated;
       },
@@ -67,6 +70,7 @@ export const useQuestStore = create<QuestState>()(
         set((state) => ({
           quests: state.quests.filter((q) => q.id !== questId),
         }));
+        syncManager.enqueue('quest', 'delete', { id: questId });
       },
 
       toggleQuestActive: (questId) => {
