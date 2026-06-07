@@ -1,0 +1,92 @@
+# Azure DevOps multi-stage pipeline for the Life RPG API.
+# Build -> Test -> Package (publish + idempotent migration script) -> Deploy (staging) -> Swap to prod.
+trigger:
+  branches:
+    include: [main]
+  paths:
+    include: [backend/*]
+
+variables:
+  buildConfiguration: 'Release'
+  azureSubscription: 'life-rpg-service-connection' # set up in Project Settings > Service connections
+  webAppName: 'liferpg-api'
+  resourceGroup: 'rg-life-rpg'
+
+stages:
+  - stage: Build
+    jobs:
+      - job: BuildTest
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - task: UseDotNet@2
+            inputs:
+              version: '8.0.x'
+          - script: dotnet restore backend/LifeRpg.sln
+            displayName: Restore
+          - script: dotnet build backend/LifeRpg.sln -c $(buildConfiguration) --no-restore
+            displayName: Build
+          - script: dotnet test backend/LifeRpg.sln -c $(buildConfiguration) --no-build --collect "XPlat Code Coverage"
+            displayName: Test
+          - task: PublishCodeCoverageResults@2
+            inputs:
+              summaryFileLocation: '$(Agent.TempDirectory)/**/coverage.cobertura.xml'
+          # Publish the API and an idempotent migration script as artifacts.
+          - script: dotnet publish backend/src/LifeRpg.Api -c $(buildConfiguration) -o $(Build.ArtifactStagingDirectory)/app
+            displayName: Publish API
+          - script: |
+              dotnet tool install --global dotnet-ef --version 8.*
+              export PATH="$PATH:$HOME/.dotnet/tools"
+              dotnet ef migrations script --idempotent \
+                -p backend/src/LifeRpg.Infrastructure -s backend/src/LifeRpg.Api \
+                -o $(Build.ArtifactStagingDirectory)/migrate.sql
+            displayName: Generate idempotent migration script
+          - publish: $(Build.ArtifactStagingDirectory)
+            artifact: drop
+
+  - stage: DeployStaging
+    dependsOn: Build
+    jobs:
+      - deployment: Staging
+        environment: life-rpg-staging
+        pool:
+          vmImage: 'ubuntu-latest'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: AzureWebApp@1
+                  inputs:
+                    azureSubscription: $(azureSubscription)
+                    appName: $(webAppName)
+                    deployToSlotOrASE: true
+                    slotName: staging
+                    package: $(Pipeline.Workspace)/drop/app
+                - task: SqlAzureDacpacDeployment@1
+                  inputs:
+                    azureSubscription: $(azureSubscription)
+                    AuthenticationType: 'servicePrincipal'
+                    ServerName: 'liferpg-sql.database.windows.net'
+                    DatabaseName: 'liferpg-db'
+                    deployType: 'SqlTask'
+                    SqlFile: '$(Pipeline.Workspace)/drop/migrate.sql'
+
+  - stage: SwapToProduction
+    dependsOn: DeployStaging
+    jobs:
+      - deployment: Swap
+        environment: life-rpg-production # add a manual approval check on this environment
+        pool:
+          vmImage: 'ubuntu-latest'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: AzureAppServiceManage@0
+                  inputs:
+                    azureSubscription: $(azureSubscription)
+                    action: 'Swap Slots'
+                    webAppName: $(webAppName)
+                    resourceGroupName: $(resourceGroup)
+                    sourceSlot: staging
+                    targetSlot: production

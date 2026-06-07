@@ -1,0 +1,30 @@
+{
+  "cli": {
+    "version": ">= 5.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://liferpg-api.azurewebsites.net",
+        "EXPO_PUBLIC_DEMO_MODE": "false"
+      }
+    },
+    "production": {
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://liferpg-api.azurewebsites.net",
+        "EXPO_PUBLIC_DEMO_MODE": "false"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
