@@ -6,9 +6,11 @@ interface SettingsState {
   notificationsEnabled: boolean;
   hapticEnabled: boolean;
   reminderTime: string;
+  aiSkillsEnabled: boolean;
   toggleNotifications: () => void;
   toggleHaptic: () => void;
   setReminderTime: (time: string) => void;
+  toggleAiSkills: () => void;
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -17,6 +19,7 @@ export const useSettingsStore = create<SettingsState>()(
       notificationsEnabled: true,
       hapticEnabled: true,
       reminderTime: '09:00',
+      aiSkillsEnabled: false,
 
       toggleNotifications: () =>
         set((state) => ({ notificationsEnabled: !state.notificationsEnabled })),
@@ -24,6 +27,8 @@ export const useSettingsStore = create<SettingsState>()(
       toggleHaptic: () => set((state) => ({ hapticEnabled: !state.hapticEnabled })),
 
       setReminderTime: (time) => set({ reminderTime: time }),
+
+      toggleAiSkills: () => set((state) => ({ aiSkillsEnabled: !state.aiSkillsEnabled })),
     }),
     {
       name: 'life-rpg-settings',

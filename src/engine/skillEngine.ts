@@ -1,5 +1,5 @@
 import { Skill, StatName } from '../types';
-import { SKILLS } from '../config/skills';
+import { SKILLS, getSkillById, getForgedSkills } from '../config/skills';
 import { levelFromXP } from '../config/xpTables';
 
 // Check which skills should be unlocked based on current stats
@@ -50,12 +50,14 @@ export function isSkillUnlockable(skill: Skill, statXP: Record<StatName, number>
 
 // Calculate total skill bonus for a given stat
 export function getSkillBonusForStat(stat: StatName, unlockedSkillIds: string[]): number {
+  // Resolve unlocked catalog skills + all AI-forged skills (forged skills are always active).
+  const skills: Skill[] = [
+    ...unlockedSkillIds.map((id) => getSkillById(id)).filter((s): s is Skill => !!s),
+    ...getForgedSkills(),
+  ];
+
   let bonus = 0;
-
-  for (const skillId of unlockedSkillIds) {
-    const skill = SKILLS.find((s) => s.id === skillId);
-    if (!skill) continue;
-
+  for (const skill of skills) {
     // Parse effect for XP bonus percentage
     const match = skill.effect.match(/\+(\d+)%/);
     if (!match) continue;

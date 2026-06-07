@@ -268,10 +268,22 @@ export const SKILLS: Skill[] = [
   },
 ];
 
+// AI-forged skills are dynamic (per hero). They're registered here at runtime so the rest of the
+// skill system (lookup, XP-bonus resolution) treats them uniformly with the static catalog.
+let forgedSkills: Skill[] = [];
+
+export function registerForgedSkills(skills: Skill[]): void {
+  forgedSkills = skills;
+}
+
+export function getForgedSkills(): Skill[] {
+  return forgedSkills;
+}
+
 export function getSkillsByCategory(category: string): Skill[] {
   return SKILLS.filter((s) => s.category === category);
 }
 
 export function getSkillById(id: string): Skill | undefined {
-  return SKILLS.find((s) => s.id === id);
+  return SKILLS.find((s) => s.id === id) ?? forgedSkills.find((s) => s.id === id);
 }

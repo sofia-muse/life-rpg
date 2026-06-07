@@ -20,9 +20,11 @@ export default function SettingsScreen() {
     notificationsEnabled,
     hapticEnabled,
     reminderTime,
+    aiSkillsEnabled,
     toggleNotifications,
     toggleHaptic,
     setReminderTime,
+    toggleAiSkills,
   } = useSettingsStore();
   const hero = useHeroStore((s) => s.hero);
 
@@ -136,6 +138,18 @@ export default function SettingsScreen() {
               onValueChange={toggleHaptic}
               trackColor={{ false: colors.bgInput, true: `${colors.gold}60` }}
               thumbColor={hapticEnabled ? colors.gold : colors.textMuted}
+            />
+          </View>
+          <View style={styles.toggleRow}>
+            <View style={{ flex: 1, paddingRight: spacing.md }}>
+              <Text style={styles.label}>AI-Forged Skills</Text>
+              <Text style={styles.sublabel}>Forge unique skills with AI (requires sign-in)</Text>
+            </View>
+            <Switch
+              value={aiSkillsEnabled}
+              onValueChange={toggleAiSkills}
+              trackColor={{ false: colors.bgInput, true: `${colors.gold}60` }}
+              thumbColor={aiSkillsEnabled ? colors.gold : colors.textMuted}
             />
           </View>
         </View>

@@ -1,19 +1,41 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity } from 'react-native';
 import { ScreenWrapper } from '../../src/components/layout/ScreenWrapper';
 import { SkillNode } from '../../src/components/game/SkillNode';
 import { Card } from '../../src/components/layout/Card';
+import { Button } from '../../src/components/layout/Button';
 import { useHeroStore } from '../../src/store/heroStore';
 import { useSkillStore } from '../../src/store/skillStore';
+import { useSettingsStore } from '../../src/store/settingsStore';
+import { useAuthStore } from '../../src/store/authStore';
+import { useForgedSkillStore } from '../../src/store/forgedSkillStore';
+import { useUIStore } from '../../src/store/uiStore';
 import { getSkillsByCategory } from '../../src/config/skills';
 import { getSkillProgress } from '../../src/engine/skillEngine';
+import { env } from '../../src/config/env';
 import { colors, spacing, fontSize, radius } from '../../src/config/theme';
 import { Skill, STAT_NAMES, STAT_COLORS, STAT_ICONS } from '../../src/types';
 
 export default function SkillsScreen() {
   const { hero } = useHeroStore();
   const { isSkillUnlocked } = useSkillStore();
+  const aiSkillsEnabled = useSettingsStore((s) => s.aiSkillsEnabled);
+  const authenticated = useAuthStore((s) => s.status === 'authenticated');
+  const { forged, loading: forging, load: loadForged, forge } = useForgedSkillStore();
+  const setSkillUnlock = useUIStore((s) => s.setSkillUnlock);
   const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);
+
+  // The forge feature is online-only (needs the backend + key).
+  const canForge = aiSkillsEnabled && !env.demoMode && authenticated;
+
+  useEffect(() => {
+    if (canForge) void loadForged();
+  }, [canForge, loadForged]);
+
+  const handleForge = async () => {
+    const skill = await forge();
+    if (skill) setSkillUnlock(skill);
+  };
 
   if (!hero) return null;
 
@@ -31,6 +53,44 @@ export default function SkillsScreen() {
     <ScreenWrapper>
       <Text style={styles.title}>Skill Trees</Text>
       <Text style={styles.subtitle}>Unlock skills by leveling your stats</Text>
+
+      {/* AI-Forged skills (opt-in, online-only) */}
+      {aiSkillsEnabled && (
+        <Card style={styles.treeCard}>
+          <View style={styles.treeHeader}>
+            <Text style={styles.treeIcon}>✨</Text>
+            <Text style={[styles.treeName, { color: colors.gold }]}>Forged</Text>
+          </View>
+          {canForge ? (
+            <>
+              {forged.length > 0 && (
+                <View style={styles.nodesRow}>
+                  {forged.map((skill) => (
+                    <SkillNode
+                      key={skill.id}
+                      skill={skill}
+                      isUnlocked
+                      progress={1}
+                      onPress={setSelectedSkill}
+                    />
+                  ))}
+                </View>
+              )}
+              <Button
+                title={forging ? 'Forging…' : '✨ Forge a Skill'}
+                onPress={handleForge}
+                loading={forging}
+                variant="secondary"
+                style={styles.forgeButton}
+              />
+            </>
+          ) : (
+            <Text style={styles.hint}>
+              Sign in (with demo mode off) to forge unique AI-generated skills for your hero.
+            </Text>
+          )}
+        </Card>
+      )}
 
       {categories.map((cat) => {
         const skills = getSkillsByCategory(cat.key);
@@ -121,6 +181,14 @@ const styles = StyleSheet.create({
   },
   treeCard: {
     marginBottom: spacing.md,
+  },
+  forgeButton: {
+    marginTop: spacing.sm,
+  },
+  hint: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    lineHeight: 20,
   },
   treeHeader: {
     flexDirection: 'row',
