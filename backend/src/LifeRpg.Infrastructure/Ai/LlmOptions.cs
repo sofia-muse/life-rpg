@@ -7,5 +7,5 @@ public class LlmOptions
     /// <summary>Google AI Studio API key. Supplied via user-secrets locally / Key Vault in prod.</summary>
     public string ApiKey { get; set; } = string.Empty;
 
-    public string Model { get; set; } = "gemini-2.0-flash";
+    public string Model { get; set; } = "gemini-2.5-flash";
 }

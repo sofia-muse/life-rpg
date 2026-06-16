@@ -53,6 +53,9 @@ public class GeminiClient : ILlmClient
         _options = options.Value;
     }
 
+    private static bool IsTransient(System.Net.HttpStatusCode code) =>
+        (int)code is 429 or 500 or 502 or 503;
+
     public async Task<ForgedSkillDraft> ForgeSkillAsync(SkillForgePrompt prompt, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(_options.ApiKey))
@@ -82,10 +85,19 @@ public class GeminiClient : ILlmClient
         };
 
         var url = $"/v1beta/models/{_options.Model}:generateContent?key={_options.ApiKey}";
-        using var res = await _http.PostAsJsonAsync(url, body, Json, ct);
-        res.EnsureSuccessStatusCode();
 
+        // Retry transient Gemini errors (429 rate-limit, 5xx overload) with backoff.
+        HttpResponseMessage res = await _http.PostAsJsonAsync(url, body, Json, ct);
+        for (var attempt = 1; attempt < 3 && IsTransient(res.StatusCode); attempt++)
+        {
+            res.Dispose();
+            await Task.Delay(TimeSpan.FromMilliseconds(600 * attempt * attempt), ct);
+            res = await _http.PostAsJsonAsync(url, body, Json, ct);
+        }
+
+        res.EnsureSuccessStatusCode();
         var payload = await res.Content.ReadFromJsonAsync<GeminiResponse>(Json, ct);
+        res.Dispose();
         var text = payload?.Candidates?.FirstOrDefault()?.Content?.Parts?.FirstOrDefault()?.Text;
         if (string.IsNullOrWhiteSpace(text))
         {
