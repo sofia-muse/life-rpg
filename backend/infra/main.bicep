@@ -21,6 +21,9 @@ param jwtSigningKey string
 @secure()
 param llmApiKey string = ''
 
+@description('App Service plan SKU. F1 = free (no always-on); B1 = basic (always-on, ~$13/mo).')
+param appServiceSku string = 'F1'
+
 var appServicePlanName = '${namePrefix}-plan'
 var webAppName = '${namePrefix}-api'
 var sqlServerName = '${namePrefix}-sql-${uniqueString(resourceGroup().id)}'
@@ -41,7 +44,7 @@ resource plan 'Microsoft.Web/serverfarms@2023-12-01' = {
   name: appServicePlanName
   location: location
   sku: {
-    name: 'B1' // Basic; switch to 'F1' for the always-free tier.
+    name: appServiceSku
   }
   kind: 'linux'
   properties: {
@@ -93,7 +96,7 @@ resource webApp 'Microsoft.Web/sites@2023-12-01' = {
     httpsOnly: true
     siteConfig: {
       linuxFxVersion: 'DOTNETCORE|8.0'
-      alwaysOn: true
+      alwaysOn: appServiceSku != 'F1' // F1 (free) does not support always-on
       ftpsState: 'Disabled'
       appSettings: [
         {
