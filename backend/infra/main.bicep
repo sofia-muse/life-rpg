@@ -25,7 +25,8 @@ param llmApiKey string = ''
 param appServiceSku string = 'F1'
 
 var appServicePlanName = '${namePrefix}-plan'
-var webAppName = '${namePrefix}-api'
+// Web App hostname is global; suffix with a hash of the RG id to avoid name collisions.
+var webAppName = '${namePrefix}-api-${uniqueString(resourceGroup().id)}'
 var sqlServerName = '${namePrefix}-sql-${uniqueString(resourceGroup().id)}'
 var sqlDbName = '${namePrefix}-db'
 var keyVaultName = '${namePrefix}-kv-${uniqueString(resourceGroup().id)}'
