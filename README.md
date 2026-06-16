@@ -16,7 +16,9 @@ A full-stack project: a **React Native / Expo** mobile + web client backed by an
 <!-- TODO: replace with the hero GIF of the level-up cascade -->
 <!-- ![Life RPG demo](docs/demo.gif) -->
 
-**🔗 Live demo:** _coming soon (Vercel)_ · **📱 Android APK:** _coming soon (EAS)_
+### ▶️ **[Try the live demo](https://life-rpg-opal-nine.vercel.app/)**  ·  📱 Android APK: _coming soon (EAS)_
+
+_The hosted demo runs fully local (no sign-in) so it's instant to try. AI-forged skills + cloud sync run against the .NET API when deployed._
 
 </div>
 
