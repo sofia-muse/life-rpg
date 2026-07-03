@@ -90,6 +90,24 @@ public class SkillResolverTests
         SkillResolver.GetSkillBonusForStat(StatName.Intelligence, new[] { "cross-1" }).Should().Be(5);
         SkillResolver.GetSkillBonusForStat(StatName.Charisma, new[] { "cross-1" }).Should().Be(0);
     }
+
+    [Fact]
+    public void Quest_type_bonuses_use_typed_effect_scopes()
+    {
+        SkillResolver.GetSkillBonusForQuest(QuestType.Side, StatName.Strength, new[] { "int-2" }).Should().Be(10);
+        SkillResolver.GetSkillBonusForQuest(QuestType.Boss, StatName.Charisma, new[] { "cha-2" }).Should().Be(10);
+        SkillResolver.GetSkillBonusForQuest(QuestType.Daily, StatName.Charisma, new[] { "cha-2" }).Should().Be(0);
+    }
+
+    [Fact]
+    public void Daily_lifecycle_skill_effects_are_resolved_without_regex()
+    {
+        SkillResolver.GetRestDayXpReward(Array.Empty<string>()).Should().Be(10);
+        SkillResolver.GetRestDayXpReward(new[] { "vit-1" }).Should().Be(15);
+        SkillResolver.GetStreakRetentionRatio(new[] { "vit-2" }).Should().Be(0.5);
+        SkillResolver.GetWeeklyStreakFreezeAllowance(new[] { "wil-2" }).Should().Be(1);
+        SkillResolver.GetActiveDailyQuestCapacityBonus(new[] { "dex-2" }).Should().Be(2);
+    }
 }
 
 public class ClassResolverTests

@@ -4,18 +4,20 @@ using LifeRpg.Application.Dtos;
 using LifeRpg.Domain.Entities;
 using LifeRpg.Domain.Enums;
 using LifeRpg.Domain.GameConfig;
+using LifeRpg.Domain.GameEngine;
 using Microsoft.EntityFrameworkCore;
 
 namespace LifeRpg.Application.Services;
 
 /// <summary>
 /// Idempotent batch sync. Each operation carries an opId logged in SyncRequestLogs, so replaying
-/// a batch (e.g. after a flaky connection) is a no-op. Storage mutations use last-write-wins by
-/// UpdatedAt; quest *completion* is intentionally handled by the authoritative /complete endpoint,
+/// a batch (e.g. after a flaky connection) is a no-op. Storage mutations accept only newer payloads
+/// by UpdatedAt; quest *completion* is intentionally handled by the authoritative /complete endpoint,
 /// not here, so progression is always server-computed. Returns a delta of server changes to converge.
 /// </summary>
 public class SyncService
 {
+    private const int BaseActiveDailyLimit = 3;
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
     {
         Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
@@ -39,7 +41,9 @@ public class SyncService
             return Result<SyncBatchResult>.Unauthorized();
         }
 
-        var hero = await _db.Heroes.Include(h => h.Quests)
+        var hero = await _db.Heroes
+            .Include(h => h.Quests)
+            .Include(h => h.UnlockedSkills)
             .FirstOrDefaultAsync(h => h.UserId == userId, ct);
         if (hero is null)
         {
@@ -130,20 +134,33 @@ public class SyncService
                 Difficulty = dto.Difficulty,
                 Stat = dto.Stat,
                 XpReward = DifficultyXp.For(dto.Difficulty), // server owns XP
-                IsActive = dto.IsActive,
+                IsActive = dto.IsActive && (dto.Type != QuestType.Daily || CanActivateDailyQuest(hero, null)),
                 TotalSteps = dto.TotalSteps,
                 CompletedSteps = dto.CompletedSteps,
+                IsCompleted = dto.IsCompleted,
+                CompletedAt = dto.CompletedAt,
+                CreatedAt = dto.CreatedAt == default ? _clock.UtcNow : dto.CreatedAt,
+                UpdatedAt = dto.UpdatedAt == default ? _clock.UtcNow : dto.UpdatedAt,
             });
             return null;
         }
 
-        // Last-write-wins is implicit (client only enqueues its own latest state); copy editable fields.
+        if (dto.UpdatedAt <= existing.UpdatedAt)
+        {
+            return new SyncConflict(op.OpId, "Stale quest payload");
+        }
+
         existing.Title = dto.Title;
         existing.Description = dto.Description;
+        existing.Type = dto.Type;
         existing.Difficulty = dto.Difficulty;
         existing.Stat = dto.Stat;
-        existing.IsActive = dto.IsActive;
+        existing.IsActive = dto.IsActive
+            && (dto.Type != QuestType.Daily || CanActivateDailyQuest(hero, existing.Id));
+        existing.TotalSteps = dto.TotalSteps;
+        existing.CompletedSteps = dto.CompletedSteps;
         existing.XpReward = DifficultyXp.For(dto.Difficulty);
+        existing.UpdatedAt = dto.UpdatedAt;
         return null;
     }
 
@@ -160,10 +177,79 @@ public class SyncService
 
     private SyncConflict? UpsertHero(Hero hero, SyncOperation op)
     {
-        // Only non-progression fields are client-writable; XP/level/class are server-authoritative.
+        if (op.Payload.TryGetProperty("updatedAt", out var updatedAtProp)
+            && updatedAtProp.ValueKind == JsonValueKind.String
+            && updatedAtProp.TryGetDateTimeOffset(out var updatedAt)
+            && updatedAt <= hero.UpdatedAt)
+        {
+            return new SyncConflict(op.OpId, "Stale hero payload");
+        }
+
+        // Quest completion remains server-authoritative, but client-managed daily/recovery systems
+        // still sync their derived hero fields back through this storage path.
         if (op.Payload.TryGetProperty("name", out var name) && name.ValueKind == JsonValueKind.String)
         {
             hero.Name = name.GetString()!.Trim();
+        }
+        if (op.Payload.TryGetProperty("statXP", out var statXp)
+            || op.Payload.TryGetProperty("statXp", out statXp))
+        {
+            var parsed = statXp.Deserialize<Domain.ValueObjects.StatBlock>(Json);
+            if (parsed is not null)
+            {
+                hero.StatXp = parsed;
+                HeroService.RecomputeProgression(hero);
+            }
+        }
+        if (op.Payload.TryGetProperty("currentStreak", out var currentStreak) && currentStreak.TryGetInt32(out var parsedCurrentStreak))
+        {
+            hero.CurrentStreak = parsedCurrentStreak;
+        }
+        if (op.Payload.TryGetProperty("longestStreak", out var longestStreak) && longestStreak.TryGetInt32(out var parsedLongestStreak))
+        {
+            hero.LongestStreak = parsedLongestStreak;
+        }
+        if (op.Payload.TryGetProperty("restDaysUsed", out var restDaysUsed) && restDaysUsed.TryGetInt32(out var parsedRestDaysUsed))
+        {
+            hero.RestDaysUsed = parsedRestDaysUsed;
+        }
+        if (op.Payload.TryGetProperty("totalLoginDays", out var totalLoginDays) && totalLoginDays.TryGetInt32(out var parsedTotalLoginDays))
+        {
+            hero.TotalLoginDays = parsedTotalLoginDays;
+        }
+        if (op.Payload.TryGetProperty("lastActiveDate", out var lastActiveDate)
+            && lastActiveDate.ValueKind == JsonValueKind.String
+            && DateOnly.TryParse(lastActiveDate.GetString(), out var parsedLastActiveDate))
+        {
+            hero.LastActiveDate = parsedLastActiveDate;
+        }
+        if (op.Payload.TryGetProperty("lastRewardDate", out var lastRewardDate)
+            && lastRewardDate.ValueKind == JsonValueKind.String
+            && DateOnly.TryParse(lastRewardDate.GetString(), out var parsedLastRewardDate))
+        {
+            hero.LastRewardDate = parsedLastRewardDate;
+        }
+        if (op.Payload.TryGetProperty("lastStreakFreezeDate", out var lastStreakFreezeDate)
+            && lastStreakFreezeDate.ValueKind == JsonValueKind.String
+            && DateOnly.TryParse(lastStreakFreezeDate.GetString(), out var parsedLastStreakFreezeDate))
+        {
+            hero.LastStreakFreezeDate = parsedLastStreakFreezeDate;
+        }
+        if (op.Payload.TryGetProperty("appearance", out var appearance))
+        {
+            var parsed = appearance.Deserialize<Domain.ValueObjects.HeroAppearance>(Json);
+            if (parsed is not null)
+            {
+                hero.Appearance = parsed;
+            }
+        }
+        if (op.Payload.TryGetProperty("characterAppearance", out var characterAppearance))
+        {
+            var parsed = characterAppearance.Deserialize<Domain.ValueObjects.CharacterAppearance>(Json);
+            if (parsed is not null)
+            {
+                hero.CharacterAppearance = parsed;
+            }
         }
         if (op.Payload.TryGetProperty("settings", out var settings))
         {
@@ -172,6 +258,12 @@ public class SyncService
             {
                 hero.Settings = parsed;
             }
+        }
+        if (op.Payload.TryGetProperty("updatedAt", out updatedAtProp)
+            && updatedAtProp.ValueKind == JsonValueKind.String
+            && updatedAtProp.TryGetDateTimeOffset(out updatedAt))
+        {
+            hero.UpdatedAt = updatedAt;
         }
         return null;
     }
@@ -193,5 +285,16 @@ public class SyncService
             heroChanged ? hero.ToDto() : null,
             quests.Select(q => q.ToDto()).ToList(),
             journal.Select(j => j.ToDto()).ToList());
+    }
+
+    private bool CanActivateDailyQuest(Hero hero, Guid? currentQuestId)
+    {
+        var currentActiveDailyCount = hero.Quests.Count(
+            q => q.Type == QuestType.Daily
+                && q.IsActive
+                && (!currentQuestId.HasValue || q.Id != currentQuestId.Value));
+        var maxActiveDailyCount =
+            BaseActiveDailyLimit + SkillResolver.GetActiveDailyQuestCapacityBonus(hero.UnlockedSkills.Select(s => s.SkillId));
+        return currentActiveDailyCount < maxActiveDailyCount;
     }
 }

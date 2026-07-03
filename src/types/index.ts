@@ -14,6 +14,36 @@ export type QuestType = 'daily' | 'side' | 'boss';
 
 export type QuestDifficulty = 'easy' | 'medium' | 'hard' | 'legendary';
 
+export type SkillEffect =
+  | {
+      type: 'displayText';
+      text: string;
+    }
+  | {
+      type: 'questXpBonus';
+      percent: number;
+      stats?: StatName[];
+      questTypes?: QuestType[];
+      appliesToAllQuests?: boolean;
+    }
+  | {
+      type: 'restDayXp';
+      stat: StatName;
+      amount: number;
+    }
+  | {
+      type: 'streakRetention';
+      retentionPercent: number;
+    }
+  | {
+      type: 'streakFreeze';
+      missesPerWeek: number;
+    }
+  | {
+      type: 'activeDailyQuestCapacity';
+      additionalSlots: number;
+    };
+
 export type ClassTier = 1 | 2 | 3 | 4 | 5;
 
 // ─── Hero Appearance ───
@@ -70,6 +100,7 @@ export interface Hero {
   name: string;
   avatarSeed: string;
   createdAt: string;
+  updatedAt?: string;
   stats: StatBlock;
   statXP: Record<StatName, number>;
   heroLevel: number;
@@ -85,6 +116,7 @@ export interface Hero {
   characterAppearance: CharacterAppearance;
   lastRewardDate: string;
   totalLoginDays: number;
+  lastStreakFreezeDate?: string;
 }
 
 export interface Quest {
@@ -98,6 +130,7 @@ export interface Quest {
   isCompleted: boolean;
   isActive: boolean;
   createdAt: string;
+  updatedAt?: string;
   completedAt?: string;
   streak: number;
   bestStreak: number;
@@ -118,6 +151,7 @@ export interface Skill {
   secondaryLevel?: number;
   icon: string;
   effect: string;
+  effects: SkillEffect[];
 }
 
 export interface UnlockedSkill {
@@ -179,8 +213,8 @@ export interface HeroStore {
   createHero: (name: string, avatarSeed: string, focusStats: StatName[]) => void;
   addXP: (stat: StatName, amount: number) => StatLevelUpResult | null;
   recordQuestCompletion: () => void;
-  updateStreak: () => void;
-  takeRestDay: () => void;
+  updateStreak: (unlockedSkillIds: string[]) => { usedStreakFreeze: boolean; rewardAvailable: boolean } | null;
+  takeRestDay: (unlockedSkillIds: string[]) => void;
   getStatProgress: (stat: StatName) => StatProgress;
 }
 
@@ -189,7 +223,14 @@ export interface QuestStore {
   addQuest: (
     quest: Omit<
       Quest,
-      'id' | 'createdAt' | 'isCompleted' | 'completedAt' | 'streak' | 'bestStreak' | 'daysCompleted'
+      | 'id'
+      | 'createdAt'
+      | 'updatedAt'
+      | 'isCompleted'
+      | 'completedAt'
+      | 'streak'
+      | 'bestStreak'
+      | 'daysCompleted'
     >,
   ) => void;
   completeQuest: (questId: string) => Quest | null;
@@ -204,7 +245,7 @@ export interface QuestStore {
 
 export interface SkillStore {
   unlockedSkills: UnlockedSkill[];
-  checkAndUnlockSkills: (stats: StatBlock, statXP: Record<StatName, number>) => Skill[];
+  checkAndUnlockSkills: (statXP: Record<StatName, number>) => Skill[];
   isSkillUnlocked: (skillId: string) => boolean;
 }
 
@@ -240,9 +281,11 @@ export interface SettingsStore {
   notificationsEnabled: boolean;
   hapticEnabled: boolean;
   reminderTime: string;
+  aiSkillsEnabled: boolean;
   toggleNotifications: () => void;
   toggleHaptic: () => void;
   setReminderTime: (time: string) => void;
+  toggleAiSkills: () => void;
 }
 
 export interface StatLevelUpResult {

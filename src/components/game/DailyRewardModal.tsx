@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Modal, Animated, TouchableOpacity } from 'react-native';
-import LottieView from 'lottie-react-native';
+import AppLottie from '../animated/AppLottie';
 import { StatName, STAT_COLORS, STAT_ICONS } from '../../types';
 import { colors, spacing, fontSize, radius } from '../../config/theme';
 
@@ -35,7 +35,7 @@ export function DailyRewardModal({ visible, xp, stat, bonusType, loginDays, onCl
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClaim}>
       <Animated.View style={[styles.overlay, { opacity }]}>
         <Animated.View style={[styles.content, { transform: [{ scale }] }]}>
-          <LottieView
+          <AppLottie
             source={require('../../../assets/animations/sparkle.json')}
             autoPlay
             loop={false}

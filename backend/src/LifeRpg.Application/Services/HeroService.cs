@@ -51,6 +51,7 @@ public class HeroService
             Name = req.Name.Trim(),
             AvatarSeed = string.IsNullOrWhiteSpace(req.AvatarSeed) ? req.Name.Trim() : req.AvatarSeed,
             StatXp = new StatBlock(0),
+            CharacterAppearance = req.CharacterAppearance ?? new CharacterAppearance(),
         };
 
         // Seed each focus stat with 50 XP (matches the client's createHero).
@@ -88,6 +89,19 @@ public class HeroService
         return Result<HeroDto>.Success(hero.ToDto());
     }
 
+    public async Task<Result> DeleteAsync(CancellationToken ct = default)
+    {
+        var hero = await LoadAsync(ct);
+        if (hero is null)
+        {
+            return Result.NotFound("Hero not found");
+        }
+
+        _db.Heroes.Remove(hero);
+        await _db.SaveChangesAsync(ct);
+        return Result.Success();
+    }
+
     public async Task<Result<List<StatProgressDto>>> GetStatsAsync(CancellationToken ct = default)
     {
         var hero = await LoadAsync(ct);
@@ -108,7 +122,9 @@ public class HeroService
 
     private Task<Hero?> LoadAsync(CancellationToken ct) =>
         _user.UserId is { } userId
-            ? _db.Heroes.FirstOrDefaultAsync(h => h.UserId == userId, ct)
+            ? _db.Heroes
+                .Include(h => h.UnlockedSkills)
+                .FirstOrDefaultAsync(h => h.UserId == userId, ct)
             : Task.FromResult<Hero?>(null);
 
     /// <summary>Recomputes derived progression (levels, hero level, dominant stat, class) from stat XP.</summary>

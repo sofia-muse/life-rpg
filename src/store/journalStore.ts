@@ -10,9 +10,23 @@ interface JournalState {
   getTodayEntry: () => JournalEntry | undefined;
   getEntriesByDate: (date: string) => JournalEntry[];
   updateTodayEntry: (updates: Partial<Omit<JournalEntry, 'id' | 'date'>>) => void;
+  clearEntries: () => void;
 }
 
 const today = () => new Date().toISOString().split('T')[0];
+
+const emptyXpGained = () => ({
+  strength: 0,
+  vitality: 0,
+  intelligence: 0,
+  charisma: 0,
+  dexterity: 0,
+  willpower: 0,
+});
+
+function mergeUnique<T>(left: T[], right: T[] = []): T[] {
+  return [...new Set([...left, ...right])];
+}
 
 export const useJournalStore = create<JournalState>()(
   persist(
@@ -41,8 +55,25 @@ export const useJournalStore = create<JournalState>()(
         const existing = get().entries.find((e) => e.date === todayStr);
 
         if (existing) {
+          const merged: JournalEntry = {
+            ...existing,
+            ...updates,
+            narrative: [existing.narrative, updates.narrative].filter(Boolean).join('\n\n'),
+            questsCompleted: mergeUnique(existing.questsCompleted, updates.questsCompleted),
+            xpGained: {
+              strength: existing.xpGained.strength + (updates.xpGained?.strength ?? 0),
+              vitality: existing.xpGained.vitality + (updates.xpGained?.vitality ?? 0),
+              intelligence: existing.xpGained.intelligence + (updates.xpGained?.intelligence ?? 0),
+              charisma: existing.xpGained.charisma + (updates.xpGained?.charisma ?? 0),
+              dexterity: existing.xpGained.dexterity + (updates.xpGained?.dexterity ?? 0),
+              willpower: existing.xpGained.willpower + (updates.xpGained?.willpower ?? 0),
+            },
+            levelsGained: mergeUnique(existing.levelsGained, updates.levelsGained),
+            skillsUnlocked: mergeUnique(existing.skillsUnlocked, updates.skillsUnlocked),
+            milestones: mergeUnique(existing.milestones, updates.milestones),
+          };
           set((state) => ({
-            entries: state.entries.map((e) => (e.id === existing.id ? { ...e, ...updates } : e)),
+            entries: state.entries.map((e) => (e.id === existing.id ? merged : e)),
           }));
         } else {
           // Create new entry for today
@@ -51,14 +82,7 @@ export const useJournalStore = create<JournalState>()(
             date: todayStr,
             narrative: '',
             questsCompleted: [],
-            xpGained: {
-              strength: 0,
-              vitality: 0,
-              intelligence: 0,
-              charisma: 0,
-              dexterity: 0,
-              willpower: 0,
-            },
+            xpGained: emptyXpGained(),
             levelsGained: [],
             skillsUnlocked: [],
             milestones: [],
@@ -67,6 +91,8 @@ export const useJournalStore = create<JournalState>()(
           set((state) => ({ entries: [newEntry, ...state.entries] }));
         }
       },
+
+      clearEntries: () => set({ entries: [] }),
     }),
     {
       name: 'life-rpg-journal',

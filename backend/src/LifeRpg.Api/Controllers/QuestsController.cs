@@ -25,6 +25,10 @@ public class QuestsController : ApiControllerBase
     public async Task<IActionResult> Delete(Guid id) =>
         ToResponse(await _quests.DeleteAsync(id));
 
+    [HttpPost("{id:guid}/boss-step")]
+    public async Task<IActionResult> AdvanceBossStep(Guid id) =>
+        ToResponse(await _quests.AdvanceBossStepAsync(id));
+
     /// <summary>Server-authoritative completion: XP/level/class/skills are recomputed server-side.</summary>
     [HttpPost("{id:guid}/complete")]
     public async Task<IActionResult> Complete(Guid id) =>

@@ -11,12 +11,18 @@ public record AuthResponse(string AccessToken, string RefreshToken, DateTimeOffs
 public record UserDto(Guid Id, string Email, string DisplayName);
 
 // ─── Hero ───
-public record CreateHeroRequest(string Name, string AvatarSeed, List<StatName> FocusStats);
+public record CreateHeroRequest(
+    string Name,
+    string AvatarSeed,
+    List<StatName> FocusStats,
+    CharacterAppearance? CharacterAppearance = null);
 
 public record HeroDto(
     Guid Id,
     string Name,
     string AvatarSeed,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt,
     int HeroLevel,
     string ClassName,
     int ClassTier,
@@ -25,12 +31,15 @@ public record HeroDto(
     int CurrentStreak,
     int LongestStreak,
     DateOnly? LastActiveDate,
+    DateOnly? LastStreakFreezeDate,
     DateOnly? LastRewardDate,
+    int RestDaysUsed,
     int TotalLoginDays,
     StatBlock StatXp,
     StatBlock Stats,
     HeroAppearance Appearance,
     CharacterAppearance CharacterAppearance,
+    List<UnlockedSkillDto> UnlockedSkills,
     HeroSettings Settings);
 
 public record UpdateAppearanceRequest(HeroAppearance? Appearance, CharacterAppearance? CharacterAppearance);
@@ -56,6 +65,8 @@ public record QuestDto(
     int XpReward,
     bool IsCompleted,
     bool IsActive,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt,
     DateTimeOffset? CompletedAt,
     int Streak,
     int BestStreak,
@@ -78,6 +89,8 @@ public record CompleteQuestResult(
     TierUpDto? TierUp,
     List<SkillDto> NewSkills,
     HeroDto Hero);
+
+public record AdvanceBossQuestResult(QuestDto Quest, CompleteQuestResult? Completion);
 
 public record TierUpDto(int NewTier, string NewClass);
 

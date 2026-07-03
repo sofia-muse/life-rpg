@@ -11,10 +11,15 @@ import {
   StatLevelUpResult,
   STAT_NAMES,
 } from '../types';
-import { applyXP, getStatDisplayProgress, getRestDayXP } from '../engine/xpEngine';
+import { applyXP, getStatDisplayProgress } from '../engine/xpEngine';
 import { calculateHeroLevel, getDominantStat, getStatBlock } from '../engine/statEngine';
 import { checkClassEvolution } from '../engine/classEngine';
-import { getNewlyUnlockedSkills } from '../engine/skillEngine';
+import {
+  getNewlyUnlockedSkills,
+  getRestDayXpReward,
+  getStreakRetentionRatio,
+  getWeeklyStreakFreezeAllowance,
+} from '../engine/skillEngine';
 import { getClassName } from '../config/classes';
 import { shouldResetStreak, isNewDay, getStreakAfterBreak } from '../engine/streakEngine';
 import {
@@ -23,12 +28,15 @@ import {
   computeUnlockedItems,
 } from '../config/appearanceConfig';
 import { levelFromXP } from '../config/xpTables';
+import { syncManager } from '../api/syncManager';
 
 interface HeroState {
   hero: Hero | null;
   isOnboarded: boolean;
   _hasHydrated: boolean;
   setHasHydrated: (v: boolean) => void;
+  setHero: (hero: Hero | null, options?: { isOnboarded?: boolean }) => void;
+  clearHero: () => void;
   createHero: (
     name: string,
     avatarSeed: string,
@@ -36,9 +44,13 @@ interface HeroState {
     charAppearance?: CharacterAppearance,
   ) => void;
   addXP: (stat: StatName, amount: number) => StatLevelUpResult | null;
+  applyQuestReward: (stat: StatName, amount: number, unlockedSkillIds: string[]) => {
+    hero: Hero;
+    levelResult: StatLevelUpResult | null;
+  } | null;
   recordQuestCompletion: () => void;
-  updateStreak: () => void;
-  takeRestDay: () => void;
+  updateStreak: (unlockedSkillIds: string[]) => { usedStreakFreeze: boolean; rewardAvailable: boolean } | null;
+  takeRestDay: (unlockedSkillIds: string[]) => void;
   getStatProgress: (stat: StatName) => StatProgress;
   updateAppearance: (
     patch: Partial<
@@ -47,7 +59,11 @@ interface HeroState {
   ) => void;
   checkAppearanceUnlocks: () => { shapes: string[]; sigils: string[] } | null;
   updateCharacterAppearance: (patch: Partial<CharacterAppearance>) => void;
-  claimDailyReward: () => { xp: number; stat: StatName; bonusType: string } | null;
+  getDailyRewardPreview: () => { xp: number; stat: StatName; bonusType: string } | null;
+  claimDailyReward: (unlockedSkillIds: string[]) => {
+    reward: { xp: number; stat: StatName; bonusType: string };
+    levelResult: StatLevelUpResult | null;
+  } | null;
 }
 
 const createEmptyStatXP = (): Record<StatName, number> => ({
@@ -61,6 +77,91 @@ const createEmptyStatXP = (): Record<StatName, number> => ({
 
 const today = () => new Date().toISOString().split('T')[0];
 
+const freezeCooldownDays = 7;
+
+function getDailyRewardForHero(hero: Hero): { xp: number; stat: StatName; bonusType: string } | null {
+  const todayStr = today();
+  if (hero.lastRewardDate === todayStr) return null;
+
+  const loginDays = (hero.totalLoginDays || 0) + 1;
+  const streak = hero.currentStreak;
+
+  let baseXP = Math.min(5 + loginDays, 25);
+  let bonusType = 'Daily Login';
+
+  if (streak >= 30) {
+    baseXP += 50;
+    bonusType = '30-Day Streak Bonus!';
+  } else if (streak >= 14) {
+    baseXP += 25;
+    bonusType = '2-Week Streak Bonus!';
+  } else if (streak >= 7) {
+    baseXP += 15;
+    bonusType = 'Weekly Streak Bonus!';
+  } else if (streak >= 3) {
+    baseXP += 5;
+    bonusType = 'Streak Bonus';
+  }
+
+  return {
+    xp: baseXP,
+    stat: hero.dominantStat,
+    bonusType,
+  };
+}
+
+function wasUsedRecently(lastUsedDate: string | undefined, days: number): boolean {
+  if (!lastUsedDate) return false;
+
+  const last = new Date(lastUsedDate);
+  const now = new Date(today());
+  const diffMs = now.getTime() - last.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  return diffDays < days;
+}
+
+function applyHeroXp(
+  hero: Hero,
+  stat: StatName,
+  amount: number,
+  unlockedSkillIds: string[],
+): { updatedHero: Hero; levelResult: StatLevelUpResult | null } {
+  const result = applyXP(hero.statXP[stat], amount);
+  const newStatXP = { ...hero.statXP, [stat]: result.newXP };
+  const evolution = checkClassEvolution(newStatXP, hero.classTier, hero.className);
+  const newSkills = getNewlyUnlockedSkills(newStatXP, unlockedSkillIds);
+  const timestamp = new Date().toISOString();
+
+  const updatedHero: Hero = {
+    ...hero,
+    statXP: newStatXP,
+    stats: getStatBlock(newStatXP),
+    heroLevel: calculateHeroLevel(newStatXP),
+    dominantStat: getDominantStat(newStatXP),
+    className: evolution ? evolution.newClass : hero.className,
+    classTier: evolution ? evolution.newTier : hero.classTier,
+    lastActiveDate: today(),
+    updatedAt: timestamp,
+  };
+
+  return {
+    updatedHero,
+    levelResult: result.didLevelUp
+      ? {
+          stat,
+          oldLevel: result.oldLevel,
+          newLevel: result.newLevel,
+          newSkills,
+          tierUp: evolution ? { newTier: evolution.newTier, newClass: evolution.newClass } : undefined,
+        }
+      : null,
+  };
+}
+
+function syncHeroState(hero: Hero): void {
+  syncManager.enqueue('hero', 'upsert', hero);
+}
+
 export const useHeroStore = create<HeroState>()(
   persist(
     (set, get) => ({
@@ -68,6 +169,12 @@ export const useHeroStore = create<HeroState>()(
       isOnboarded: false,
       _hasHydrated: false,
       setHasHydrated: (v: boolean) => set({ _hasHydrated: v }),
+      setHero: (hero, options) =>
+        set({
+          hero,
+          isOnboarded: options?.isOnboarded ?? !!hero,
+        }),
+      clearHero: () => set({ hero: null, isOnboarded: false }),
 
       createHero: (name, avatarSeed, focusStats, charAppearance) => {
         const statXP = createEmptyStatXP();
@@ -75,11 +182,13 @@ export const useHeroStore = create<HeroState>()(
           statXP[stat] = 50;
         }
         const dominantStat = focusStats[0] || 'strength';
+        const timestamp = new Date().toISOString();
         const hero: Hero = {
           id: generateId(),
           name,
           avatarSeed,
-          createdAt: new Date().toISOString(),
+          createdAt: timestamp,
+          updatedAt: timestamp,
           stats: getStatBlock(statXP),
           statXP,
           heroLevel: 1,
@@ -95,6 +204,7 @@ export const useHeroStore = create<HeroState>()(
           characterAppearance: charAppearance || getDefaultCharacterAppearance(),
           lastRewardDate: '',
           totalLoginDays: 0,
+          lastStreakFreezeDate: undefined,
         };
         set({ hero, isOnboarded: true });
       },
@@ -103,42 +213,30 @@ export const useHeroStore = create<HeroState>()(
         const { hero } = get();
         if (!hero) return null;
 
-        const result = applyXP(hero.statXP[stat], amount);
-        const newStatXP = { ...hero.statXP, [stat]: result.newXP };
-        const newStats = getStatBlock(newStatXP);
-        const newHeroLevel = calculateHeroLevel(newStatXP);
-        const newDominantStat = getDominantStat(newStatXP);
-
-        const evolution = checkClassEvolution(newStatXP, hero.classTier, hero.className);
-
-        const unlockedSkillIds: string[] = [];
-        const newSkills = getNewlyUnlockedSkills(newStatXP, unlockedSkillIds);
-
-        const updatedHero: Hero = {
-          ...hero,
-          statXP: newStatXP,
-          stats: newStats,
-          heroLevel: newHeroLevel,
-          dominantStat: newDominantStat,
-          className: evolution ? evolution.newClass : hero.className,
-          classTier: evolution ? evolution.newTier : hero.classTier,
-          lastActiveDate: today(),
-        };
-
+        const { updatedHero, levelResult } = applyHeroXp(hero, stat, amount, []);
         set({ hero: updatedHero });
+        return levelResult;
+      },
 
-        if (result.didLevelUp) {
-          return {
-            stat,
-            oldLevel: result.oldLevel,
-            newLevel: result.newLevel,
-            newSkills,
-            tierUp: evolution
-              ? { newTier: evolution.newTier, newClass: evolution.newClass }
-              : undefined,
-          };
-        }
-        return null;
+      applyQuestReward: (stat, amount, unlockedSkillIds) => {
+        const { hero } = get();
+        if (!hero) return null;
+
+        const { updatedHero, levelResult } = applyHeroXp(hero, stat, amount, unlockedSkillIds);
+        set({
+          hero: {
+            ...updatedHero,
+            totalQuestsCompleted: hero.totalQuestsCompleted + 1,
+          },
+        });
+
+        return {
+          hero: {
+            ...updatedHero,
+            totalQuestsCompleted: hero.totalQuestsCompleted + 1,
+          },
+          levelResult,
+        };
       },
 
       recordQuestCompletion: () => {
@@ -152,49 +250,82 @@ export const useHeroStore = create<HeroState>()(
         });
       },
 
-      updateStreak: () => {
+      updateStreak: (unlockedSkillIds) => {
         const { hero } = get();
-        if (!hero) return;
+        if (!hero) return null;
 
         const todayStr = today();
-        if (!isNewDay(hero.lastActiveDate, todayStr)) return;
+        if (!hero.lastActiveDate) {
+          const updatedHero: Hero = {
+            ...hero,
+            lastActiveDate: todayStr,
+            updatedAt: new Date().toISOString(),
+          };
+          set({ hero: updatedHero });
+          syncHeroState(updatedHero);
+          return { usedStreakFreeze: false, rewardAvailable: getDailyRewardForHero(updatedHero) !== null };
+        }
+        if (!isNewDay(hero.lastActiveDate, todayStr)) {
+          return { usedStreakFreeze: false, rewardAvailable: getDailyRewardForHero(hero) !== null };
+        }
 
         const streakBroken = shouldResetStreak(hero.lastActiveDate, todayStr);
         let newStreak = hero.currentStreak;
+        let usedStreakFreeze = false;
+        let lastStreakFreezeDate = hero.lastStreakFreezeDate;
 
         if (streakBroken) {
-          newStreak = getStreakAfterBreak(hero.currentStreak, false);
+          const streakFreezeAllowance = getWeeklyStreakFreezeAllowance(unlockedSkillIds);
+          const canUseFreeze =
+            streakFreezeAllowance > 0 && !wasUsedRecently(hero.lastStreakFreezeDate, freezeCooldownDays);
+
+          if (canUseFreeze) {
+            usedStreakFreeze = true;
+            lastStreakFreezeDate = todayStr;
+          } else {
+            const retentionRatio = getStreakRetentionRatio(unlockedSkillIds);
+            newStreak =
+              retentionRatio > 0
+                ? Math.floor(hero.currentStreak * retentionRatio)
+                : getStreakAfterBreak(hero.currentStreak, false);
+          }
         } else {
           newStreak = hero.currentStreak + 1;
         }
 
-        set({
-          hero: {
-            ...hero,
-            currentStreak: newStreak,
-            longestStreak: Math.max(hero.longestStreak, newStreak),
-            lastActiveDate: todayStr,
-          },
-        });
+        const updatedHero: Hero = {
+          ...hero,
+          currentStreak: newStreak,
+          longestStreak: Math.max(hero.longestStreak, newStreak),
+          lastActiveDate: todayStr,
+          lastStreakFreezeDate,
+          updatedAt: new Date().toISOString(),
+        };
+
+        set({ hero: updatedHero });
+        syncHeroState(updatedHero);
+
+        return {
+          usedStreakFreeze,
+          rewardAvailable: getDailyRewardForHero(updatedHero) !== null,
+        };
       },
 
-      takeRestDay: () => {
+      takeRestDay: (unlockedSkillIds) => {
         const { hero } = get();
         if (!hero) return;
 
-        const restXP = getRestDayXP(false);
-        const result = applyXP(hero.statXP.vitality, restXP);
-        const newStatXP = { ...hero.statXP, vitality: result.newXP };
+        const restXP = getRestDayXpReward(unlockedSkillIds);
+        const { updatedHero } = applyHeroXp(hero, 'vitality', restXP, unlockedSkillIds);
+        const syncedHero: Hero = {
+          ...updatedHero,
+          restDaysUsed: hero.restDaysUsed + 1,
+        };
 
         set({
-          hero: {
-            ...hero,
-            statXP: newStatXP,
-            stats: getStatBlock(newStatXP),
-            restDaysUsed: hero.restDaysUsed + 1,
-            lastActiveDate: today(),
-          },
+          hero: syncedHero,
         });
+        syncHeroState(syncedHero);
       },
 
       getStatProgress: (stat) => {
@@ -213,66 +344,61 @@ export const useHeroStore = create<HeroState>()(
       updateAppearance: (patch) => {
         const { hero } = get();
         if (!hero) return;
+        const updatedHero: Hero = {
+          ...hero,
+          appearance: { ...hero.appearance, ...patch },
+          updatedAt: new Date().toISOString(),
+        };
         set({
-          hero: {
-            ...hero,
-            appearance: { ...hero.appearance, ...patch },
-          },
+          hero: updatedHero,
+        });
+        syncManager.enqueue('hero', 'upsert', {
+          appearance: updatedHero.appearance,
+          updatedAt: updatedHero.updatedAt,
         });
       },
 
       updateCharacterAppearance: (patch) => {
         const { hero } = get();
         if (!hero) return;
+        const updatedHero: Hero = {
+          ...hero,
+          characterAppearance: { ...hero.characterAppearance, ...patch },
+          updatedAt: new Date().toISOString(),
+        };
         set({
-          hero: {
-            ...hero,
-            characterAppearance: { ...hero.characterAppearance, ...patch },
-          },
+          hero: updatedHero,
+        });
+        syncManager.enqueue('hero', 'upsert', {
+          characterAppearance: updatedHero.characterAppearance,
+          updatedAt: updatedHero.updatedAt,
         });
       },
 
-      claimDailyReward: () => {
+      getDailyRewardPreview: () => {
+        const { hero } = get();
+        if (!hero) return null;
+        return getDailyRewardForHero(hero);
+      },
+
+      claimDailyReward: (unlockedSkillIds) => {
         const { hero } = get();
         if (!hero) return null;
 
-        const todayStr = new Date().toISOString().split('T')[0];
-        if (hero.lastRewardDate === todayStr) return null; // Already claimed
+        const reward = getDailyRewardForHero(hero);
+        if (!reward) return null;
 
-        const loginDays = (hero.totalLoginDays || 0) + 1;
-        const streak = hero.currentStreak;
-
-        // Base XP scales with login days (5 + 1 per day, max 25)
-        let baseXP = Math.min(5 + loginDays, 25);
-        let bonusType = 'Daily Login';
-
-        // Streak milestones give bonus
-        if (streak >= 30) {
-          baseXP += 50;
-          bonusType = '30-Day Streak Bonus!';
-        } else if (streak >= 14) {
-          baseXP += 25;
-          bonusType = '2-Week Streak Bonus!';
-        } else if (streak >= 7) {
-          baseXP += 15;
-          bonusType = 'Weekly Streak Bonus!';
-        } else if (streak >= 3) {
-          baseXP += 5;
-          bonusType = 'Streak Bonus';
-        }
-
-        // Apply to dominant stat
-        const stat = hero.dominantStat;
-
+        const { updatedHero, levelResult } = applyHeroXp(hero, reward.stat, reward.xp, unlockedSkillIds);
         set({
           hero: {
-            ...hero,
-            lastRewardDate: todayStr,
-            totalLoginDays: loginDays,
+            ...updatedHero,
+            lastRewardDate: today(),
+            totalLoginDays: (hero.totalLoginDays || 0) + 1,
           },
         });
+        syncHeroState(get().hero!);
 
-        return { xp: baseXP, stat, bonusType };
+        return { reward, levelResult };
       },
 
       checkAppearanceUnlocks: () => {

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { useRouter } from 'expo-router';
 import { useHeroStore } from '../../src/store/heroStore';
 import { useQuestStore } from '../../src/store/questStore';
+import { useSkillStore } from '../../src/store/skillStore';
 import { useUIStore } from '../../src/store/uiStore';
 import { Card } from '../../src/components/layout/Card';
 import { Badge } from '../../src/components/layout/Badge';
@@ -20,10 +21,10 @@ import { getStatDisplayProgress } from '../../src/engine/xpEngine';
 export default function DashboardScreen() {
   const router = useRouter();
   const hero = useHeroStore((s) => s.hero);
-  const updateStreak = useHeroStore((s) => s.updateStreak);
   const addXP = useHeroStore((s) => s.addXP);
   const claimDailyReward = useHeroStore((s) => s.claimDailyReward);
   const getActiveQuests = useQuestStore((s) => s.getActiveQuests);
+  const getUnlockedSkillIds = useSkillStore((s) => s.getUnlockedSkillIds);
   const showXPPopup = useUIStore((s) => s.showXPPopup);
   const xpPopupData = useUIStore((s) => s.xpPopupData);
   const dismissXP = useUIStore((s) => s.dismissXP);
@@ -37,14 +38,16 @@ export default function DashboardScreen() {
 
   useEffect(() => {
     if (hero) {
-      updateStreak();
-      // Check for daily reward
-      const reward = claimDailyReward();
+      const unlockedSkillIds = getUnlockedSkillIds();
+      const reward = claimDailyReward({
+        hasRegenerationSkill: unlockedSkillIds.includes('vit-2'),
+        hasUnbreakableSkill: unlockedSkillIds.includes('wil-2'),
+      });
       if (reward) {
         setTimeout(() => setDailyReward(reward), 800);
       }
     }
-  }, [hero?.id]);
+  }, [hero?.id, claimDailyReward, getUnlockedSkillIds]);
 
   const handleClaimReward = () => {
     if (dailyReward) {

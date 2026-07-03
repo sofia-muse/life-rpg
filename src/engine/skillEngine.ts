@@ -1,4 +1,4 @@
-import { Skill, StatName } from '../types';
+import { QuestType, Skill, SkillEffect, StatName } from '../types';
 import { SKILLS, getSkillById, getForgedSkills } from '../config/skills';
 import { levelFromXP } from '../config/xpTables';
 
@@ -48,36 +48,88 @@ export function isSkillUnlockable(skill: Skill, statXP: Record<StatName, number>
   return !!skill.requiredStat && levelFromXP(statXP[skill.requiredStat]) >= skill.requiredLevel;
 }
 
-// Calculate total skill bonus for a given stat
-export function getSkillBonusForStat(stat: StatName, unlockedSkillIds: string[]): number {
-  // Resolve unlocked catalog skills + all AI-forged skills (forged skills are always active).
-  const skills: Skill[] = [
+function getResolvedSkills(unlockedSkillIds: string[]): Skill[] {
+  return [
     ...unlockedSkillIds.map((id) => getSkillById(id)).filter((s): s is Skill => !!s),
     ...getForgedSkills(),
   ];
+}
 
-  let bonus = 0;
-  for (const skill of skills) {
-    // Parse effect for XP bonus percentage
-    const match = skill.effect.match(/\+(\d+)%/);
-    if (!match) continue;
+function isQuestXpEffect(
+  effect: SkillEffect,
+): effect is Extract<SkillEffect, { type: 'questXpBonus' }> {
+  return effect.type === 'questXpBonus';
+}
 
-    const percent = parseInt(match[1], 10);
+function appliesToQuest(effect: Extract<SkillEffect, { type: 'questXpBonus' }>, quest: {
+  stat: StatName;
+  type: QuestType;
+}): boolean {
+  if (effect.appliesToAllQuests) return true;
+  if (effect.questTypes?.includes(quest.type)) return true;
+  if (effect.stats?.includes(quest.stat)) return true;
+  return false;
+}
 
-    // Check if skill applies to this stat
-    if (skill.id === 'cross-6') {
-      // Zen Master applies to all
-      bonus += percent;
-    } else if (skill.category === stat) {
-      bonus += percent;
-    } else if (skill.category === 'cross') {
-      if (skill.requiredStat === stat || skill.secondaryStat === stat) {
-        bonus += percent;
+function findSkillEffects<TType extends SkillEffect['type']>(
+  unlockedSkillIds: string[],
+  type: TType,
+): Extract<SkillEffect, { type: TType }>[] {
+  const effects: Extract<SkillEffect, { type: TType }>[] = [];
+  for (const skill of getResolvedSkills(unlockedSkillIds)) {
+    for (const effect of skill.effects) {
+      if (effect.type === type) {
+        effects.push(effect as Extract<SkillEffect, { type: TType }>);
       }
     }
   }
+  return effects;
+}
 
+export function getQuestSkillBonus(
+  quest: { stat: StatName; type: QuestType },
+  unlockedSkillIds: string[],
+): number {
+  let bonus = 0;
+  for (const skill of getResolvedSkills(unlockedSkillIds)) {
+    for (const effect of skill.effects) {
+      if (isQuestXpEffect(effect) && appliesToQuest(effect, quest)) {
+        bonus += effect.percent;
+      }
+    }
+  }
   return bonus;
+}
+
+// Backwards-compatible stat-only helper for older call sites and tests.
+export function getSkillBonusForStat(stat: StatName, unlockedSkillIds: string[]): number {
+  return getQuestSkillBonus({ stat, type: 'daily' }, unlockedSkillIds);
+}
+
+export function getRestDayXpReward(unlockedSkillIds: string[]): number {
+  const bonuses = findSkillEffects(unlockedSkillIds, 'restDayXp').filter(
+    (effect) => effect.stat === 'vitality',
+  );
+  return bonuses.reduce((max, effect) => Math.max(max, effect.amount), 10);
+}
+
+export function getStreakRetentionRatio(unlockedSkillIds: string[]): number {
+  const effects = findSkillEffects(unlockedSkillIds, 'streakRetention');
+  return effects.reduce((max, effect) => Math.max(max, effect.retentionPercent / 100), 0);
+}
+
+export function getWeeklyStreakFreezeAllowance(unlockedSkillIds: string[]): number {
+  return findSkillEffects(unlockedSkillIds, 'streakFreeze').reduce(
+    (max, effect) => Math.max(max, effect.missesPerWeek),
+    0,
+  );
+}
+
+export function getActiveDailyQuestCapacityBonus(unlockedSkillIds: string[]): number {
+  return findSkillEffects(unlockedSkillIds, 'activeDailyQuestCapacity').reduce(
+    (sum, effect) => sum + effect.additionalSlots,
+    0,
+  );
 }
 
 // Get progress toward a skill (0-1)

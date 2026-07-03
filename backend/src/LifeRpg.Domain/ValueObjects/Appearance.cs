@@ -8,8 +8,8 @@ public sealed class HeroAppearance
     public string CrestShape { get; set; } = "shield";
     public string Sigil { get; set; } = "sword";
     public string AccentOverride { get; set; } = "none";
-    public string TitleDisplay { get; set; } = string.Empty;
-    public List<string> UnlockedShapes { get; set; } = new() { "shield", "circle" };
+    public bool TitleDisplay { get; set; } = true;
+    public List<string> UnlockedCrestShapes { get; set; } = new() { "shield", "circle" };
     public List<string> UnlockedSigils { get; set; } = new() { "sword" };
 }
 

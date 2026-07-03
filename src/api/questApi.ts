@@ -17,6 +17,11 @@ export interface CompleteQuestResult {
   hero: ApiHero;
 }
 
+export interface AdvanceBossQuestResult {
+  quest: ApiQuest;
+  completion: CompleteQuestResult | null;
+}
+
 export const questApi = {
   list: (type?: QuestType, active?: boolean) => {
     const params = new URLSearchParams();
@@ -40,4 +45,7 @@ export const questApi = {
   /** Server-authoritative completion — returns the recomputed progression + modal payload. */
   complete: (id: string) =>
     apiFetch<CompleteQuestResult>(`/api/v1/quests/${id}/complete`, { method: 'POST' }),
+
+  advanceBossStep: (id: string) =>
+    apiFetch<AdvanceBossQuestResult>(`/api/v1/quests/${id}/boss-step`, { method: 'POST' }),
 };

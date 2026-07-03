@@ -18,6 +18,15 @@ function toSkill(dto: ForgedSkillDto): Skill {
     requiredLevel: 0, // forged skills are immediately active
     icon: dto.icon,
     effect: dto.effect,
+    effects: stat
+      ? [
+          {
+            type: 'questXpBonus',
+            percent: Number.parseInt(dto.effect.match(/\+(\d+)%/)?.[1] ?? '0', 10),
+            stats: [stat],
+          },
+        ]
+      : [{ type: 'displayText', text: dto.effect }],
   };
 }
 
@@ -29,6 +38,7 @@ interface ForgedSkillState {
   load: () => Promise<void>;
   /** Forge one new skill; returns it (or null on failure). */
   forge: () => Promise<Skill | null>;
+  clear: () => void;
 }
 
 export const useForgedSkillStore = create<ForgedSkillState>()(
@@ -61,6 +71,11 @@ export const useForgedSkillStore = create<ForgedSkillState>()(
           set({ loading: false, error: e instanceof Error ? e.message : 'Forge failed' });
           return null;
         }
+      },
+
+      clear: () => {
+        set({ forged: [], loading: false, error: null });
+        registerForgedSkills([]);
       },
     }),
     {

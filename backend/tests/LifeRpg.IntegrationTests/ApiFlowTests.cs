@@ -102,4 +102,49 @@ public class ApiFlowTests : IClassFixture<LifeRpgApiFactory>
         (await client.PostAsync($"/api/v1/quests/{quest.Id}/complete", null)).StatusCode
             .Should().Be(HttpStatusCode.Conflict, "daily quests complete once per day (anti-cheat)");
     }
+
+    [Fact]
+    public async Task Side_quest_cannot_be_replayed_after_completion()
+    {
+        var client = await AuthedClientAsync("side-replay@example.com");
+        await client.PostAsJsonAsync("/api/v1/heroes",
+            new CreateHeroRequest("Sia", "sia", new() { Domain.Enums.StatName.Dexterity }));
+
+        var quest = await (await client.PostAsJsonAsync("/api/v1/quests",
+            new CreateQuestRequest("Sprint", "", Domain.Enums.QuestType.Side, Domain.Enums.QuestDifficulty.Medium,
+                Domain.Enums.StatName.Dexterity, null))).Content.ReadFromJsonAsync<QuestDto>(Json);
+
+        (await client.PostAsync($"/api/v1/quests/{quest!.Id}/complete", null)).StatusCode
+            .Should().Be(HttpStatusCode.OK);
+        (await client.PostAsync($"/api/v1/quests/{quest.Id}/complete", null)).StatusCode
+            .Should().Be(HttpStatusCode.Conflict);
+    }
+
+    [Fact]
+    public async Task Boss_quest_requires_step_progression_before_reward()
+    {
+        var client = await AuthedClientAsync("boss@example.com");
+        await client.PostAsJsonAsync("/api/v1/heroes",
+            new CreateHeroRequest("Bossy", "bossy", new() { Domain.Enums.StatName.Charisma }));
+
+        var quest = await (await client.PostAsJsonAsync("/api/v1/quests",
+            new CreateQuestRequest("Lead the raid", "", Domain.Enums.QuestType.Boss, Domain.Enums.QuestDifficulty.Hard,
+                Domain.Enums.StatName.Charisma, 2))).Content.ReadFromJsonAsync<QuestDto>(Json);
+
+        (await client.PostAsync($"/api/v1/quests/{quest!.Id}/complete", null)).StatusCode
+            .Should().Be(HttpStatusCode.Conflict);
+
+        var firstStep = await (await client.PostAsync($"/api/v1/quests/{quest.Id}/boss-step", null))
+            .Content.ReadFromJsonAsync<AdvanceBossQuestResult>(Json);
+        firstStep!.Completion.Should().BeNull();
+        firstStep.Quest.CompletedSteps.Should().Be(1);
+        firstStep.Quest.IsCompleted.Should().BeFalse();
+
+        var secondStep = await (await client.PostAsync($"/api/v1/quests/{quest.Id}/boss-step", null))
+            .Content.ReadFromJsonAsync<AdvanceBossQuestResult>(Json);
+        secondStep!.Completion.Should().NotBeNull();
+        secondStep.Quest.CompletedSteps.Should().Be(2);
+        secondStep.Quest.IsCompleted.Should().BeTrue();
+        secondStep.Completion!.Hero.TotalQuestsCompleted.Should().Be(1);
+    }
 }

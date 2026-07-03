@@ -6,10 +6,13 @@
 // AsyncStorage so it survives app restarts.
 //
 // Quest *completion* is done online via the authoritative endpoint (questApi.complete) for its rich
-// modal payload; only storage mutations (quest upsert/delete, hero settings) flow through here.
+// modal payload; storage mutations and client-managed hero state (appearance, settings, daily
+// lifecycle, rest-day rewards) flow through here.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
 import { apiFetch } from './client';
+import { ApiHero, ApiQuest } from './dto';
+import { mapApiHero, mapApiQuest } from './mappers';
 import { env } from '../config/env';
 import { generateId } from '../utils/id';
 
@@ -24,10 +27,24 @@ export interface SyncOperation {
 }
 
 const QUEUE_KEY = 'life-rpg-sync-queue';
+const LAST_SYNC_KEY = 'life-rpg-last-sync-at';
 const MAX_RETRIES = 5;
+
+interface SyncBatchResponse {
+  serverTime: string;
+  applied: string[];
+  skipped: string[];
+  conflicts: { opId: string; reason: string }[];
+  serverChanges: {
+    hero: ApiHero | null;
+    quests: ApiQuest[];
+    journal: unknown[];
+  };
+}
 
 class SyncManager {
   private queue: SyncOperation[] = [];
+  private lastSyncedAt: string | null = null;
   private retries: Record<string, number> = {};
   private online = true;
   private hydrated = false;
@@ -40,8 +57,10 @@ class SyncManager {
     try {
       const raw = await AsyncStorage.getItem(QUEUE_KEY);
       if (raw) this.queue = JSON.parse(raw) as SyncOperation[];
+      this.lastSyncedAt = await AsyncStorage.getItem(LAST_SYNC_KEY);
     } catch {
       this.queue = [];
+      this.lastSyncedAt = null;
     }
     this.hydrated = true;
 
@@ -65,17 +84,25 @@ class SyncManager {
     if (env.demoMode || this.flushing || !this.online || this.queue.length === 0) return;
     this.flushing = true;
     try {
-      const operations = this.queue.slice(0, 50);
-      const result = await apiFetch<{ applied: string[]; skipped: string[] }>('/api/v1/sync', {
-        method: 'POST',
-        body: { lastSyncedAt: null, operations },
-      });
-      const settled = new Set([...result.applied, ...result.skipped]);
-      this.queue = this.queue.filter((op) => !settled.has(op.opId));
-      await this.persist();
+      while (this.online && this.queue.length > 0) {
+        const operations = this.queue.slice(0, 50);
+        const result = await apiFetch<SyncBatchResponse>('/api/v1/sync', {
+          method: 'POST',
+          body: { lastSyncedAt: this.lastSyncedAt, operations },
+        });
+        const settled = new Set([
+          ...result.applied,
+          ...result.skipped,
+          ...result.conflicts.map((conflict) => conflict.opId),
+        ]);
+        this.queue = this.queue.filter((op) => !settled.has(op.opId));
+        this.lastSyncedAt = result.serverTime;
+        this.applyServerChanges(result.serverChanges);
+        await this.persist();
+      }
     } catch {
       // Network/server error — bump retries; drop poison ops past the limit.
-      for (const op of this.queue) {
+      for (const op of this.queue.slice(0, 50)) {
         this.retries[op.opId] = (this.retries[op.opId] ?? 0) + 1;
       }
       this.queue = this.queue.filter((op) => (this.retries[op.opId] ?? 0) < MAX_RETRIES);
@@ -98,8 +125,30 @@ class SyncManager {
     this.listeners.forEach((l) => l(this.queue.length));
     try {
       await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(this.queue));
+      if (this.lastSyncedAt) {
+        await AsyncStorage.setItem(LAST_SYNC_KEY, this.lastSyncedAt);
+      } else {
+        await AsyncStorage.removeItem(LAST_SYNC_KEY);
+      }
     } catch {
       // ignore persistence failures
+    }
+  }
+
+  private applyServerChanges(changes: SyncBatchResponse['serverChanges']): void {
+    const { useHeroStore } = require('../store/heroStore') as typeof import('../store/heroStore');
+    const { useQuestStore } = require('../store/questStore') as typeof import('../store/questStore');
+    const { useSettingsStore } = require('../store/settingsStore') as typeof import('../store/settingsStore');
+    const { useSkillStore } = require('../store/skillStore') as typeof import('../store/skillStore');
+
+    if (changes.hero) {
+      useHeroStore.getState().setHero(mapApiHero(changes.hero), { isOnboarded: true });
+      useSkillStore.getState().replaceUnlockedSkills(changes.hero.unlockedSkills);
+      useSettingsStore.getState().replaceSettings(changes.hero.settings);
+    }
+
+    if (changes.quests.length > 0) {
+      useQuestStore.getState().replaceQuests(changes.quests.map(mapApiQuest));
     }
   }
 }

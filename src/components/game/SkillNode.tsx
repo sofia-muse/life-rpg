@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Skill, STAT_COLORS } from '../../types';
-import { colors, spacing, fontSize, radius } from '../../config/theme';
+import { colors, spacing, fontSize, radius, typography } from '../../config/theme';
+import { useResponsive } from '../../hooks/useResponsive';
 
 interface Props {
   skill: Skill;
@@ -12,20 +13,25 @@ interface Props {
 
 export function SkillNode({ skill, isUnlocked, progress, onPress }: Props) {
   const statColor = skill.requiredStat ? STAT_COLORS[skill.requiredStat] : colors.gold;
+  const { isDesktop, isTablet } = useResponsive();
+  const nodeSize = isDesktop ? 140 : isTablet ? 122 : 104;
 
   return (
     <TouchableOpacity
       style={[
         styles.node,
-        isUnlocked ? { borderColor: statColor, backgroundColor: `${statColor}20` } : styles.locked,
+        { width: nodeSize, minHeight: nodeSize },
+        isUnlocked ? { borderColor: statColor, backgroundColor: `${statColor}16` } : styles.locked,
       ]}
       onPress={() => onPress(skill)}
       activeOpacity={0.7}
     >
+      <View style={[styles.nodeGlow, { backgroundColor: statColor }]} />
       <Text style={styles.icon}>{skill.icon}</Text>
       <Text style={[styles.name, isUnlocked ? { color: statColor } : styles.lockedText]}>
         {skill.name}
       </Text>
+      <Text style={styles.requirement}>Lv. {skill.requiredLevel}</Text>
       {!isUnlocked && (
         <View style={styles.progressBar}>
           <View
@@ -43,38 +49,52 @@ export function SkillNode({ skill, isUnlocked, progress, onPress }: Props) {
 
 const styles = StyleSheet.create({
   node: {
-    width: 100,
-    height: 100,
     borderRadius: radius.lg,
-    borderWidth: 2,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
     margin: spacing.xs,
-    padding: spacing.xs,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xs,
+    overflow: 'hidden',
   },
   locked: {
     borderColor: colors.border,
     backgroundColor: colors.bgSecondary,
-    opacity: 0.7,
+    opacity: 0.82,
+  },
+  nodeGlow: {
+    position: 'absolute',
+    top: -20,
+    right: -16,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    opacity: 0.14,
   },
   icon: {
-    fontSize: 24,
-    marginBottom: 4,
+    fontSize: 22,
+    marginBottom: spacing.xs,
   },
   name: {
-    fontSize: fontSize.xs,
-    fontWeight: '600',
+    ...typography.bodyStrong,
+    fontSize: fontSize.sm,
     textAlign: 'center',
   },
   lockedText: {
     color: colors.textMuted,
   },
+  requirement: {
+    ...typography.eyebrow,
+    color: colors.textMuted,
+    marginTop: spacing.xs,
+  },
   progressBar: {
     width: '80%',
-    height: 3,
+    height: 4,
     backgroundColor: colors.bgInput,
     borderRadius: radius.full,
-    marginTop: 4,
+    marginTop: spacing.sm,
     overflow: 'hidden',
   },
   progressFill: {
@@ -85,6 +105,6 @@ const styles = StyleSheet.create({
     color: colors.success,
     fontSize: fontSize.xs,
     fontWeight: '700',
-    marginTop: 2,
+    marginTop: spacing.xs,
   },
 });

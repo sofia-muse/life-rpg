@@ -7,13 +7,14 @@ namespace LifeRpg.Application.Dtos;
 public static class Mapping
 {
     public static HeroDto ToDto(this Hero h) => new(
-        h.Id, h.Name, h.AvatarSeed, h.HeroLevel, h.ClassName, h.ClassTier, h.DominantStat,
-        h.TotalQuestsCompleted, h.CurrentStreak, h.LongestStreak, h.LastActiveDate, h.LastRewardDate,
-        h.TotalLoginDays, h.StatXp, h.Stats, h.Appearance, h.CharacterAppearance, h.Settings);
+        h.Id, h.Name, h.AvatarSeed, h.CreatedAt, h.UpdatedAt, h.HeroLevel, h.ClassName, h.ClassTier, h.DominantStat,
+        h.TotalQuestsCompleted, h.CurrentStreak, h.LongestStreak, h.LastActiveDate, h.LastStreakFreezeDate, h.LastRewardDate,
+        h.RestDaysUsed, h.TotalLoginDays, h.StatXp, h.Stats, h.Appearance, h.CharacterAppearance,
+        h.UnlockedSkills.OrderBy(s => s.UnlockedAt).Select(s => s.ToDto()).ToList(), h.Settings);
 
     public static QuestDto ToDto(this Quest q) => new(
         q.Id, q.Title, q.Description, q.Type, q.Difficulty, q.Stat, q.XpReward, q.IsCompleted,
-        q.IsActive, q.CompletedAt, q.Streak, q.BestStreak, q.DaysCompleted, q.TotalSteps, q.CompletedSteps);
+        q.IsActive, q.CreatedAt, q.UpdatedAt, q.CompletedAt, q.Streak, q.BestStreak, q.DaysCompleted, q.TotalSteps, q.CompletedSteps);
 
     public static UnlockedSkillDto ToDto(this UnlockedSkill s) => new(s.SkillId, s.UnlockedAt);
 

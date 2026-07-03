@@ -1,4 +1,4 @@
-import { StatName } from '../types';
+import { CharacterAppearance, HeroAppearance, StatName, UnlockedSkill } from '../types';
 
 // Wire shapes returned by the .NET API (camelCase). Stat blocks come back as objects keyed by stat.
 export interface ApiStatBlock {
@@ -14,6 +14,8 @@ export interface ApiHero {
   id: string;
   name: string;
   avatarSeed: string;
+  createdAt: string;
+  updatedAt: string;
   heroLevel: number;
   className: string;
   classTier: number;
@@ -22,10 +24,21 @@ export interface ApiHero {
   currentStreak: number;
   longestStreak: number;
   lastActiveDate: string | null;
+  lastStreakFreezeDate: string | null;
   lastRewardDate: string | null;
+  restDaysUsed: number;
   totalLoginDays: number;
   statXp: ApiStatBlock;
   stats: ApiStatBlock;
+  appearance: HeroAppearance;
+  characterAppearance: CharacterAppearance;
+  unlockedSkills: UnlockedSkill[];
+  settings: {
+    notificationsEnabled: boolean;
+    hapticEnabled: boolean;
+    reminderTime: string;
+    aiSkillsEnabled: boolean;
+  };
 }
 
 export interface ApiQuest {
@@ -38,6 +51,8 @@ export interface ApiQuest {
   xpReward: number;
   isCompleted: boolean;
   isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
   completedAt: string | null;
   streak: number;
   bestStreak: number;

@@ -9,6 +9,8 @@ interface SkillState {
   checkAndUnlockSkills: (statXP: Record<StatName, number>) => Skill[];
   isSkillUnlocked: (skillId: string) => boolean;
   getUnlockedSkillIds: () => string[];
+  replaceUnlockedSkills: (skills: UnlockedSkill[]) => void;
+  clearUnlockedSkills: () => void;
 }
 
 export const useSkillStore = create<SkillState>()(
@@ -41,6 +43,10 @@ export const useSkillStore = create<SkillState>()(
       getUnlockedSkillIds: () => {
         return get().unlockedSkills.map((s) => s.skillId);
       },
+
+      replaceUnlockedSkills: (skills) => set({ unlockedSkills: skills }),
+
+      clearUnlockedSkills: () => set({ unlockedSkills: [] }),
     }),
     {
       name: 'life-rpg-skills',

@@ -1,15 +1,58 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView, ViewStyle, Platform } from 'react-native';
-import { colors } from '../../config/theme';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  ViewStyle,
+  Platform,
+  StyleProp,
+  ScrollViewProps,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { colors, spacing } from '../../config/theme';
+import { resolveContentWidth, useResponsive } from '../../hooks/useResponsive';
 
 interface Props {
   children: React.ReactNode;
   scroll?: boolean;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
+  contentStyle?: StyleProp<ViewStyle>;
+  contentWidth?: 'compact' | 'regular' | 'wide' | 'full';
+  noTopPadding?: boolean;
+  scrollProps?: Omit<ScrollViewProps, 'contentContainerStyle' | 'style'>;
 }
 
-export function ScreenWrapper({ children, scroll = true, style }: Props) {
-  const content = <View style={[styles.container, style]}>{children}</View>;
+export function ScreenWrapper({
+  children,
+  scroll = true,
+  style,
+  contentStyle,
+  contentWidth = 'regular',
+  noTopPadding = false,
+  scrollProps,
+}: Props) {
+  const insets = useSafeAreaInsets();
+  const { horizontalPadding } = useResponsive();
+  const resolvedWidth = resolveContentWidth(contentWidth);
+  const topPadding = noTopPadding ? spacing.md : Platform.OS === 'web' ? spacing.lg : insets.top + spacing.md;
+
+  const content = (
+    <View
+      style={[
+        styles.container,
+        {
+          paddingHorizontal: horizontalPadding,
+          paddingTop: topPadding,
+          paddingBottom: Math.max(insets.bottom + spacing.xl, spacing.xl),
+        },
+        contentWidth !== 'full' && styles.centered,
+        resolvedWidth ? { maxWidth: resolvedWidth } : null,
+        style,
+      ]}
+    >
+      <View style={[styles.inner, contentStyle]}>{children}</View>
+    </View>
+  );
 
   if (scroll) {
     return (
@@ -17,6 +60,7 @@ export function ScreenWrapper({ children, scroll = true, style }: Props) {
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        {...scrollProps}
       >
         {content}
       </ScrollView>
@@ -36,13 +80,12 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'web' ? 16 : 48,
-    // On web (the hosted demo, viewed on desktop) keep the app phone-shaped and centered
-    // instead of stretching edge-to-edge.
-    ...Platform.select({
-      web: { width: '100%', maxWidth: 480, alignSelf: 'center' as const },
-      default: {},
-    }),
+    width: '100%',
+  },
+  centered: {
+    alignSelf: 'center',
+  },
+  inner: {
+    width: '100%',
   },
 });

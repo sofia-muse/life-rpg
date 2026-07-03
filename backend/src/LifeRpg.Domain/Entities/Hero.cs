@@ -27,6 +27,7 @@ public class Hero : Entity
     public int CurrentStreak { get; set; }
     public int LongestStreak { get; set; }
     public DateOnly? LastActiveDate { get; set; }
+    public DateOnly? LastStreakFreezeDate { get; set; }
     public int RestDaysUsed { get; set; }
 
     // Daily reward.

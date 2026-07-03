@@ -23,6 +23,9 @@ public class HeroesController : ApiControllerBase
     public async Task<IActionResult> UpdateAppearance(UpdateAppearanceRequest request) =>
         ToResponse(await _heroes.UpdateAppearanceAsync(request));
 
+    [HttpDelete("me")]
+    public async Task<IActionResult> DeleteMine() => ToResponse(await _heroes.DeleteAsync());
+
     [HttpGet("me/stats")]
     public async Task<IActionResult> Stats() => ToResponse(await _heroes.GetStatsAsync());
 }

@@ -5,16 +5,11 @@ import { QuestCard } from '../../src/components/game/QuestCard';
 import { XPPopup } from '../../src/components/game/XPPopup';
 import { useQuestStore } from '../../src/store/questStore';
 import { useHeroStore } from '../../src/store/heroStore';
-import { useSkillStore } from '../../src/store/skillStore';
-import { useJournalStore } from '../../src/store/journalStore';
+import { useGameplayStore } from '../../src/store/gameplayStore';
 import { useUIStore } from '../../src/store/uiStore';
 import { Card } from '../../src/components/layout/Card';
 import { colors, spacing, fontSize, radius } from '../../src/config/theme';
 import { STAT_COLORS, STAT_ICONS, DIFFICULTY_XP } from '../../src/types';
-import { calculateXPReward } from '../../src/engine/xpEngine';
-import { getStreakMultiplier } from '../../src/engine/streakEngine';
-import { getSkillBonusForStat } from '../../src/engine/skillEngine';
-import { generateQuestNarrative } from '../../src/engine/journalEngine';
 import { getAllTemplates, QuestTemplate } from '../../src/config/questTemplates';
 
 type Tab = 'daily' | 'side' | 'boss';
@@ -24,15 +19,13 @@ export default function QuestsScreen() {
   const {
     quests,
     addQuest,
-    completeQuest,
     deleteQuest,
     getDailyQuests,
     getSideQuests,
     getBossQuests,
   } = useQuestStore();
-  const { hero, addXP, recordQuestCompletion, checkAppearanceUnlocks } = useHeroStore();
-  const { checkAndUnlockSkills, getUnlockedSkillIds } = useSkillStore();
-  const { updateTodayEntry } = useJournalStore();
+  const { hero } = useHeroStore();
+  const completeQuest = useGameplayStore((s) => s.completeQuest);
   const {
     showXP,
     setLevelUp,
@@ -73,78 +66,58 @@ export default function QuestsScreen() {
   );
 
   const handleComplete = useCallback(
-    (questId: string) => {
-      if (!hero) return;
+    async (questId: string) => {
+      const result = await completeQuest(questId);
+      if (!result) return;
 
-      const quest = completeQuest(questId);
-      if (!quest) return;
-
-      // Calculate XP
-      const streakMult = getStreakMultiplier(hero.currentStreak);
-      const skillBonus = getSkillBonusForStat(quest.stat, getUnlockedSkillIds());
-      const xpReward = calculateXPReward(quest.difficulty, streakMult, skillBonus);
-
-      // Apply XP
-      const levelResult = addXP(quest.stat, xpReward.totalXP);
-      recordQuestCompletion();
-
-      // Show XP popup
-      showXP(quest.stat, xpReward.totalXP);
-
-      // Trigger character celebration
       setCharacterEvent('questComplete');
       setTimeout(() => setCharacterEvent('idle'), 1500);
 
-      // Check level up
-      if (levelResult) {
+      if (result.stepAdvancedOnly || !result.completed) {
+        return;
+      }
+
+      showXP(result.quest.stat, result.xpAwarded);
+
+      if (result.levelResult) {
         setTimeout(() => {
-          setLevelUp(levelResult.stat, levelResult.newLevel);
+          setLevelUp(result.levelResult!.stat, result.levelResult!.newLevel);
         }, 1200);
 
-        // Check tier up
-        if (levelResult.tierUp) {
+        if (result.levelResult.tierUp) {
           setTimeout(() => {
-            setTierUp(levelResult.tierUp!.newTier, levelResult.tierUp!.newClass);
+            setTierUp(result.levelResult!.tierUp!.newTier, result.levelResult!.tierUp!.newClass);
           }, 2500);
         }
       }
 
-      // Check skill unlocks
-      if (hero) {
-        const newSkills = checkAndUnlockSkills(hero.statXP);
-        if (newSkills.length > 0) {
-          setTimeout(
-            () => {
-              setSkillUnlock(newSkills[0]);
-            },
-            levelResult ? 3000 : 1200,
-          );
-        }
+      if (result.newSkills.length > 0) {
+        setTimeout(
+          () => {
+            setSkillUnlock(result.newSkills[0]);
+          },
+          result.levelResult ? 3000 : 1200,
+        );
       }
 
-      // Check appearance unlocks
-      const appearanceResult = checkAppearanceUnlocks();
-      if (appearanceResult) {
-        const delay = levelResult ? 4000 : 2000;
-        if (appearanceResult.shapes.length > 0) {
-          setTimeout(() => setAppearanceUnlock('shape', appearanceResult.shapes[0]), delay);
-        } else if (appearanceResult.sigils.length > 0) {
-          setTimeout(() => setAppearanceUnlock('sigil', appearanceResult.sigils[0]), delay);
+      if (result.appearanceUnlock) {
+        const delay = result.levelResult ? 4000 : 2000;
+        if (result.appearanceUnlock.shapes.length > 0) {
+          setTimeout(() => setAppearanceUnlock('shape', result.appearanceUnlock!.shapes[0]), delay);
+        } else if (result.appearanceUnlock.sigils.length > 0) {
+          setTimeout(() => setAppearanceUnlock('sigil', result.appearanceUnlock!.sigils[0]), delay);
         }
       }
-
-      // Update journal
-      const narrative = generateQuestNarrative(quest);
-      updateTodayEntry({
-        narrative,
-        questsCompleted: [quest.id],
-        xpGained: {
-          ...{ strength: 0, vitality: 0, intelligence: 0, charisma: 0, dexterity: 0, willpower: 0 },
-          [quest.stat]: xpReward.totalXP,
-        },
-      });
     },
-    [hero],
+    [
+      completeQuest,
+      setAppearanceUnlock,
+      setCharacterEvent,
+      setLevelUp,
+      setSkillUnlock,
+      setTierUp,
+      showXP,
+    ],
   );
 
   const filteredQuests = tabQuests[activeTab];

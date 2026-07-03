@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch } from 're
 import { useHeroStore } from '../../store/heroStore';
 import { HeroCrest } from './HeroCrest';
 import { StatRadar } from './StatRadar';
-import { colors, spacing, fontSize, radius } from '../../config/theme';
+import { colors, spacing, fontSize, radius, typography } from '../../config/theme';
 import { CrestShape, SigilStyle, AccentOverride, STAT_COLORS, STAT_NAMES } from '../../types';
 import { APPEARANCE_UNLOCKS, ACCENT_COLORS } from '../../config/appearanceConfig';
 
@@ -150,20 +150,23 @@ export function CrestCustomizer() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bgPrimary,
+    backgroundColor: 'transparent',
   },
   content: {
-    padding: spacing.lg,
     paddingBottom: spacing.xxl,
   },
   preview: {
     alignItems: 'center',
     paddingVertical: spacing.xl,
+    borderRadius: radius.xxl,
+    backgroundColor: colors.bgCardMuted,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: spacing.md,
   },
   sectionTitle: {
-    color: colors.textAccent,
-    fontSize: fontSize.lg,
-    fontWeight: '700',
+    ...typography.sectionTitle,
+    color: colors.textPrimary,
     marginTop: spacing.lg,
     marginBottom: spacing.sm,
   },
@@ -171,9 +174,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   option: {
-    backgroundColor: colors.bgCard,
+    backgroundColor: colors.bgCardMuted,
     borderRadius: radius.lg,
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: colors.border,
     padding: spacing.md,
     marginRight: spacing.sm,
@@ -192,12 +195,12 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   optionLabel: {
+    ...typography.bodyStrong,
     color: colors.textSecondary,
     fontSize: fontSize.sm,
-    fontWeight: '600',
   },
   optionLabelSelected: {
-    color: colors.gold,
+    color: colors.textPrimary,
   },
   lockText: {
     color: colors.textMuted,
@@ -211,9 +214,9 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   gridOption: {
-    backgroundColor: colors.bgCard,
+    backgroundColor: colors.bgCardMuted,
     borderRadius: radius.lg,
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: colors.border,
     padding: spacing.md,
     alignItems: 'center',
@@ -245,9 +248,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   colorLabel: {
+    ...typography.eyebrow,
     color: colors.textMuted,
     fontSize: fontSize.xs,
-    fontWeight: '600',
   },
   toggleRow: {
     flexDirection: 'row',
@@ -257,9 +260,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   toggleLabel: {
+    ...typography.bodyStrong,
     color: colors.textPrimary,
-    fontSize: fontSize.md,
-    fontWeight: '600',
   },
   radarContainer: {
     alignItems: 'center',

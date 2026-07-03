@@ -1,12 +1,13 @@
 import React, { useRef, useEffect } from 'react';
 import { Animated, StyleSheet } from 'react-native';
 import Avatar from '@zamplyy/react-native-nice-avatar';
-import LottieView from 'lottie-react-native';
 import { CharacterAppearance, StatName, ClassTier } from '../../types';
 import { buildNiceAvatarConfig } from '../../config/anime/niceAvatarConfig';
 import { useCharacterAnimations } from './anime/useCharacterAnimations';
 import { useExpressionState, CharacterEvent } from './anime/useExpressionState';
 import { useHeroStore } from '../../store/heroStore';
+import AppLottie from '../animated/AppLottie';
+import { AppLottieHandle } from '../animated/AppLottie.types';
 
 interface Props {
   appearance: CharacterAppearance;
@@ -27,8 +28,8 @@ export function NiceAvatarCharacter({
   const { mood } = useExpressionState(hero);
   const anims = useCharacterAnimations(event);
 
-  const sparkleRef = useRef<LottieView>(null);
-  const levelUpRef = useRef<LottieView>(null);
+  const sparkleRef = useRef<AppLottieHandle>(null);
+  const levelUpRef = useRef<AppLottieHandle>(null);
 
   useEffect(() => {
     if (event === 'questComplete' && sparkleRef.current) {
@@ -52,7 +53,7 @@ export function NiceAvatarCharacter({
     >
       {/* Lottie: Aura glow for tier 3+ */}
       {classTier >= 3 && (
-        <LottieView
+        <AppLottie
           source={require('../../../assets/animations/aura-glow.json')}
           autoPlay
           loop
@@ -62,7 +63,7 @@ export function NiceAvatarCharacter({
       )}
 
       {/* Lottie: Sparkle (quest complete) */}
-      <LottieView
+      <AppLottie
         ref={sparkleRef}
         source={require('../../../assets/animations/sparkle.json')}
         loop={false}
@@ -72,7 +73,7 @@ export function NiceAvatarCharacter({
       />
 
       {/* Lottie: Level up burst */}
-      <LottieView
+      <AppLottie
         ref={levelUpRef}
         source={require('../../../assets/animations/levelup.json')}
         loop={false}

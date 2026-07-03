@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useHeroStore } from '../../store/heroStore';
 import { NiceAvatarCharacter } from './NiceAvatarCharacter';
-import { colors, spacing, fontSize, radius } from '../../config/theme';
+import { colors, spacing, fontSize, radius, typography } from '../../config/theme';
 import {
   Gender,
   SkinTone,
@@ -144,13 +144,20 @@ export function CharacterCustomizer() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bgPrimary },
-  content: { padding: spacing.lg, paddingBottom: spacing.xxl },
-  preview: { alignItems: 'center', paddingVertical: spacing.xl },
+  container: { flex: 1, backgroundColor: 'transparent' },
+  content: { paddingBottom: spacing.xxl },
+  preview: {
+    alignItems: 'center',
+    paddingVertical: spacing.xl,
+    borderRadius: radius.xxl,
+    backgroundColor: colors.bgCardMuted,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: spacing.md,
+  },
   sectionTitle: {
-    color: colors.textAccent,
-    fontSize: fontSize.lg,
-    fontWeight: '700',
+    ...typography.sectionTitle,
+    color: colors.textPrimary,
     marginTop: spacing.lg,
     marginBottom: spacing.sm,
   },
@@ -160,9 +167,9 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   option: {
-    backgroundColor: colors.bgCard,
-    borderRadius: radius.md,
-    borderWidth: 2,
+    backgroundColor: colors.bgCardMuted,
+    borderRadius: radius.lg,
+    borderWidth: 1,
     borderColor: colors.border,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
@@ -175,12 +182,12 @@ const styles = StyleSheet.create({
     backgroundColor: `${colors.gold}15`,
   },
   optionText: {
+    ...typography.bodyStrong,
     color: colors.textSecondary,
     fontSize: fontSize.sm,
-    fontWeight: '600',
   },
   optionTextActive: {
-    color: colors.gold,
+    color: colors.textPrimary,
   },
   swatch: {
     width: 44,
@@ -194,9 +201,9 @@ const styles = StyleSheet.create({
     borderWidth: 3,
   },
   hint: {
+    ...typography.journalItalic,
     color: colors.textMuted,
     fontSize: fontSize.sm,
-    fontStyle: 'italic',
     textAlign: 'center',
     marginTop: spacing.xl,
   },

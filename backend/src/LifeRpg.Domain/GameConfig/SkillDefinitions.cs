@@ -17,6 +17,13 @@ public sealed record SkillDefinition(
 /// <summary>The skill catalog (24 skills). Faithful port of the client's skills.ts.</summary>
 public static class SkillDefinitions
 {
+    private static SkillEffectDefinition.QuestXpBonus QuestXpBonus(
+        int percent,
+        IReadOnlyList<StatName>? stats = null,
+        IReadOnlyList<QuestType>? questTypes = null,
+        bool appliesToAllQuests = false) =>
+        new(percent, stats, questTypes, appliesToAllQuests);
+
     public static readonly IReadOnlyList<SkillDefinition> All = new[]
     {
         // Strength (3)
@@ -55,5 +62,37 @@ public static class SkillDefinitions
     private static readonly IReadOnlyDictionary<string, SkillDefinition> ById =
         All.ToDictionary(s => s.Id);
 
+    private static readonly IReadOnlyDictionary<string, IReadOnlyList<SkillEffectDefinition>> EffectsById =
+        new Dictionary<string, IReadOnlyList<SkillEffectDefinition>>
+        {
+            ["str-1"] = new SkillEffectDefinition[] { QuestXpBonus(5, new[] { StatName.Strength }) },
+            ["str-2"] = new SkillEffectDefinition[] { new SkillEffectDefinition.DisplayText("Unlock Hard difficulty Strength quests") },
+            ["str-3"] = new SkillEffectDefinition[] { QuestXpBonus(10, new[] { StatName.Strength, StatName.Vitality, StatName.Dexterity }) },
+            ["vit-1"] = new SkillEffectDefinition[] { new SkillEffectDefinition.RestDayXp(StatName.Vitality, 15) },
+            ["vit-2"] = new SkillEffectDefinition[] { new SkillEffectDefinition.StreakRetention(50) },
+            ["vit-3"] = new SkillEffectDefinition[] { QuestXpBonus(10, new[] { StatName.Vitality }) },
+            ["int-1"] = new SkillEffectDefinition[] { QuestXpBonus(5, new[] { StatName.Intelligence }) },
+            ["int-2"] = new SkillEffectDefinition[] { QuestXpBonus(10, questTypes: new[] { QuestType.Side }) },
+            ["int-3"] = new SkillEffectDefinition[] { QuestXpBonus(10, new[] { StatName.Intelligence }) },
+            ["cha-1"] = new SkillEffectDefinition[] { QuestXpBonus(5, new[] { StatName.Charisma }) },
+            ["cha-2"] = new SkillEffectDefinition[] { QuestXpBonus(10, questTypes: new[] { QuestType.Boss }) },
+            ["cha-3"] = new SkillEffectDefinition[] { QuestXpBonus(10, new[] { StatName.Charisma }) },
+            ["dex-1"] = new SkillEffectDefinition[] { QuestXpBonus(5, new[] { StatName.Dexterity }) },
+            ["dex-2"] = new SkillEffectDefinition[] { new SkillEffectDefinition.ActiveDailyQuestCapacity(2) },
+            ["dex-3"] = new SkillEffectDefinition[] { QuestXpBonus(10, new[] { StatName.Dexterity }) },
+            ["wil-1"] = new SkillEffectDefinition[] { QuestXpBonus(5, new[] { StatName.Willpower }) },
+            ["wil-2"] = new SkillEffectDefinition[] { new SkillEffectDefinition.StreakFreeze(1) },
+            ["wil-3"] = new SkillEffectDefinition[] { QuestXpBonus(10, new[] { StatName.Willpower }) },
+            ["cross-1"] = new SkillEffectDefinition[] { QuestXpBonus(5, new[] { StatName.Strength, StatName.Intelligence }) },
+            ["cross-2"] = new SkillEffectDefinition[] { QuestXpBonus(5, new[] { StatName.Strength, StatName.Charisma }) },
+            ["cross-3"] = new SkillEffectDefinition[] { QuestXpBonus(5, new[] { StatName.Vitality, StatName.Willpower }) },
+            ["cross-4"] = new SkillEffectDefinition[] { QuestXpBonus(5, new[] { StatName.Dexterity, StatName.Intelligence }) },
+            ["cross-5"] = new SkillEffectDefinition[] { QuestXpBonus(5, new[] { StatName.Charisma, StatName.Intelligence }) },
+            ["cross-6"] = new SkillEffectDefinition[] { QuestXpBonus(3, appliesToAllQuests: true) },
+        };
+
     public static SkillDefinition? GetById(string id) => ById.GetValueOrDefault(id);
+
+    public static IReadOnlyList<SkillEffectDefinition> GetEffects(string id) =>
+        EffectsById.GetValueOrDefault(id) ?? Array.Empty<SkillEffectDefinition>();
 }

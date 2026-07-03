@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
+import { ScreenWrapper } from '../src/components/layout/ScreenWrapper';
+import { PageHeader } from '../src/components/layout/PageHeader';
+import { Card } from '../src/components/layout/Card';
 import { CharacterCustomizer } from '../src/components/avatar/CharacterCustomizer';
 import { CrestCustomizer } from '../src/components/avatar/CrestCustomizer';
-import { colors, spacing, fontSize, radius } from '../src/config/theme';
+import { colors, spacing, fontSize, radius, typography } from '../src/config/theme';
 
 type Tab = 'character' | 'crest';
 
@@ -12,86 +15,81 @@ export default function CustomizeScreen() {
   const [tab, setTab] = useState<Tab>('character');
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Text style={styles.backText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Customize</Text>
-        <View style={styles.backBtn} />
-      </View>
+    <ScreenWrapper scroll={false} contentWidth="wide">
+      <PageHeader
+        eyebrow="Hero Workshop"
+        title="Customize"
+        subtitle="Refine the face your journey presents to the world, from your character to your crest."
+        action={
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <Text style={styles.backText}>Back</Text>
+          </TouchableOpacity>
+        }
+      />
 
-      <View style={styles.tabs}>
-        <TouchableOpacity
-          style={[styles.tab, tab === 'character' && styles.tabActive]}
-          onPress={() => setTab('character')}
-        >
-          <Text style={[styles.tabText, tab === 'character' && styles.tabTextActive]}>
-            Character
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, tab === 'crest' && styles.tabActive]}
-          onPress={() => setTab('crest')}
-        >
-          <Text style={[styles.tabText, tab === 'crest' && styles.tabTextActive]}>Crest</Text>
-        </TouchableOpacity>
-      </View>
+      <Card style={styles.tabsCard}>
+        <View style={styles.tabs}>
+          <TouchableOpacity
+            style={[styles.tab, tab === 'character' && styles.tabActive]}
+            onPress={() => setTab('character')}
+          >
+            <Text style={[styles.tabText, tab === 'character' && styles.tabTextActive]}>
+              Character
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, tab === 'crest' && styles.tabActive]}
+            onPress={() => setTab('crest')}
+          >
+            <Text style={[styles.tabText, tab === 'crest' && styles.tabTextActive]}>Crest</Text>
+          </TouchableOpacity>
+        </View>
+      </Card>
 
-      {tab === 'character' ? <CharacterCustomizer /> : <CrestCustomizer />}
-    </View>
+      <View style={styles.content}>{tab === 'character' ? <CharacterCustomizer /> : <CrestCustomizer />}</View>
+    </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.bgPrimary,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.sm,
-  },
   backBtn: {
-    width: 70,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.bgInset,
   },
   backText: {
-    color: colors.gold,
+    ...typography.eyebrow,
+    color: colors.textAccent,
     fontSize: fontSize.md,
-    fontWeight: '600',
   },
-  title: {
-    color: colors.textPrimary,
-    fontSize: fontSize.xl,
-    fontWeight: '900',
-    textAlign: 'center',
-  },
+  tabsCard: { marginBottom: spacing.md },
   tabs: {
     flexDirection: 'row',
-    marginHorizontal: spacing.md,
-    marginBottom: spacing.sm,
     gap: spacing.sm,
   },
   tab: {
     flex: 1,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.md,
-    backgroundColor: colors.bgSecondary,
+    paddingVertical: spacing.sm + 2,
+    borderRadius: radius.lg,
+    backgroundColor: colors.bgInset,
+    borderWidth: 1,
+    borderColor: colors.border,
     alignItems: 'center',
   },
   tabActive: {
-    backgroundColor: colors.gold,
+    backgroundColor: colors.goldSoft,
+    borderColor: colors.goldBorder,
   },
   tabText: {
+    ...typography.eyebrow,
     color: colors.textMuted,
     fontSize: fontSize.sm,
-    fontWeight: '600',
   },
   tabTextActive: {
-    color: colors.bgPrimary,
+    color: colors.textPrimary,
   },
+  content: { flex: 1 },
 });

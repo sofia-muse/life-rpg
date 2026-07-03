@@ -74,6 +74,7 @@ public class QuestCompletionConfiguration : IEntityTypeConfiguration<QuestComple
         b.HasKey(c => c.Id);
         b.Property(c => c.Stat).HasConversion<string>().HasMaxLength(20);
         b.HasIndex(c => new { c.HeroId, c.CompletionDate });
+        b.HasIndex(c => new { c.QuestId, c.CompletionDate }).IsUnique();
     }
 }
 

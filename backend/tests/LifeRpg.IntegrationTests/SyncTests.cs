@@ -68,4 +68,106 @@ public class SyncTests : IClassFixture<LifeRpgApiFactory>
         var quests = await client.GetFromJsonAsync<List<QuestDto>>("/api/v1/quests", Json);
         quests!.Count(q => q.Title == "Offline quest").Should().Be(1);
     }
+
+    [Fact]
+    public async Task Sync_rejects_stale_quest_overwrites()
+    {
+        var client = await AuthedHeroClientAsync("sync-stale@example.com");
+        var questId = Guid.NewGuid();
+        var createdAt = DateTimeOffset.UtcNow.AddMinutes(-10);
+        var freshUpdatedAt = DateTimeOffset.UtcNow.AddMinutes(-1);
+        var staleUpdatedAt = DateTimeOffset.UtcNow.AddMinutes(-5);
+
+        var createBatch = new
+        {
+            lastSyncedAt = (DateTimeOffset?)null,
+            operations = new[]
+            {
+                new
+                {
+                    opId = "op-create",
+                    entity = "quest",
+                    action = "upsert",
+                    payload = new
+                    {
+                        id = questId,
+                        title = "Original",
+                        description = "",
+                        type = "side",
+                        difficulty = "easy",
+                        stat = "dexterity",
+                        isCompleted = false,
+                        isActive = true,
+                        createdAt,
+                        updatedAt = createdAt,
+                    }
+                }
+            }
+        };
+
+        var freshBatch = new
+        {
+            lastSyncedAt = (DateTimeOffset?)null,
+            operations = new[]
+            {
+                new
+                {
+                    opId = "op-fresh",
+                    entity = "quest",
+                    action = "upsert",
+                    payload = new
+                    {
+                        id = questId,
+                        title = "Fresh title",
+                        description = "",
+                        type = "side",
+                        difficulty = "easy",
+                        stat = "dexterity",
+                        isCompleted = false,
+                        isActive = true,
+                        createdAt,
+                        updatedAt = freshUpdatedAt,
+                    }
+                }
+            }
+        };
+
+        var staleBatch = new
+        {
+            lastSyncedAt = (DateTimeOffset?)null,
+            operations = new[]
+            {
+                new
+                {
+                    opId = "op-stale",
+                    entity = "quest",
+                    action = "upsert",
+                    payload = new
+                    {
+                        id = questId,
+                        title = "Stale title",
+                        description = "",
+                        type = "side",
+                        difficulty = "easy",
+                        stat = "dexterity",
+                        isCompleted = false,
+                        isActive = true,
+                        createdAt,
+                        updatedAt = staleUpdatedAt,
+                    }
+                }
+            }
+        };
+
+        await client.PostAsJsonAsync("/api/v1/sync", createBatch);
+        await client.PostAsJsonAsync("/api/v1/sync", freshBatch);
+        var stale = await (await client.PostAsJsonAsync("/api/v1/sync", staleBatch))
+            .Content.ReadFromJsonAsync<SyncBatchResult>(Json);
+
+        stale!.Conflicts.Should().ContainSingle();
+        stale.Conflicts[0].OpId.Should().Be("op-stale");
+
+        var quests = await client.GetFromJsonAsync<List<QuestDto>>("/api/v1/quests", Json);
+        quests!.Single(q => q.Id == questId).Title.Should().Be("Fresh title");
+    }
 }

@@ -6,7 +6,16 @@ import {
   getStreakAfterBreak,
   getNextMilestone,
 } from '../streakEngine';
-import { getNewlyUnlockedSkills, getSkillBonusForStat, isSkillUnlockable } from '../skillEngine';
+import {
+  getActiveDailyQuestCapacityBonus,
+  getNewlyUnlockedSkills,
+  getQuestSkillBonus,
+  getRestDayXpReward,
+  getSkillBonusForStat,
+  getStreakRetentionRatio,
+  getWeeklyStreakFreezeAllowance,
+  isSkillUnlockable,
+} from '../skillEngine';
 import { checkClassEvolution } from '../classEngine';
 import { getSkillById } from '../../config/skills';
 
@@ -99,10 +108,24 @@ describe('skillEngine', () => {
     expect(getSkillBonusForStat('vitality', ['str-1'])).toBe(0);
   });
 
+  it('applies quest-type skill bonuses with typed effects', () => {
+    expect(getQuestSkillBonus({ stat: 'strength', type: 'side' }, ['int-2'])).toBe(10);
+    expect(getQuestSkillBonus({ stat: 'charisma', type: 'boss' }, ['cha-2'])).toBe(10);
+    expect(getQuestSkillBonus({ stat: 'charisma', type: 'daily' }, ['cha-2'])).toBe(0);
+  });
+
   it('Zen Master (cross-6) applies to all stats', () => {
     (
       ['strength', 'vitality', 'intelligence', 'charisma', 'dexterity', 'willpower'] as StatName[]
     ).forEach((stat) => expect(getSkillBonusForStat(stat, ['cross-6'])).toBe(3));
+  });
+
+  it('exposes typed daily lifecycle bonuses', () => {
+    expect(getRestDayXpReward([])).toBe(10);
+    expect(getRestDayXpReward(['vit-1'])).toBe(15);
+    expect(getStreakRetentionRatio(['vit-2'])).toBe(0.5);
+    expect(getWeeklyStreakFreezeAllowance(['wil-2'])).toBe(1);
+    expect(getActiveDailyQuestCapacityBonus(['dex-2'])).toBe(2);
   });
 
   it('isSkillUnlockable matches the unlock list', () => {
