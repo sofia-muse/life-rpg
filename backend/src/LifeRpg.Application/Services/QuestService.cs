@@ -236,6 +236,7 @@ public class QuestService
         quest.Streak += 1;
         quest.BestStreak = Math.Max(quest.BestStreak, quest.Streak);
         quest.DaysCompleted += 1;
+        QuestEvolutionResolver.Apply(quest);
         hero.TotalQuestsCompleted += 1;
 
         _db.QuestCompletions.Add(new QuestCompletion

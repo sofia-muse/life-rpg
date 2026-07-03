@@ -14,7 +14,7 @@ import { XPPopup } from '../../src/components/game/XPPopup';
 import { FadeIn } from '../../src/components/animated/FadeIn';
 import { HeroShareCard } from '../../src/components/game/HeroShareCard';
 import { DailyRewardModal } from '../../src/components/game/DailyRewardModal';
-import { colors, spacing, fontSize } from '../../src/config/theme';
+import { colors, spacing, fontSize, typography } from '../../src/config/theme';
 import { STAT_NAMES, STAT_COLORS } from '../../src/types';
 import { getStatDisplayProgress } from '../../src/engine/xpEngine';
 
@@ -62,6 +62,10 @@ export default function DashboardScreen() {
 
   const activeQuests = getActiveQuests();
   const todayQuests = activeQuests.filter((q) => q.type === 'daily');
+  const homeBlessing =
+    todayQuests.length > 0
+      ? `${todayQuests.length} small quest${todayQuests.length === 1 ? '' : 's'} await your light today.`
+      : 'The sanctuary is quiet. Choose one gentle quest when you are ready.';
 
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
@@ -96,6 +100,7 @@ export default function DashboardScreen() {
             <View style={styles.headerInfo}>
               <Text style={styles.heroName}>{hero.name}</Text>
               <Badge label={hero.className} color={STAT_COLORS[hero.dominantStat]} />
+              <Text style={styles.heroBlessing}>{homeBlessing}</Text>
               <Text style={styles.heroLevel}>Hero Level {hero.heroLevel}</Text>
             </View>
             <TouchableOpacity onPress={() => router.push('/modal')} style={styles.settingsBtn}>
@@ -112,7 +117,7 @@ export default function DashboardScreen() {
         {/* Stat Bars */}
         <FadeIn delay={200} slideFrom="bottom">
           <Card style={styles.statsCard}>
-            <Text style={styles.sectionTitle}>Stats</Text>
+            <Text style={styles.sectionTitle}>Heroic Attributes</Text>
             {STAT_NAMES.map((stat, i) => {
               const display = getStatDisplayProgress(hero.statXP[stat]);
               return (
@@ -135,7 +140,9 @@ export default function DashboardScreen() {
           <Card style={styles.questSummary}>
             <Text style={styles.sectionTitle}>Today&apos;s Quests</Text>
             {todayQuests.length === 0 ? (
-              <Text style={styles.emptyText}>No active quests. Head to the Quests tab!</Text>
+              <Text style={styles.emptyText}>
+                No active quests yet. Visit Quests and choose one small act to begin the day.
+              </Text>
             ) : (
               todayQuests.map((quest, i) => (
                 <FadeIn key={quest.id} delay={600 + i * 60} slideFrom="right" slideDistance={12}>
@@ -159,11 +166,11 @@ export default function DashboardScreen() {
           <View style={styles.quickStats}>
             <Card style={styles.quickStatCard}>
               <Text style={styles.quickStatNum}>{hero.totalQuestsCompleted}</Text>
-              <Text style={styles.quickStatLabel}>Quests Done</Text>
+              <Text style={styles.quickStatLabel}>Quests Honored</Text>
             </Card>
             <Card style={styles.quickStatCard}>
               <Text style={styles.quickStatNum}>{hero.longestStreak}</Text>
-              <Text style={styles.quickStatLabel}>Best Streak</Text>
+              <Text style={styles.quickStatLabel}>Steady Days</Text>
             </Card>
           </View>
         </FadeIn>
@@ -199,8 +206,22 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xxl,
     fontWeight: '900',
     marginBottom: spacing.xs,
+    ...typography.heading,
   },
-  heroLevel: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: spacing.xs },
+  heroBlessing: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    lineHeight: 18,
+    marginTop: spacing.sm,
+    ...typography.journal,
+  },
+  heroLevel: {
+    color: colors.textAccent,
+    fontSize: fontSize.sm,
+    marginTop: spacing.xs,
+    textTransform: 'uppercase',
+    ...typography.headingWide,
+  },
   settingsBtn: { padding: spacing.xs },
   settingsIcon: { color: colors.textMuted, fontSize: 22 },
   statsCard: { marginBottom: spacing.md },
@@ -209,15 +230,34 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg,
     fontWeight: '700',
     marginBottom: spacing.md,
+    textTransform: 'uppercase',
+    ...typography.headingWide,
   },
   questSummary: { marginBottom: spacing.md },
-  emptyText: { color: colors.textMuted, fontSize: fontSize.sm, fontStyle: 'italic' },
+  emptyText: {
+    color: colors.textMuted,
+    fontSize: fontSize.sm,
+    fontStyle: 'italic',
+    lineHeight: 18,
+    ...typography.journal,
+  },
   questRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.xs },
   questDot: { width: 8, height: 8, borderRadius: 4, marginRight: spacing.sm },
-  questTitle: { flex: 1, color: colors.textPrimary, fontSize: fontSize.md },
-  questXP: { fontSize: fontSize.sm, fontWeight: '700' },
+  questTitle: { flex: 1, color: colors.textPrimary, fontSize: fontSize.md, ...typography.body },
+  questXP: { fontSize: fontSize.sm, fontWeight: '700', ...typography.headingWide },
   quickStats: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.xl },
   quickStatCard: { flex: 1, alignItems: 'center' },
-  quickStatNum: { color: colors.textAccent, fontSize: fontSize.xxl, fontWeight: '900' },
-  quickStatLabel: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: 2 },
+  quickStatNum: {
+    color: colors.textAccent,
+    fontSize: fontSize.xxl,
+    fontWeight: '900',
+    ...typography.heading,
+  },
+  quickStatLabel: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    marginTop: 2,
+    textTransform: 'uppercase',
+    ...typography.headingWide,
+  },
 });

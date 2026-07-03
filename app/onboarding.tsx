@@ -5,7 +5,7 @@ import { Button } from '../src/components/layout/Button';
 import { Card } from '../src/components/layout/Card';
 import { useHeroStore } from '../src/store/heroStore';
 import { useQuestStore } from '../src/store/questStore';
-import { colors, spacing, fontSize, radius } from '../src/config/theme';
+import { colors, spacing, fontSize, radius, typography } from '../src/config/theme';
 import {
   Gender,
   SkinTone,
@@ -125,8 +125,8 @@ export default function OnboardingScreen() {
             <Text style={styles.bigIcon}>⚔️</Text>
             <Text style={styles.heading}>Welcome, Adventurer</Text>
             <Text style={styles.body}>
-              Your real life is about to become an epic quest.{'\n\n'}
-              Build habits. Gain XP. Level up your life.
+              Your real life can become a gentler kind of quest.{'\n\n'}
+              Build small rituals. Earn XP. Let everyday acts of care shape your legend.
             </Text>
             <Button title="Begin Your Journey" onPress={() => setStep('name')} />
           </View>
@@ -136,7 +136,7 @@ export default function OnboardingScreen() {
           <View style={styles.step}>
             <Text style={styles.bigIcon}>🏰</Text>
             <Text style={styles.heading}>Name Your Hero</Text>
-            <Text style={styles.body}>What shall the legends call you?</Text>
+            <Text style={styles.body}>What name will your journey answer to?</Text>
             <TextInput
               style={styles.input}
               placeholder="Enter your name..."
@@ -156,7 +156,7 @@ export default function OnboardingScreen() {
 
         {step === 'character' && (
           <View style={styles.step}>
-            <Text style={styles.heading}>Create Your Hero</Text>
+            <Text style={styles.heading}>Shape Your Hero</Text>
             <View style={styles.charPreview}>
               <NiceAvatarCharacter
                 appearance={charAppearance}
@@ -275,7 +275,9 @@ export default function OnboardingScreen() {
           <View style={styles.step}>
             <Text style={styles.bigIcon}>🔮</Text>
             <Text style={styles.heading}>Your Adventurer Profile</Text>
-            <Text style={styles.body}>Based on your answers, here are your strongest traits:</Text>
+            <Text style={styles.body}>
+              Based on your answers, these are the gifts that shine brightest right now:
+            </Text>
 
             {/* Top 3 stats */}
             <View style={styles.resultStats}>
@@ -327,7 +329,7 @@ export default function OnboardingScreen() {
           <View style={styles.step}>
             <Text style={styles.heading}>Your Starter Quests</Text>
             <Text style={styles.body}>
-              Based on your profile, here&apos;s how your adventure begins:
+              Based on your profile, here&apos;s a gentle path into your adventure:
             </Text>
 
             <Text style={styles.sectionLabel}>📋 Daily Quests</Text>
@@ -342,10 +344,10 @@ export default function OnboardingScreen() {
             ))}
 
             <Text style={styles.sectionLabel}>🗡️ Side Quests</Text>
-            <Text style={styles.sectionHint}>One-time goals to push your boundaries</Text>
+            <Text style={styles.sectionHint}>One-time goals to stretch your courage with care</Text>
 
             <Text style={styles.sectionLabel}>🐉 Boss Quest</Text>
-            <Text style={styles.sectionHint}>A long-term challenge for your dominant stat</Text>
+            <Text style={styles.sectionHint}>A longer quest for the gift you rely on most</Text>
 
             <Button title="Looks Great!" onPress={() => setStep('begin')} />
           </View>
@@ -356,12 +358,12 @@ export default function OnboardingScreen() {
             <Text style={styles.bigIcon}>🌟</Text>
             <Text style={styles.heading}>Ready, {heroName}?</Text>
             <Text style={styles.body}>
-              Your journey begins now.{'\n\n'}
-              Complete quests daily to earn XP, level up your stats, unlock skills, and evolve your
-              class.{'\n\n'}
-              Every real-world action counts.
+              Your journey begins with ordinary magic.{'\n\n'}
+              Complete quests to grow your stats, unlock skills, and let your class awaken over
+              time.{'\n\n'}
+              Every real-world act of care becomes part of your legend.
             </Text>
-            <Button title="Start Adventure!" onPress={handleComplete} size="lg" />
+            <Button title="Begin the First Day" onPress={handleComplete} size="lg" />
           </View>
         )}
       </ScrollView>
@@ -401,6 +403,7 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     textAlign: 'center',
     marginBottom: spacing.md,
+    ...typography.heading,
   },
   body: {
     color: colors.textSecondary,
@@ -409,6 +412,7 @@ const styles = StyleSheet.create({
     lineHeight: 26,
     marginBottom: spacing.xl,
     paddingHorizontal: spacing.md,
+    ...typography.journal,
   },
   input: {
     backgroundColor: colors.bgInput,
@@ -421,6 +425,7 @@ const styles = StyleSheet.create({
     width: '100%',
     textAlign: 'center',
     marginBottom: spacing.lg,
+    ...typography.body,
   },
 
   // Quiz styles
@@ -429,6 +434,8 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     fontWeight: '600',
     marginBottom: spacing.sm,
+    textTransform: 'uppercase',
+    ...typography.headingWide,
   },
   progressBar: {
     width: '100%',
@@ -458,6 +465,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: fontSize.md,
     lineHeight: 22,
+    ...typography.body,
   },
 
   // Results styles
@@ -487,6 +495,7 @@ const styles = StyleSheet.create({
   resultStatName: {
     fontSize: fontSize.lg,
     fontWeight: '700',
+    ...typography.heading,
   },
   resultBar: {
     width: '100%',
@@ -520,10 +529,12 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: fontSize.sm,
     flex: 1,
+    ...typography.body,
   },
   miniScoreValue: {
     fontSize: fontSize.sm,
     fontWeight: '700',
+    ...typography.headingWide,
   },
 
   // Starter quest styles
@@ -534,6 +545,8 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
     marginBottom: spacing.xs,
     alignSelf: 'flex-start',
+    textTransform: 'uppercase',
+    ...typography.headingWide,
   },
   sectionHint: {
     color: colors.textMuted,
@@ -541,6 +554,7 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     alignSelf: 'flex-start',
     marginBottom: spacing.sm,
+    ...typography.journal,
   },
   questPreview: {
     marginBottom: spacing.sm,
@@ -559,10 +573,12 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: fontSize.md,
     fontWeight: '700',
+    ...typography.heading,
   },
   questDesc: {
     color: colors.textSecondary,
     fontSize: fontSize.sm,
+    ...typography.body,
   },
   dots: {
     flexDirection: 'row',

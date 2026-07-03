@@ -5,11 +5,16 @@ import { QuestCard } from '../../src/components/game/QuestCard';
 import { XPPopup } from '../../src/components/game/XPPopup';
 import { useQuestStore } from '../../src/store/questStore';
 import { useHeroStore } from '../../src/store/heroStore';
-import { useGameplayStore } from '../../src/store/gameplayStore';
+import { useSkillStore } from '../../src/store/skillStore';
+import { useJournalStore } from '../../src/store/journalStore';
 import { useUIStore } from '../../src/store/uiStore';
 import { Card } from '../../src/components/layout/Card';
 import { colors, spacing, fontSize, radius } from '../../src/config/theme';
 import { STAT_COLORS, STAT_ICONS, DIFFICULTY_XP } from '../../src/types';
+import { calculateXPReward } from '../../src/engine/xpEngine';
+import { getStreakMultiplier } from '../../src/engine/streakEngine';
+import { getSkillBonusForQuest } from '../../src/engine/skillEngine';
+import { generateQuestNarrative } from '../../src/engine/journalEngine';
 import { getAllTemplates, QuestTemplate } from '../../src/config/questTemplates';
 
 type Tab = 'daily' | 'side' | 'boss';
@@ -19,13 +24,18 @@ export default function QuestsScreen() {
   const {
     quests,
     addQuest,
+    completeQuest,
+    completeBossStep,
     deleteQuest,
     getDailyQuests,
     getSideQuests,
     getBossQuests,
+    resetDailyQuests,
   } = useQuestStore();
-  const { hero } = useHeroStore();
-  const completeQuest = useGameplayStore((s) => s.completeQuest);
+  const { hero, addXP, beginDailyActivity, recordQuestCompletion, checkAppearanceUnlocks } =
+    useHeroStore();
+  const { checkAndUnlockSkills, getUnlockedSkillIds } = useSkillStore();
+  const { updateTodayEntry } = useJournalStore();
   const {
     showXP,
     setLevelUp,
@@ -66,57 +76,112 @@ export default function QuestsScreen() {
   );
 
   const handleComplete = useCallback(
-    async (questId: string) => {
-      const result = await completeQuest(questId);
-      if (!result) return;
+    (questId: string) => {
+      if (!hero) return;
 
+      resetDailyQuests();
+
+      const currentQuest = useQuestStore.getState().quests.find((item) => item.id === questId);
+      if (!currentQuest) return;
+
+      const quest =
+        currentQuest.type === 'boss' && currentQuest.totalSteps
+          ? completeBossStep(questId)
+          : completeQuest(questId);
+      if (!quest) return;
+      if (!quest.isCompleted) return;
+
+      const unlockedSkillIds = getUnlockedSkillIds();
+      const streak = beginDailyActivity({
+        hasRegenerationSkill: unlockedSkillIds.includes('vit-2'),
+        hasUnbreakableSkill: unlockedSkillIds.includes('wil-2'),
+      });
+      if (streak === null) return;
+
+      // Calculate XP
+      const streakMult = getStreakMultiplier(streak);
+      const skillBonus = getSkillBonusForQuest(
+        { stat: quest.stat, type: quest.type },
+        unlockedSkillIds,
+      );
+      const xpReward = calculateXPReward(quest.difficulty, streakMult, skillBonus);
+
+      // Apply XP
+      const levelResult = addXP(quest.stat, xpReward.totalXP);
+      recordQuestCompletion();
+
+      // Show XP popup
+      showXP(quest.stat, xpReward.totalXP);
+
+      // Trigger character celebration
       setCharacterEvent('questComplete');
       setTimeout(() => setCharacterEvent('idle'), 1500);
 
-      if (result.stepAdvancedOnly || !result.completed) {
-        return;
-      }
-
-      showXP(result.quest.stat, result.xpAwarded);
-
-      if (result.levelResult) {
+      // Check level up
+      if (levelResult) {
         setTimeout(() => {
-          setLevelUp(result.levelResult!.stat, result.levelResult!.newLevel);
+          setLevelUp(levelResult.stat, levelResult.newLevel);
         }, 1200);
 
-        if (result.levelResult.tierUp) {
+        // Check tier up
+        if (levelResult.tierUp) {
           setTimeout(() => {
-            setTierUp(result.levelResult!.tierUp!.newTier, result.levelResult!.tierUp!.newClass);
+            setTierUp(levelResult.tierUp!.newTier, levelResult.tierUp!.newClass);
           }, 2500);
         }
       }
 
-      if (result.newSkills.length > 0) {
-        setTimeout(
-          () => {
-            setSkillUnlock(result.newSkills[0]);
-          },
-          result.levelResult ? 3000 : 1200,
-        );
-      }
-
-      if (result.appearanceUnlock) {
-        const delay = result.levelResult ? 4000 : 2000;
-        if (result.appearanceUnlock.shapes.length > 0) {
-          setTimeout(() => setAppearanceUnlock('shape', result.appearanceUnlock!.shapes[0]), delay);
-        } else if (result.appearanceUnlock.sigils.length > 0) {
-          setTimeout(() => setAppearanceUnlock('sigil', result.appearanceUnlock!.sigils[0]), delay);
+      // Check skill unlocks
+      const updatedHero = useHeroStore.getState().hero;
+      if (updatedHero) {
+        const newSkills = checkAndUnlockSkills(updatedHero.statXP);
+        if (newSkills.length > 0) {
+          setTimeout(() => {
+            setSkillUnlock(newSkills[0]);
+          }, levelResult ? 3000 : 1200);
         }
       }
+
+      // Check appearance unlocks
+      const appearanceResult = checkAppearanceUnlocks();
+      if (appearanceResult) {
+        const delay = levelResult ? 4000 : 2000;
+        if (appearanceResult.shapes.length > 0) {
+          setTimeout(() => setAppearanceUnlock('shape', appearanceResult.shapes[0]), delay);
+        } else if (appearanceResult.sigils.length > 0) {
+          setTimeout(() => setAppearanceUnlock('sigil', appearanceResult.sigils[0]), delay);
+        }
+      }
+
+      // Update journal
+      const narrative = generateQuestNarrative(quest);
+      updateTodayEntry({
+        narrative,
+        questsCompleted: [quest.id],
+        xpGained: {
+          ...{ strength: 0, vitality: 0, intelligence: 0, charisma: 0, dexterity: 0, willpower: 0 },
+          [quest.stat]: xpReward.totalXP,
+        },
+      });
     },
     [
+      hero,
       completeQuest,
-      setAppearanceUnlock,
+      completeBossStep,
+      resetDailyQuests,
+      getUnlockedSkillIds,
+      beginDailyActivity,
+      addXP,
+      recordQuestCompletion,
+      checkAndUnlockSkills,
+      checkAppearanceUnlocks,
+      showXP,
       setCharacterEvent,
       setLevelUp,
-      setSkillUnlock,
       setTierUp,
-      showXP,
+      setSkillUnlock,
+      setAppearanceUnlock,
+      updateTodayEntry,
     ],
   );
 

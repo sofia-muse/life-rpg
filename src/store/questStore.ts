@@ -5,6 +5,7 @@ import { generateId } from '../utils/id';
 import { Quest } from '../types';
 import { syncManager } from '../api/syncManager';
 import { getActiveDailyQuestCapacityBonus } from '../engine/skillEngine';
+import { applyQuestEvolution } from '../engine/questProgression';
 import { useSkillStore } from './skillStore';
 
 interface QuestState {
@@ -78,7 +79,7 @@ export const useQuestStore = create<QuestState>()(
 
         const timestamp = new Date().toISOString();
 
-        const updated: Quest = {
+        const updated = applyQuestEvolution({
           ...quest,
           isCompleted: true,
           updatedAt: timestamp,
@@ -86,7 +87,7 @@ export const useQuestStore = create<QuestState>()(
           streak: quest.streak + 1,
           bestStreak: Math.max(quest.bestStreak, quest.streak + 1),
           daysCompleted: quest.daysCompleted + 1,
-        };
+        });
 
         set((state) => ({
           quests: state.quests.map((q) => (q.id === questId ? updated : q)),

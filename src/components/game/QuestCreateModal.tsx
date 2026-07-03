@@ -11,6 +11,8 @@ import {
 import { Button } from '../layout/Button';
 import { useQuestStore } from '../../store/questStore';
 import { useUIStore } from '../../store/uiStore';
+import { useSettingsStore } from '../../store/settingsStore';
+import { useAuthStore } from '../../store/authStore';
 import { colors, spacing, fontSize, radius } from '../../config/theme';
 import {
   StatName,
@@ -21,10 +23,14 @@ import {
   STAT_ICONS,
   DIFFICULTY_XP,
 } from '../../types';
+import { guidanceApi } from '../../api/guidanceApi';
+import { env } from '../../config/env';
 
 export function QuestCreateModal() {
   const { showQuestCreateModal, setQuestCreateModal } = useUIStore();
   const { addQuest } = useQuestStore();
+  const aiSkillsEnabled = useSettingsStore((s) => s.aiSkillsEnabled);
+  const authenticated = useAuthStore((s) => s.status === 'authenticated');
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -32,6 +38,12 @@ export function QuestCreateModal() {
   const [type, setType] = useState<QuestType>('daily');
   const [difficulty, setDifficulty] = useState<QuestDifficulty>('medium');
   const [totalSteps, setTotalSteps] = useState('');
+  const [bossSteps, setBossSteps] = useState<string[]>([]);
+  const [bossSagaTitle, setBossSagaTitle] = useState('');
+  const [bossRewardTitle, setBossRewardTitle] = useState('');
+  const [planningBoss, setPlanningBoss] = useState(false);
+  const [bossPlanError, setBossPlanError] = useState<string | null>(null);
+  const canUseBossPlanner = aiSkillsEnabled && !env.demoMode && authenticated;
 
   const reset = () => {
     setTitle('');
@@ -40,14 +52,30 @@ export function QuestCreateModal() {
     setType('daily');
     setDifficulty('medium');
     setTotalSteps('');
+    setBossSteps([]);
+    setBossSagaTitle('');
+    setBossRewardTitle('');
+    setBossPlanError(null);
   };
 
   const handleCreate = () => {
     if (!title.trim()) return;
 
+    const chapters =
+      type === 'boss' && bossSteps.length > 0
+        ? `Chapters:\n${bossSteps.map((step, index) => `${index + 1}. ${step}`).join('\n')}`
+        : '';
+    const sagaMeta =
+      type === 'boss'
+        ? [bossSagaTitle ? `Saga: ${bossSagaTitle}` : '', bossRewardTitle ? `Reward: ${bossRewardTitle}` : '']
+            .filter(Boolean)
+            .join('\n')
+        : '';
+    const finalDescription = [description.trim(), sagaMeta, chapters].filter(Boolean).join('\n\n');
+
     addQuest({
       title: title.trim(),
-      description: description.trim(),
+      description: finalDescription,
       type,
       difficulty,
       stat,
@@ -60,6 +88,33 @@ export function QuestCreateModal() {
 
     reset();
     setQuestCreateModal(false);
+  };
+
+  const handleForgeBossPlan = async () => {
+    const goal = title.trim() || description.trim();
+    if (!goal) {
+      setBossPlanError('Give the boss quest a goal first.');
+      return;
+    }
+
+    setPlanningBoss(true);
+    setBossPlanError(null);
+
+    try {
+      const plan = await guidanceApi.planBossQuest(goal, stat);
+      setTitle(plan.title);
+      setDescription(plan.description);
+      setDifficulty(plan.difficulty);
+      setStat(plan.stat);
+      setTotalSteps(String(plan.totalSteps));
+      setBossSteps(plan.steps);
+      setBossSagaTitle(plan.sagaTitle);
+      setBossRewardTitle(plan.rewardTitle);
+    } catch (error) {
+      setBossPlanError(error instanceof Error ? error.message : 'Boss planning failed');
+    } finally {
+      setPlanningBoss(false);
+    }
   };
 
   const difficulties: QuestDifficulty[] = ['easy', 'medium', 'hard', 'legendary'];
@@ -131,6 +186,33 @@ export function QuestCreateModal() {
                   keyboardType="number-pad"
                   maxLength={3}
                 />
+                {canUseBossPlanner && (
+                  <View style={styles.bossPlanner}>
+                    <Button
+                      title={planningBoss ? 'Forging Saga…' : 'Forge Boss Saga'}
+                      onPress={handleForgeBossPlan}
+                      loading={planningBoss}
+                      variant="secondary"
+                    />
+                    <Text style={styles.bossPlannerHint}>
+                      Use AI to break a real-world goal into a campaign with concrete steps.
+                    </Text>
+                    {bossPlanError && <Text style={styles.errorText}>{bossPlanError}</Text>}
+                    {bossSagaTitle ? (
+                      <View style={styles.planPreview}>
+                        <Text style={styles.planTitle}>{bossSagaTitle}</Text>
+                        {bossRewardTitle ? (
+                          <Text style={styles.planReward}>Reward: {bossRewardTitle}</Text>
+                        ) : null}
+                        {bossSteps.map((step, index) => (
+                          <Text key={`${step}-${index}`} style={styles.planStep}>
+                            {index + 1}. {step}
+                          </Text>
+                        ))}
+                      </View>
+                    ) : null}
+                  </View>
+                )}
               </>
             )}
 
@@ -279,5 +361,41 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: spacing.xl,
     marginBottom: spacing.md,
+  },
+  bossPlanner: {
+    marginTop: spacing.md,
+    gap: spacing.xs,
+  },
+  bossPlannerHint: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+  },
+  planPreview: {
+    backgroundColor: colors.bgCard,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  planTitle: {
+    color: colors.textAccent,
+    fontSize: fontSize.sm,
+    fontWeight: '700',
+    marginBottom: spacing.xs,
+  },
+  planReward: {
+    color: colors.textSecondary,
+    fontSize: fontSize.xs,
+    marginBottom: spacing.xs,
+  },
+  planStep: {
+    color: colors.textPrimary,
+    fontSize: fontSize.xs,
+    marginBottom: 2,
+  },
+  errorText: {
+    color: colors.error,
+    fontSize: fontSize.xs,
   },
 });

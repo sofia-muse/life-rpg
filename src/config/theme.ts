@@ -1,8 +1,11 @@
+import { Platform } from 'react-native';
+
 export const colors = {
   // Backgrounds
   bgPrimary: '#0F0F1A',
   bgSecondary: '#1A1A2E',
   bgCard: '#16213E',
+  bgCardRaised: '#1E2A4A',
   bgInput: '#1E2A4A',
   bgModal: '#0D0D1A',
 
@@ -16,6 +19,8 @@ export const colors = {
   gold: '#C4A962',
   goldLight: '#D4B872',
   goldDark: '#A48942',
+  goldGlow: 'rgba(196, 169, 98, 0.18)',
+  goldSoft: 'rgba(196, 169, 98, 0.1)',
 
   // Stat colors
   strength: '#EF4444',
@@ -39,9 +44,24 @@ export const colors = {
 };
 
 export const fonts = {
-  heading: 'Cinzel',
-  body: 'Inter',
-  journal: 'Lora',
+  heading: Platform.select({
+    ios: 'Georgia',
+    android: 'serif',
+    web: 'Georgia',
+    default: 'Georgia',
+  }) as string,
+  body: Platform.select({
+    ios: 'System',
+    android: 'sans-serif',
+    web: 'system-ui',
+    default: 'System',
+  }) as string,
+  journal: Platform.select({
+    ios: 'Georgia',
+    android: 'serif',
+    web: 'Georgia',
+    default: 'serif',
+  }) as string,
 };
 
 export const spacing = {
@@ -70,4 +90,23 @@ export const fontSize = {
   xxl: 24,
   title: 28,
   hero: 36,
+};
+
+export const typography = {
+  heading: {
+    fontFamily: fonts.heading,
+    letterSpacing: 0.6,
+  },
+  headingWide: {
+    fontFamily: fonts.heading,
+    letterSpacing: 1.2,
+  },
+  body: {
+    fontFamily: fonts.body,
+    letterSpacing: 0.15,
+  },
+  journal: {
+    fontFamily: fonts.journal,
+    letterSpacing: 0.25,
+  },
 };

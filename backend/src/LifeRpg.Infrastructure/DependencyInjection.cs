@@ -62,6 +62,7 @@ public static class DependencyInjection
         services.AddScoped<QuestService>();
         services.AddScoped<SyncService>();
         services.AddScoped<SkillForgeService>();
+        services.AddScoped<GuidanceService>();
 
         return services;
     }

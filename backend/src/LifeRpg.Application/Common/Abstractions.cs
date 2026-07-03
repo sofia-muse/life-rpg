@@ -61,8 +61,61 @@ public sealed record ForgedSkillDraft(
     string Stat,
     int BonusPercent);
 
+public sealed record QuestSuggestionPrompt(
+    string HeroName,
+    string ClassName,
+    string DominantStat,
+    int HeroLevel,
+    int CurrentStreak,
+    IReadOnlyList<string> ActiveQuestTitles);
+
+public sealed record SuggestedQuestDraft(
+    string Title,
+    string Description,
+    string Type,
+    string Difficulty,
+    string Stat,
+    string WhyItFits,
+    int? TotalSteps);
+
+public sealed record QuestSuggestionPackDraft(IReadOnlyList<SuggestedQuestDraft> Suggestions);
+
+public sealed record BossQuestPlanPrompt(
+    string HeroName,
+    string ClassName,
+    string DominantStat,
+    int HeroLevel,
+    string Goal,
+    string? SuggestedStat);
+
+public sealed record BossQuestPlanDraft(
+    string SagaTitle,
+    string Title,
+    string Description,
+    string Difficulty,
+    string Stat,
+    int TotalSteps,
+    IReadOnlyList<string> Steps,
+    string RewardTitle);
+
+public sealed record ChroniclePrompt(
+    string HeroName,
+    string ClassName,
+    string DominantStat,
+    int HeroLevel,
+    int CurrentStreak,
+    IReadOnlyList<string> RecentVictories);
+
+public sealed record ChronicleDraft(
+    string Title,
+    string Narrative,
+    IReadOnlyList<string> Highlights);
+
 /// <summary>Generates skill flavor via an LLM (implemented in Infrastructure; stubbed in tests).</summary>
 public interface ILlmClient
 {
     Task<ForgedSkillDraft> ForgeSkillAsync(SkillForgePrompt prompt, CancellationToken ct = default);
+    Task<QuestSuggestionPackDraft> SuggestQuestsAsync(QuestSuggestionPrompt prompt, CancellationToken ct = default);
+    Task<BossQuestPlanDraft> PlanBossQuestAsync(BossQuestPlanPrompt prompt, CancellationToken ct = default);
+    Task<ChronicleDraft> WriteChronicleAsync(ChroniclePrompt prompt, CancellationToken ct = default);
 }

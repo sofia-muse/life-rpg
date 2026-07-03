@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { Quest, STAT_COLORS, STAT_ICONS } from '../../types';
-import { colors, spacing, fontSize, radius, typography } from '../../config/theme';
+import { colors, spacing, fontSize, radius } from '../../config/theme';
 import { Card } from '../layout/Card';
 
 interface Props {
@@ -42,10 +42,7 @@ export function QuestCard({ quest, onComplete, onDelete }: Props) {
 
   return (
     <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-      <Card
-        style={[styles.card, quest.isCompleted ? styles.completed : undefined]}
-        accentColor={statColor}
-      >
+      <Card style={[styles.card, quest.isCompleted ? styles.completed : undefined]}>
         <TouchableOpacity
           style={styles.content}
           onPress={handlePress}
@@ -65,9 +62,6 @@ export function QuestCard({ quest, onComplete, onDelete }: Props) {
           </View>
 
           <View style={styles.info}>
-            <Text style={[styles.typeLabel, { color: statColor }]}>
-              {quest.type.toUpperCase()} QUEST
-            </Text>
             <Text style={[styles.title, quest.isCompleted && styles.titleCompleted]}>
               {quest.title}
             </Text>
@@ -120,14 +114,13 @@ const styles = StyleSheet.create({
     marginRight: spacing.sm + 4,
   },
   checkbox: {
-    width: 26,
-    height: 26,
-    borderRadius: radius.md,
-    borderWidth: 1,
+    width: 24,
+    height: 24,
+    borderRadius: radius.sm,
+    borderWidth: 2,
     borderColor: colors.borderLight,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.bgInset,
   },
   checkmark: {
     color: colors.bgPrimary,
@@ -137,20 +130,16 @@ const styles = StyleSheet.create({
   info: {
     flex: 1,
   },
-  typeLabel: {
-    ...typography.eyebrow,
-    marginBottom: spacing.xs,
-  },
   title: {
-    ...typography.bodyStrong,
     color: colors.textPrimary,
+    fontSize: fontSize.md,
+    fontWeight: '600',
   },
   titleCompleted: {
     textDecorationLine: 'line-through',
     color: colors.textMuted,
   },
   description: {
-    ...typography.body,
     color: colors.textSecondary,
     fontSize: fontSize.sm,
     marginTop: 2,
@@ -162,29 +151,27 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   statBadge: {
-    ...typography.eyebrow,
     color: colors.textMuted,
+    fontSize: fontSize.xs,
   },
   xpBadge: {
-    ...typography.eyebrow,
     fontSize: fontSize.xs,
+    fontWeight: '700',
   },
   streak: {
     color: colors.warning,
     fontSize: fontSize.xs,
   },
   bossProgress: {
-    backgroundColor: colors.bgInset,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: colors.bgInput,
+    borderRadius: radius.sm,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
   },
   bossText: {
-    ...typography.eyebrow,
     color: colors.textAccent,
     fontSize: fontSize.sm,
+    fontWeight: '700',
   },
   deleteBtn: {
     position: 'absolute',

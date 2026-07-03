@@ -1,15 +1,26 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Share } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, Share } from 'react-native';
 import { Hero, STAT_NAMES, STAT_COLORS, STAT_ICONS } from '../../types';
 import { colors, spacing, fontSize, radius } from '../../config/theme';
 import { getStatDisplayProgress } from '../../engine/xpEngine';
 import { NiceAvatarCharacter } from '../avatar/NiceAvatarCharacter';
+import { Button } from '../layout/Button';
+import { guidanceApi } from '../../api/guidanceApi';
+import { useAuthStore } from '../../store/authStore';
+import { useSettingsStore } from '../../store/settingsStore';
+import { env } from '../../config/env';
 
 interface Props {
   hero: Hero;
 }
 
 export function HeroShareCard({ hero }: Props) {
+  const [sharingChronicle, setSharingChronicle] = useState(false);
+  const [chronicleError, setChronicleError] = useState<string | null>(null);
+  const aiSkillsEnabled = useSettingsStore((s) => s.aiSkillsEnabled);
+  const authenticated = useAuthStore((s) => s.status === 'authenticated');
+  const canUseGuidance = aiSkillsEnabled && !env.demoMode && authenticated;
+
   const handleShare = async () => {
     const statLines = STAT_NAMES.map((stat) => {
       const p = getStatDisplayProgress(hero.statXP[stat]);
@@ -17,14 +28,14 @@ export function HeroShareCard({ hero }: Props) {
     }).join('\n');
 
     const message =
-      `🎮 Life RPG - Hero Card\n\n` +
+      `Life RPG - Hero Card\n\n` +
       `⚔️ ${hero.name}\n` +
       `🏅 ${hero.className} (Tier ${hero.classTier})\n` +
       `⭐ Hero Level ${hero.heroLevel}\n` +
       `🔥 Streak: ${hero.currentStreak} days\n` +
       `✅ ${hero.totalQuestsCompleted} quests completed\n\n` +
       `📊 Stats:\n${statLines}\n\n` +
-      `Level up your real life! 💪`;
+      `Build your class through action.`;
 
     try {
       await Share.share({
@@ -33,6 +44,28 @@ export function HeroShareCard({ hero }: Props) {
       });
     } catch {
       // User cancelled
+    }
+  };
+
+  const handleShareChronicle = async () => {
+    setSharingChronicle(true);
+    setChronicleError(null);
+
+    try {
+      const chronicle = await guidanceApi.getChronicle();
+      const highlights = chronicle.highlights.map((highlight) => `- ${highlight}`).join('\n');
+      const message = `${chronicle.title}\n\n${chronicle.narrative}${
+        highlights ? `\n\nHighlights:\n${highlights}` : ''
+      }`;
+
+      await Share.share({
+        message,
+        title: chronicle.title,
+      });
+    } catch (error) {
+      setChronicleError(error instanceof Error ? error.message : 'Chronicle failed');
+    } finally {
+      setSharingChronicle(false);
     }
   };
 
@@ -85,9 +118,17 @@ export function HeroShareCard({ hero }: Props) {
         </View>
       </View>
 
-      <TouchableOpacity style={styles.shareBtn} onPress={handleShare}>
-        <Text style={styles.shareBtnText}>Share Hero Card</Text>
-      </TouchableOpacity>
+      <Button title="Share Hero Card" onPress={handleShare} style={styles.shareBtn} />
+      {canUseGuidance && (
+        <Button
+          title={sharingChronicle ? 'Writing Chronicle…' : 'Share AI Chronicle'}
+          onPress={handleShareChronicle}
+          variant="secondary"
+          loading={sharingChronicle}
+          style={styles.chronicleBtn}
+        />
+      )}
+      {chronicleError && <Text style={styles.errorText}>{chronicleError}</Text>}
     </View>
   );
 }
@@ -128,10 +169,13 @@ const styles = StyleSheet.create({
   footerNum: { color: colors.textAccent, fontSize: fontSize.xl, fontWeight: '900' },
   footerLabel: { color: colors.textMuted, fontSize: fontSize.xs },
   shareBtn: {
-    backgroundColor: colors.gold,
-    borderRadius: radius.md,
-    paddingVertical: spacing.sm + 4,
-    alignItems: 'center',
+    marginBottom: spacing.sm,
   },
-  shareBtnText: { color: colors.bgPrimary, fontSize: fontSize.md, fontWeight: '700' },
+  chronicleBtn: {
+    marginBottom: spacing.xs,
+  },
+  errorText: {
+    color: colors.error,
+    fontSize: fontSize.xs,
+  },
 });
