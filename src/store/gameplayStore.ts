@@ -9,6 +9,7 @@ import { generateQuestNarrative } from '../engine/journalEngine';
 import { getQuestSkillBonus } from '../engine/skillEngine';
 import { getStreakMultiplier } from '../engine/streakEngine';
 import { calculateXPReward } from '../engine/xpEngine';
+import { getWeeklyPathQuestBonus } from '../config/weeklyPaths';
 import { useAuthStore } from './authStore';
 import { useForgedSkillStore } from './forgedSkillStore';
 import { useHeroStore } from './heroStore';
@@ -165,15 +166,40 @@ async function completeAuthoritativeQuest(quest: Quest): Promise<QuestCompletion
   };
 }
 
-function completeLocalQuest(quest: Quest): QuestCompletionFlowResult | null {
+function completeLocalQuest(questId: string): QuestCompletionFlowResult | null {
   const skillState = useSkillStore.getState();
   const heroState = useHeroStore.getState();
   const questState = useQuestStore.getState();
+  const hero = heroState.hero;
+
+  if (!hero) {
+    console.error('[GameplayStore] Cannot complete a local quest without an active hero.', {
+      questId,
+    });
+    return null;
+  }
+
+  questState.resetDailyQuests();
+
+  const quest = questState.getQuestById(questId);
+  if (!quest) {
+    console.warn('[GameplayStore] Tried to complete a missing local quest.', {
+      questId,
+    });
+    return null;
+  }
 
   const unlockedSkillIds = skillState.getUnlockedSkillIds();
+  const settings = useSettingsStore.getState();
   const updatedQuest =
     quest.type === 'boss' ? questState.completeBossStep(quest.id) : questState.completeQuest(quest.id);
-  if (!updatedQuest) return null;
+  if (!updatedQuest) {
+    console.warn('[GameplayStore] Quest completion was ignored because the quest is inactive or already done.', {
+      questId,
+      questType: quest.type,
+    });
+    return null;
+  }
 
   if (!updatedQuest.isCompleted) {
     return {
@@ -187,14 +213,33 @@ function completeLocalQuest(quest: Quest): QuestCompletionFlowResult | null {
     };
   }
 
-  const streakMult = getStreakMultiplier(useHeroStore.getState().hero?.currentStreak ?? 0);
+  const streakUpdate = heroState.updateStreak(unlockedSkillIds);
+  if (streakUpdate?.usedStreakFreeze) {
+    console.info('[GameplayStore] Preserved the current streak with a freeze during quest completion.', {
+      questId,
+    });
+  }
+
+  const streakMult = getStreakMultiplier(useHeroStore.getState().hero?.currentStreak ?? hero.currentStreak);
   const skillBonus = getQuestSkillBonus(
     { stat: updatedQuest.stat, type: updatedQuest.type },
     unlockedSkillIds,
   );
-  const xpReward = calculateXPReward(updatedQuest.difficulty, streakMult, skillBonus);
+  const weeklyPathBonus = getWeeklyPathQuestBonus(settings, {
+    stat: updatedQuest.stat,
+    type: updatedQuest.type,
+  });
+  const xpReward = calculateXPReward(updatedQuest.difficulty, streakMult, skillBonus + weeklyPathBonus);
   const progression = heroState.applyQuestReward(updatedQuest.stat, xpReward.totalXP, unlockedSkillIds);
-  if (!progression) return null;
+  if (!progression) {
+    console.error('[GameplayStore] Failed to apply the local quest reward.', {
+      questId,
+      questType: updatedQuest.type,
+      stat: updatedQuest.stat,
+      xpAwarded: xpReward.totalXP,
+    });
+    return null;
+  }
 
   const newSkills = skillState.checkAndUnlockSkills(progression.hero.statXP);
   const appearanceUnlock = heroState.checkAppearanceUnlocks();
@@ -222,6 +267,7 @@ export const useGameplayStore = create<GameplayState>((set) => ({
 
     set({ initializingSession: true });
     try {
+      useSettingsStore.getState().clearStaleWeeklyPath();
       const [apiHero, apiQuests] = await Promise.all([heroApi.getMine(), questApi.list()]);
       useHeroStore.getState().setHero(mapApiHero(apiHero), { isOnboarded: true });
       useSkillStore.getState().replaceUnlockedSkills(apiHero.unlockedSkills);
@@ -244,17 +290,39 @@ export const useGameplayStore = create<GameplayState>((set) => ({
   },
 
   completeQuest: async (questId) => {
-    const quest = useQuestStore.getState().getQuestById(questId);
-    if (!quest) return null;
-
     const authoritative = !env.demoMode && useAuthStore.getState().status === 'authenticated';
-    return authoritative ? completeAuthoritativeQuest(quest) : completeLocalQuest(quest);
+    try {
+      if (authoritative) {
+        const quest = useQuestStore.getState().getQuestById(questId);
+        if (!quest) {
+          console.warn('[GameplayStore] Tried to complete a missing authoritative quest.', {
+            questId,
+          });
+          return null;
+        }
+
+        return await completeAuthoritativeQuest(quest);
+      }
+
+      return completeLocalQuest(questId);
+    } catch (error) {
+      console.error('[GameplayStore] Quest completion failed.', {
+        questId,
+        authoritative,
+        error,
+      });
+      throw error;
+    }
   },
 
   runDailyLifecycle: () => {
     const unlockedSkillIds = useSkillStore.getState().getUnlockedSkillIds();
+    useSettingsStore.getState().clearStaleWeeklyPath();
     useQuestStore.getState().resetDailyQuests();
     const result = useHeroStore.getState().updateStreak(unlockedSkillIds);
+    if (result?.usedStreakFreeze) {
+      console.info('[GameplayStore] Daily lifecycle used a streak freeze to preserve progress.');
+    }
 
     return {
       rewardAvailable: useHeroStore.getState().getDailyRewardPreview() !== null,

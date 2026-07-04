@@ -2,7 +2,9 @@ import { useGameplayStore } from '../gameplayStore';
 import { useHeroStore } from '../heroStore';
 import { useJournalStore } from '../journalStore';
 import { useQuestStore } from '../questStore';
+import { useSettingsStore } from '../settingsStore';
 import { useSkillStore } from '../skillStore';
+import { getCurrentWeekKey } from '../../config/weeklyPaths';
 import { getStatBlock } from '../../engine/statEngine';
 import { Quest, StatName } from '../../types';
 
@@ -81,6 +83,19 @@ beforeEach(() => {
   useQuestStore.setState({ quests: [] });
   useSkillStore.setState({ unlockedSkills: [] });
   useJournalStore.setState({ entries: [] });
+  useSettingsStore.setState({
+    notificationsEnabled: true,
+    hapticEnabled: true,
+    reminderTime: '09:00',
+    aiSkillsEnabled: false,
+    weeklyPath: null,
+    weeklyPathWeekKey: null,
+    weeklyPathStartedAt: null,
+    weeklyRewardWeekKey: null,
+    weeklyRewardTitle: null,
+    weeklyRewardBadge: null,
+  });
+  jest.restoreAllMocks();
 });
 
 describe('gameplayStore local quest flow', () => {
@@ -143,6 +158,66 @@ describe('gameplayStore local quest flow', () => {
     expect(useQuestStore.getState().getQuestById('boss-1')?.completedSteps).toBe(2);
     expect(second).toMatchObject({ completed: true, stepAdvancedOnly: false });
     expect(second?.xpAwarded).toBeGreaterThan(0);
+  });
+
+  it('applies the weekly path bonus to aligned local quests', async () => {
+    useSettingsStore.setState({
+      weeklyPath: 'power',
+      weeklyPathWeekKey: getCurrentWeekKey(),
+      weeklyPathStartedAt: new Date().toISOString(),
+    });
+    useQuestStore.setState({
+      quests: [buildQuest({ id: 'quest-weekly', stat: 'strength', difficulty: 'hard' })],
+    });
+
+    const result = await useGameplayStore.getState().completeQuest('quest-weekly');
+
+    expect(result).toMatchObject({
+      completed: true,
+      stepAdvancedOnly: false,
+      xpAwarded: 52,
+    });
+    expect(useHeroStore.getState().hero?.statXP.strength).toBe(52);
+  });
+
+  it('logs an error when a local quest completes without a hero', async () => {
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    useHeroStore.setState({ hero: null, isOnboarded: false, _hasHydrated: true });
+
+    const result = await useGameplayStore.getState().completeQuest('missing-hero');
+
+    expect(result).toBeNull();
+    expect(errorSpy).toHaveBeenCalledWith(
+      '[GameplayStore] Cannot complete a local quest without an active hero.',
+      { questId: 'missing-hero' },
+    );
+  });
+
+  it('logs a warning when the local quest id does not exist', async () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const result = await useGameplayStore.getState().completeQuest('missing-quest');
+
+    expect(result).toBeNull();
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[GameplayStore] Tried to complete a missing local quest.',
+      { questId: 'missing-quest' },
+    );
+  });
+
+  it('logs a warning when a local quest is inactive or already completed', async () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    useQuestStore.setState({
+      quests: [buildQuest({ id: 'quest-inactive', isActive: false })],
+    });
+
+    const result = await useGameplayStore.getState().completeQuest('quest-inactive');
+
+    expect(result).toBeNull();
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[GameplayStore] Quest completion was ignored because the quest is inactive or already done.',
+      { questId: 'quest-inactive', questType: 'side' },
+    );
   });
 
   it('resets expired daily quests during the daily lifecycle pass', () => {

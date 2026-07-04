@@ -50,6 +50,8 @@ export type ClassTier = 1 | 2 | 3 | 4 | 5;
 export type CrestShape = 'shield' | 'circle' | 'diamond' | 'hexagon';
 export type SigilStyle = 'sword' | 'flame' | 'eye' | 'star' | 'tree' | 'crown';
 export type AccentOverride = StatName | 'gold' | 'silver' | 'none';
+export type ClassFlair = 'auto' | 'circlet' | 'mantle' | 'pauldrons';
+export type WeeklyPath = 'power' | 'focus' | 'support';
 
 // ─── Character Appearance ───
 export type Gender = 'male' | 'female';
@@ -68,6 +70,7 @@ export interface CharacterAppearance {
   eyeStyle: EyeStyle;
   mouthStyle: MouthStyle;
   glassesStyle: GlassesStyle;
+  classFlair?: ClassFlair;
 }
 
 export interface HeroAppearance {

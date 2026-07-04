@@ -7,19 +7,33 @@ import { StatRadar } from './StatRadar';
 import { ACCENT_COLORS, STAT_PIP_THRESHOLDS } from '../../config/appearanceConfig';
 import { colors, fontSize } from '../../config/theme';
 import { levelFromXP } from '../../config/xpTables';
+import { useSettingsStore } from '../../store/settingsStore';
+import { getActiveWeeklyPath } from '../../config/weeklyPaths';
 
 interface Props {
   hero: Hero;
   size?: number;
   onPress?: () => void;
   showTitle?: boolean;
+  variant?: 'default' | 'heroic' | 'editor' | 'compact';
 }
 
 const AnimatedSvg = Animated.createAnimatedComponent(View);
 
-export function HeroCrest({ hero, size = 120, onPress, showTitle }: Props) {
+export function HeroCrest({
+  hero,
+  size = 120,
+  onPress,
+  showTitle,
+  variant = 'default',
+}: Props) {
   const appearance = hero.appearance;
+  const settings = useSettingsStore();
+  const activeWeeklyPath = getActiveWeeklyPath(settings);
   const tierFrame = TIER_FRAMES[hero.classTier] || TIER_FRAMES[1];
+  const glowBoost = variant === 'heroic' ? 1.55 : variant === 'editor' ? 1.3 : variant === 'compact' ? 0.9 : 1;
+  const particleCount =
+    tierFrame.particleCount + (variant === 'heroic' ? 6 : variant === 'editor' ? 4 : 0);
 
   // Resolve accent color
   let accentColor: string;
@@ -35,15 +49,17 @@ export function HeroCrest({ hero, size = 120, onPress, showTitle }: Props) {
 
   // Animations
   const pulseScale = useRef(new Animated.Value(1)).current;
-  const glowOpacity = useRef(new Animated.Value(tierFrame.glowIntensity * 0.5)).current;
+  const glowOpacity = useRef(new Animated.Value(tierFrame.glowIntensity * 0.45 * glowBoost)).current;
+  const orbitRotate = useRef(new Animated.Value(0)).current;
+  const sigilFloat = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const pulse = Animated.loop(
       Animated.sequence([
         Animated.parallel([
-          Animated.timing(pulseScale, { toValue: 1.04, duration: 2000, useNativeDriver: true }),
+          Animated.timing(pulseScale, { toValue: 1.05, duration: 2000, useNativeDriver: true }),
           Animated.timing(glowOpacity, {
-            toValue: tierFrame.glowIntensity,
+            toValue: tierFrame.glowIntensity * glowBoost,
             duration: 2000,
             useNativeDriver: true,
           }),
@@ -51,16 +67,35 @@ export function HeroCrest({ hero, size = 120, onPress, showTitle }: Props) {
         Animated.parallel([
           Animated.timing(pulseScale, { toValue: 1, duration: 2000, useNativeDriver: true }),
           Animated.timing(glowOpacity, {
-            toValue: tierFrame.glowIntensity * 0.5,
+            toValue: tierFrame.glowIntensity * 0.45 * glowBoost,
             duration: 2000,
             useNativeDriver: true,
           }),
         ]),
       ]),
     );
+    const orbit = Animated.loop(
+      Animated.timing(orbitRotate, {
+        toValue: 1,
+        duration: 16000,
+        useNativeDriver: true,
+      }),
+    );
+    const float = Animated.loop(
+      Animated.sequence([
+        Animated.timing(sigilFloat, { toValue: -2, duration: 2200, useNativeDriver: true }),
+        Animated.timing(sigilFloat, { toValue: 2, duration: 2200, useNativeDriver: true }),
+      ]),
+    );
     pulse.start();
-    return () => pulse.stop();
-  }, [hero.classTier]);
+    orbit.start();
+    float.start();
+    return () => {
+      pulse.stop();
+      orbit.stop();
+      float.stop();
+    };
+  }, [glowBoost, hero.classTier, glowOpacity, orbitRotate, pulseScale, sigilFloat, tierFrame.glowIntensity]);
 
   // Stat levels for pip rendering
   const statLevels: Record<StatName, number> = {
@@ -74,6 +109,10 @@ export function HeroCrest({ hero, size = 120, onPress, showTitle }: Props) {
 
   const pipPositions = getStatPipPositions(size);
   const svgSize = size;
+  const orbitRotation = orbitRotate.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
 
   const content = (
     <View
@@ -84,8 +123,8 @@ export function HeroCrest({ hero, size = 120, onPress, showTitle }: Props) {
         style={[
           styles.glow,
           {
-            width: size + 16,
-            height: size + 16,
+            width: size + 18,
+            height: size + 18,
             borderRadius: size / 2,
             backgroundColor: accentColor,
             opacity: glowOpacity,
@@ -96,25 +135,83 @@ export function HeroCrest({ hero, size = 120, onPress, showTitle }: Props) {
 
       {/* Outer ring for tier 3+ */}
       {tierFrame.outerRing && (
-        <View
+        <Animated.View
           style={[
             styles.outerRing,
             {
-              width: size + 20,
-              height: size + 20,
+              width: size + (variant === 'heroic' ? 30 : 20),
+              height: size + (variant === 'heroic' ? 30 : 20),
               borderRadius: size / 2 + 10,
               borderColor: `${accentColor}40`,
+              transform: [{ rotate: orbitRotation }],
             },
           ]}
         />
       )}
 
+      {particleCount > 0 && (
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.particleOrbit,
+            {
+              width: size + 40,
+              height: size + 40,
+              transform: [{ rotate: orbitRotation }],
+            },
+          ]}
+        >
+          {Array.from({ length: particleCount }).map((_, index) => {
+            const angle = (Math.PI * 2 * index) / particleCount;
+            const radius = size * 0.55 + (index % 2 === 0 ? 10 : 0);
+            const particleSize = index % 3 === 0 ? 5 : 3;
+            return (
+              <View
+                key={`particle-${index}`}
+                style={[
+                  styles.particle,
+                  {
+                    left: size / 2 + 20 + Math.cos(angle) * radius - particleSize / 2,
+                    top: size / 2 + 20 + Math.sin(angle) * radius - particleSize / 2,
+                    width: particleSize,
+                    height: particleSize,
+                    borderRadius: particleSize / 2,
+                    backgroundColor: index % 3 === 0 ? colors.goldBright : accentColor,
+                    opacity: index % 3 === 0 ? 0.9 : 0.55,
+                  },
+                ]}
+              />
+            );
+          })}
+        </Animated.View>
+      )}
+
+      {tierFrame.cornerDecoration && (
+        <>
+          {([
+            { left: 8, top: 10 },
+            { right: 8, top: 10 },
+            { right: 8, bottom: shouldShowTitle ? 34 : 16 },
+            { left: 8, bottom: shouldShowTitle ? 34 : 16 },
+          ] as const).map((corner, index) => (
+            <View
+              key={`corner-${index}`}
+              style={[
+                styles.cornerRune,
+                { borderColor: `${accentColor}80`, backgroundColor: `${accentColor}18` },
+                corner,
+              ]}
+            />
+          ))}
+        </>
+      )}
+
       {/* Main crest SVG */}
-      <Animated.View style={{ transform: [{ scale: pulseScale }] }}>
+      <Animated.View style={{ transform: [{ scale: pulseScale }, { translateY: sigilFloat }] }}>
         <Svg width={svgSize} height={svgSize} viewBox="0 0 100 100">
           <Defs>
             <RadialGradient id="crestGrad" cx="50%" cy="40%" r="60%">
-              <Stop offset="0%" stopColor={accentColor} stopOpacity="0.25" />
+              <Stop offset="0%" stopColor={accentColor} stopOpacity={variant === 'heroic' ? '0.34' : '0.25'} />
               <Stop offset="100%" stopColor={accentColor} stopOpacity="0.05" />
             </RadialGradient>
           </Defs>
@@ -137,7 +234,7 @@ export function HeroCrest({ hero, size = 120, onPress, showTitle }: Props) {
             strokeWidth={1.8}
             strokeLinecap="round"
             strokeLinejoin="round"
-            opacity={0.85}
+            opacity={0.9}
           />
         </Svg>
       </Animated.View>
@@ -191,9 +288,23 @@ export function HeroCrest({ hero, size = 120, onPress, showTitle }: Props) {
 
       {/* Class title */}
       {shouldShowTitle && (
-        <Text style={[styles.title, { color: accentColor }]} numberOfLines={1}>
+        <Text
+          style={[
+            styles.title,
+            variant === 'heroic' && styles.titleHeroic,
+            { color: accentColor, maxWidth: size + 26 },
+          ]}
+          numberOfLines={1}
+        >
           {hero.className}
         </Text>
+      )}
+      {settings.weeklyRewardBadge && settings.weeklyRewardWeekKey === settings.weeklyPathWeekKey && activeWeeklyPath && (
+        <View style={[styles.weeklyRibbon, { borderColor: accentColor }]}>
+          <Text style={[styles.weeklyRibbonText, { color: accentColor }]} numberOfLines={1}>
+            {settings.weeklyRewardBadge}
+          </Text>
+        </View>
       )}
     </View>
   );
@@ -222,6 +333,23 @@ const styles = StyleSheet.create({
     position: 'absolute',
     borderWidth: 1,
     borderStyle: 'dashed',
+  },
+  particleOrbit: {
+    position: 'absolute',
+  },
+  particle: {
+    position: 'absolute',
+    shadowColor: colors.gold,
+    shadowOpacity: 0.45,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  cornerRune: {
+    position: 'absolute',
+    width: 10,
+    height: 10,
+    transform: [{ rotate: '45deg' }],
+    borderWidth: 1,
   },
   radarOverlay: {
     position: 'absolute',
@@ -252,7 +380,25 @@ const styles = StyleSheet.create({
   title: {
     fontSize: fontSize.xs,
     fontWeight: '700',
+    marginTop: 6,
+    textAlign: 'center',
+    letterSpacing: 0.8,
+  },
+  titleHeroic: {
+    fontSize: fontSize.sm,
+  },
+  weeklyRibbon: {
     marginTop: 4,
+    borderWidth: 1,
+    borderRadius: 999,
+    backgroundColor: 'rgba(9, 11, 20, 0.88)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    maxWidth: 110,
+  },
+  weeklyRibbonText: {
+    fontSize: 9,
+    fontWeight: '700',
     textAlign: 'center',
   },
 });

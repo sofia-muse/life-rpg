@@ -7,8 +7,10 @@ import {
   TextStyle,
   ActivityIndicator,
   Animated,
+  View,
 } from 'react-native';
-import { colors, radius, spacing, fontSize } from '../../config/theme';
+import { LinearGradient } from 'expo-linear-gradient';
+import { colors, radius, spacing, fontSize, typography } from '../../config/theme';
 
 interface Props {
   title: string;
@@ -54,8 +56,8 @@ export function Button({
       <TouchableOpacity
         style={[
           styles.base,
-          styles[variant],
           styles[`size_${size}`],
+          styles[`frame_${variant}`],
           disabled && styles.disabled,
           style,
         ]}
@@ -68,6 +70,16 @@ export function Button({
         accessibilityLabel={title}
         accessibilityState={{ disabled: disabled || loading, busy: loading }}
       >
+        {variant === 'primary' && (
+          <LinearGradient
+            colors={[colors.goldLight, colors.gold, colors.goldDark]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFillObject}
+          />
+        )}
+        {variant !== 'primary' && <View pointerEvents="none" style={styles.secondaryGlow} />}
+        <View pointerEvents="none" style={styles.innerBorder} />
         {loading ? (
           <ActivityIndicator color={variant === 'primary' ? colors.bgPrimary : colors.gold} />
         ) : (
@@ -85,16 +97,23 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
-  primary: {
-    backgroundColor: colors.gold,
-  },
-  secondary: {
-    backgroundColor: 'transparent',
+  frame_primary: {
     borderWidth: 1,
-    borderColor: colors.gold,
+    borderColor: colors.goldLight,
+    shadowColor: colors.gold,
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 4,
   },
-  ghost: {
+  frame_secondary: {
+    backgroundColor: colors.bgSecondary,
+    borderWidth: 1,
+    borderColor: colors.goldSoft,
+  },
+  frame_ghost: {
     backgroundColor: 'transparent',
   },
   size_sm: {
@@ -114,6 +133,8 @@ const styles = StyleSheet.create({
   },
   text: {
     fontWeight: '700',
+    textTransform: 'uppercase',
+    ...typography.headingWide,
   },
   text_primary: {
     color: colors.bgPrimary,
@@ -132,5 +153,20 @@ const styles = StyleSheet.create({
   },
   text_lg: {
     fontSize: fontSize.lg,
+  },
+  innerBorder: {
+    position: 'absolute',
+    top: 3,
+    right: 3,
+    bottom: 3,
+    left: 3,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+  },
+  secondaryGlow: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.goldSoft,
+    opacity: 0.2,
   },
 });

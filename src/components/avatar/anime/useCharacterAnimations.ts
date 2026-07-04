@@ -79,10 +79,25 @@ export function useCharacterAnimations(event: CharacterEvent = 'idle') {
         Animated.timing(bounceY, { toValue: -8, duration: 150, useNativeDriver: true }),
         Animated.spring(bounceY, { toValue: 0, friction: 3, useNativeDriver: true }),
       ]).start();
-    } else if (event === 'levelUp') {
+    } else if (event === 'levelUp' || event === 'tierUp') {
       Animated.sequence([
+        Animated.timing(bounceY, {
+          toValue: event === 'tierUp' ? -12 : -6,
+          duration: 160,
+          useNativeDriver: true,
+        }),
+        Animated.spring(bounceY, {
+          toValue: 0,
+          friction: event === 'tierUp' ? 2.5 : 3.5,
+          useNativeDriver: true,
+        }),
         Animated.timing(flashOpacity, { toValue: 0.7, duration: 200, useNativeDriver: true }),
         Animated.timing(flashOpacity, { toValue: 0, duration: 500, useNativeDriver: true }),
+      ]).start();
+    } else if (event === 'rest') {
+      Animated.sequence([
+        Animated.timing(bounceY, { toValue: 4, duration: 220, useNativeDriver: true }),
+        Animated.spring(bounceY, { toValue: 0, friction: 6, useNativeDriver: true }),
       ]).start();
     }
   }, [event]);

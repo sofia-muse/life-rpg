@@ -28,4 +28,7 @@ public class HeroesController : ApiControllerBase
 
     [HttpGet("me/stats")]
     public async Task<IActionResult> Stats() => ToResponse(await _heroes.GetStatsAsync());
+
+    [HttpGet("me/weekly-cup")]
+    public async Task<IActionResult> WeeklyCup() => ToResponse(await _heroes.GetWeeklyCupAsync());
 }

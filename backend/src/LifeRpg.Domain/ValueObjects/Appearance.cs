@@ -23,6 +23,7 @@ public sealed class CharacterAppearance
     public string EyeStyle { get; set; } = "oval";
     public string MouthStyle { get; set; } = "smile";
     public string GlassesStyle { get; set; } = "none";
+    public string ClassFlair { get; set; } = "auto";
 }
 
 /// <summary>Per-user preferences. Persisted as a JSON column on the hero. Mirrors the client's settings store.</summary>
@@ -34,4 +35,10 @@ public sealed class HeroSettings
 
     /// <summary>Opt-in to AI-forged skills (off by default; online-only).</summary>
     public bool AiSkillsEnabled { get; set; }
+    public string? WeeklyPath { get; set; }
+    public string? WeeklyPathWeekKey { get; set; }
+    public string? WeeklyPathStartedAt { get; set; }
+    public string? WeeklyRewardWeekKey { get; set; }
+    public string? WeeklyRewardTitle { get; set; }
+    public string? WeeklyRewardBadge { get; set; }
 }

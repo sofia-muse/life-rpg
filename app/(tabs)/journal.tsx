@@ -1,12 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, FlatList } from 'react-native';
-import { ScreenWrapper } from '../../src/components/layout/ScreenWrapper';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { Card } from '../../src/components/layout/Card';
 import { EmptyState } from '../../src/components/layout/EmptyState';
-import { PageHeader } from '../../src/components/layout/PageHeader';
+import { ScreenWrapper } from '../../src/components/layout/ScreenWrapper';
+import { colors, fontSize, radius, spacing } from '../../src/config/theme';
 import { useJournalStore } from '../../src/store/journalStore';
-import { colors, spacing, fontSize, radius, typography } from '../../src/config/theme';
-import { STAT_ICONS, STAT_COLORS, StatName } from '../../src/types';
+import { STAT_COLORS, STAT_ICONS, StatName } from '../../src/types';
 
 export default function JournalScreen() {
   const { entries } = useJournalStore();
@@ -22,22 +21,16 @@ export default function JournalScreen() {
   };
 
   return (
-    <ScreenWrapper scroll={false} contentWidth="regular">
-      <PageHeader
-        eyebrow="Chronicle"
-        title="Journal"
-        subtitle="A living record of the quests, victories, and lessons that shaped your hero."
-      />
+    <ScreenWrapper scroll={false}>
+      <Text style={styles.title}>Journal</Text>
+      <Text style={styles.subtitle}>A chronicle of your adventures</Text>
 
       <FlatList
         data={entries}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <Card style={styles.entryCard}>
-            <View style={styles.entryTopRow}>
-              <View style={styles.entryMarker} />
-              <Text style={styles.date}>{formatDate(item.date)}</Text>
-            </View>
+            <Text style={styles.date}>{formatDate(item.date)}</Text>
 
             {item.narrative ? <Text style={styles.narrative}>{item.narrative}</Text> : null}
 
@@ -90,36 +83,36 @@ export default function JournalScreen() {
 }
 
 const styles = StyleSheet.create({
+  title: {
+    color: colors.textPrimary,
+    fontSize: fontSize.title,
+    fontWeight: '900',
+    marginTop: spacing.md,
+  },
+  subtitle: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    marginBottom: spacing.lg,
+    fontStyle: 'italic',
+  },
   list: {
     paddingBottom: spacing.xxl,
   },
   entryCard: {
     marginBottom: spacing.md,
-    paddingLeft: spacing.sm,
-  },
-  entryTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  entryMarker: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: colors.gold,
   },
   date: {
-    ...typography.eyebrow,
     color: colors.textAccent,
     fontSize: fontSize.sm,
+    fontWeight: '700',
     marginBottom: spacing.sm,
   },
   narrative: {
-    ...typography.journalItalic,
-    color: colors.textPrimary,
-    fontSize: fontSize.lg,
-    lineHeight: 28,
-    marginBottom: spacing.md,
+    color: colors.textSecondary,
+    fontSize: fontSize.md,
+    lineHeight: 22,
+    fontStyle: 'italic',
+    marginBottom: spacing.sm,
   },
   xpRow: {
     flexDirection: 'row',
@@ -130,10 +123,8 @@ const styles = StyleSheet.create({
   xpChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.bgInset,
+    backgroundColor: colors.bgInput,
     borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.border,
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
     gap: 4,
@@ -147,15 +138,13 @@ const styles = StyleSheet.create({
   },
   milestones: {
     marginTop: spacing.sm,
-    gap: spacing.xs,
   },
   milestone: {
-    ...typography.bodyStrong,
     color: colors.textPrimary,
     fontSize: fontSize.sm,
+    marginBottom: 2,
   },
   skillUnlock: {
-    ...typography.eyebrow,
     color: colors.textAccent,
     fontSize: fontSize.sm,
     marginTop: spacing.xs,

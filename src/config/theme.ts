@@ -3,9 +3,12 @@ import { Platform } from 'react-native';
 export const colors = {
   // Backgrounds
   bgPrimary: '#0F0F1A',
+  bgCanvas: '#090B14',
   bgSecondary: '#1A1A2E',
   bgCard: '#16213E',
   bgCardRaised: '#1E2A4A',
+  bgPanel: '#221B3D',
+  bgInset: '#11162B',
   bgInput: '#1E2A4A',
   bgModal: '#0D0D1A',
 
@@ -18,9 +21,16 @@ export const colors = {
   // Accents
   gold: '#C4A962',
   goldLight: '#D4B872',
+  goldBright: '#F1DEA1',
   goldDark: '#A48942',
   goldGlow: 'rgba(196, 169, 98, 0.18)',
   goldSoft: 'rgba(196, 169, 98, 0.1)',
+  starlight: 'rgba(240, 232, 196, 0.65)',
+  veil: 'rgba(9, 11, 20, 0.72)',
+  amethyst: '#7C5CFC',
+  amethystGlow: 'rgba(124, 92, 252, 0.25)',
+  sapphire: '#4E82FF',
+  rose: '#E879B8',
 
   // Stat colors
   strength: '#EF4444',
@@ -33,9 +43,11 @@ export const colors = {
   // UI
   border: '#2A2A4A',
   borderLight: '#3A3A5A',
+  borderStrong: '#60547A',
   success: '#22C55E',
   error: '#EF4444',
   warning: '#F59E0B',
+  shadowHeavy: 'rgba(5, 8, 20, 0.45)',
 
   // Tab bar
   tabActive: '#C4A962',

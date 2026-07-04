@@ -120,6 +120,60 @@ public class HeroService
         return Result<List<StatProgressDto>>.Success(list);
     }
 
+    public async Task<Result<WeeklyCupDto>> GetWeeklyCupAsync(CancellationToken ct = default)
+    {
+        var hero = await _db.Heroes
+            .Include(h => h.Quests)
+            .FirstOrDefaultAsync(h => _user.UserId != null && h.UserId == _user.UserId, ct);
+        if (hero is null)
+        {
+            return Result<WeeklyCupDto>.NotFound("Hero not found");
+        }
+
+        var path = hero.Settings.WeeklyPath?.Trim().ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(path) || hero.Settings.WeeklyPathWeekKey != WeekKey(_clock.Today))
+        {
+            return Result<WeeklyCupDto>.Conflict("No weekly path is active");
+        }
+
+        var (stats, label, rewardTitle, rewardBadge, requiredCount) = path switch
+        {
+            "power" => (new[] { StatName.Strength, StatName.Vitality }, "Power", "Vanguard of Power", "Power Cup", 4),
+            "focus" => (new[] { StatName.Intelligence, StatName.Dexterity }, "Focus", "Sage of Focus", "Focus Cup", 4),
+            "support" => (new[] { StatName.Charisma, StatName.Willpower }, "Support", "Warden of Support", "Support Cup", 4),
+            _ => (Array.Empty<StatName>(), "Unknown", "Weekly Reward", "Weekly Cup", 4),
+        };
+
+        var statSet = stats.ToHashSet();
+        var completedMatches = hero.Quests.Count(q =>
+            q.IsCompleted
+            && statSet.Contains(q.Stat)
+            && q.CompletedAt is { } completedAt
+            && WeekKey(DateOnly.FromDateTime(completedAt.UtcDateTime)) == hero.Settings.WeeklyPathWeekKey);
+
+        var bossProgress = Math.Min(20, (int)Math.Round(hero.Quests
+            .Where(q => q.Type == QuestType.Boss && statSet.Contains(q.Stat) && q.TotalSteps is > 0)
+            .Sum(q => ((double)(q.CompletedSteps ?? 0) / q.TotalSteps!.Value) * 20)));
+
+        var contractProgress = Math.Min(60, (int)Math.Round((double)completedMatches / Math.Max(requiredCount, 1) * 60));
+        var streakBoost = Math.Min(10, hero.CurrentStreak);
+        var rewardBoost = hero.Settings.WeeklyRewardWeekKey == hero.Settings.WeeklyPathWeekKey ? 10 : 0;
+        var score = Math.Min(100, contractProgress + bossProgress + streakBoost + rewardBoost);
+        var rank = score >= 85 ? "mythic" : score >= 65 ? "gold" : score >= 40 ? "silver" : "bronze";
+
+        return Result<WeeklyCupDto>.Success(new WeeklyCupDto(
+            $"{label} Cup",
+            $"{label} Path",
+            score,
+            rank,
+            completedMatches,
+            requiredCount,
+            bossProgress,
+            streakBoost,
+            hero.Settings.WeeklyRewardTitle ?? rewardTitle,
+            hero.Settings.WeeklyRewardBadge ?? rewardBadge));
+    }
+
     private Task<Hero?> LoadAsync(CancellationToken ct) =>
         _user.UserId is { } userId
             ? _db.Heroes
@@ -135,5 +189,11 @@ public class HeroService
         hero.DominantStat = StatCalculator.GetDominantStat(hero.StatXp);
         hero.ClassTier = ClassDefinitions.GetTierForLevel(hero.HeroLevel);
         hero.ClassName = ClassDefinitions.GetClassName(hero.DominantStat, hero.ClassTier);
+    }
+
+    private static string WeekKey(DateOnly date)
+    {
+        var diff = ((int)date.DayOfWeek + 6) % 7;
+        return date.AddDays(-diff).ToString("yyyy-MM-dd");
     }
 }

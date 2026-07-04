@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
 import { DarkTheme, ThemeProvider } from '@react-navigation/native';
-import { useFonts } from 'expo-font';
 import { Stack, Redirect } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { View, ActivityIndicator } from 'react-native';
@@ -31,31 +30,23 @@ const rpgDarkTheme = {
 };
 
 export default function RootLayout() {
-  const [loaded, error] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-  });
   const hasHydrated = useHeroStore((s) => s._hasHydrated);
   const isOnboarded = useHeroStore((s) => s.isOnboarded);
   const authStatus = useAuthStore((s) => s.status);
   const bootstrap = useAuthStore((s) => s.bootstrap);
 
   useEffect(() => {
-    if (error) throw error;
-  }, [error]);
-
-  // Resolve the auth session and start the offline sync queue once on mount.
-  useEffect(() => {
     void bootstrap();
     void syncManager.init();
   }, [bootstrap]);
 
   useEffect(() => {
-    if (loaded && hasHydrated) {
-      SplashScreen.hideAsync();
+    if (hasHydrated && authStatus !== 'loading') {
+      void SplashScreen.hideAsync();
     }
-  }, [loaded, hasHydrated]);
+  }, [hasHydrated, authStatus]);
 
-  if (!loaded || !hasHydrated || authStatus === 'loading') {
+  if (!hasHydrated || authStatus === 'loading') {
     return (
       <View
         style={{

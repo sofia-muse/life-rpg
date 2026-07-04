@@ -206,7 +206,8 @@ public class QuestService
         var unlockedIds = hero.UnlockedSkills.Select(s => s.SkillId).ToList();
         var streakMultiplier = StreakCalculator.GetMultiplier(hero.CurrentStreak);
         var skillBonus = SkillResolver.GetSkillBonusForQuest(quest.Type, quest.Stat, unlockedIds)
-            + SkillResolver.GetForgedBonusForStat(quest.Stat, hero.GeneratedSkills);
+            + SkillResolver.GetForgedBonusForStat(quest.Stat, hero.GeneratedSkills)
+            + GetWeeklyPathBonus(hero, quest, today);
         var reward = XpCalculator.CalculateXpReward(quest.Difficulty, streakMultiplier, skillBonus);
 
         var oldTier = hero.ClassTier;
@@ -345,5 +346,30 @@ public class QuestService
         var unlockedIds = hero.UnlockedSkills.Select(s => s.SkillId);
         var maxActiveDailyCount = BaseActiveDailyLimit + SkillResolver.GetActiveDailyQuestCapacityBonus(unlockedIds);
         return currentActiveDailyCount < maxActiveDailyCount;
+    }
+
+    private static int GetWeeklyPathBonus(Hero hero, Quest quest, DateOnly today)
+    {
+        var path = hero.Settings.WeeklyPath?.Trim().ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(path) || hero.Settings.WeeklyPathWeekKey != WeekKey(today))
+        {
+            return 0;
+        }
+
+        var matches = path switch
+        {
+            "power" => quest.Stat is StatName.Strength or StatName.Vitality,
+            "focus" => quest.Stat is StatName.Intelligence or StatName.Dexterity,
+            "support" => quest.Stat is StatName.Charisma or StatName.Willpower,
+            _ => false,
+        };
+
+        return matches ? 5 : 0;
+    }
+
+    private static string WeekKey(DateOnly date)
+    {
+        var diff = ((int)date.DayOfWeek + 6) % 7;
+        return date.AddDays(-diff).ToString("yyyy-MM-dd");
     }
 }

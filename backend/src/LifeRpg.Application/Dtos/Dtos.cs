@@ -44,6 +44,18 @@ public record HeroDto(
 
 public record UpdateAppearanceRequest(HeroAppearance? Appearance, CharacterAppearance? CharacterAppearance);
 
+public record WeeklyCupDto(
+    string PathLabel,
+    string ContractTitle,
+    int Score,
+    string Rank,
+    int CompletedMatches,
+    int RequiredCount,
+    int BossProgress,
+    int StreakBoost,
+    string RewardTitle,
+    string RewardBadge);
+
 public record StatProgressDto(StatName Stat, int Level, int CurrentXp, int XpNeeded, double Progress);
 
 // ─── Quests ───
@@ -111,4 +123,10 @@ public record SettingsDto(
     bool NotificationsEnabled,
     bool HapticEnabled,
     string ReminderTime,
-    bool AiSkillsEnabled);
+    bool AiSkillsEnabled,
+    string? WeeklyPath,
+    string? WeeklyPathWeekKey,
+    string? WeeklyPathStartedAt,
+    string? WeeklyRewardWeekKey,
+    string? WeeklyRewardTitle,
+    string? WeeklyRewardBadge);

@@ -1,10 +1,16 @@
-import { Hero, Quest, StatName } from '../types';
+import { Hero, Quest, StatName, WeeklyPath } from '../types';
 import {
   QuestTemplate,
   getBossTemplates,
   getDailyTemplates,
   getSideTemplates,
 } from './questTemplates';
+import {
+  WeeklyPathSettingsLike,
+  getActiveWeeklyPath,
+  getWeekKeyForIsoDate,
+  getWeeklyPathDefinition,
+} from './weeklyPaths';
 
 interface ContractBlueprint {
   codename: string;
@@ -26,6 +32,19 @@ export interface ClassContract {
   activeMatches: number;
   completedMatches: number;
   recommended: QuestTemplate[];
+}
+
+export interface ContractRewardPreview {
+  title: string;
+  badge: string;
+  flair: Hero['characterAppearance']['classFlair'];
+}
+
+export interface WeeklyContract extends ClassContract {
+  kind: 'class' | 'weeklyPath';
+  path?: WeeklyPath;
+  stats: StatName[];
+  reward: ContractRewardPreview;
 }
 
 const CONTRACT_BLUEPRINTS: Record<StatName, ContractBlueprint> = {
@@ -104,6 +123,37 @@ function countContractMatches(quests: Quest[], titles: Set<string>, completedOnl
   }).length;
 }
 
+function countPathMatches(
+  quests: Quest[],
+  stats: StatName[],
+  completedOnly: boolean,
+  weeklyPathWeekKey?: string | null,
+) {
+  const statSet = new Set(stats);
+  return quests.filter((quest) => {
+    if (!statSet.has(quest.stat)) return false;
+    if (completedOnly) {
+      if (!quest.isCompleted) return false;
+      return weeklyPathWeekKey ? getWeekKeyForIsoDate(quest.completedAt) === weeklyPathWeekKey : true;
+    }
+    return quest.isActive && !quest.isCompleted;
+  }).length;
+}
+
+function buildRecommendedForStats(
+  stats: StatName[],
+  gender: Hero['characterAppearance']['gender'],
+  dailyCount = 2,
+  sideCount = 1,
+  bossCount = 1,
+): QuestTemplate[] {
+  const uniqueStats = [...new Set(stats)];
+  const daily = uniqueStats.flatMap((stat) => getDailyTemplates(stat, gender).slice(0, 1)).slice(0, dailyCount);
+  const side = uniqueStats.flatMap((stat) => getSideTemplates(stat, gender).slice(0, 1)).slice(0, sideCount);
+  const boss = uniqueStats.flatMap((stat) => getBossTemplates(stat, gender).slice(0, 1)).slice(0, bossCount);
+  return [...daily, ...side, ...boss];
+}
+
 export function getClassContract(hero: Hero, quests: Quest[] = []): ClassContract {
   const blueprint = CONTRACT_BLUEPRINTS[hero.dominantStat];
   const gender = hero.characterAppearance?.gender;
@@ -127,4 +177,62 @@ export function getClassContract(hero: Hero, quests: Quest[] = []): ClassContrac
     completedMatches: countContractMatches(quests, recommendedTitles, true),
     recommended,
   };
+}
+
+export function getWeeklyPathContract(
+  hero: Hero,
+  settings: WeeklyPathSettingsLike,
+  quests: Quest[] = [],
+): WeeklyContract | null {
+  const activePath = getActiveWeeklyPath(settings);
+  if (!activePath) return null;
+
+  const definition = getWeeklyPathDefinition(activePath);
+  const gender = hero.characterAppearance?.gender;
+  const recommended = buildRecommendedForStats(definition.stats, gender);
+
+  return {
+    id: `${activePath}-weekly-contract`,
+    kind: 'weeklyPath',
+    path: activePath,
+    title: `${definition.label} Path`,
+    focus: definition.focus,
+    vow: definition.vow,
+    summary: definition.summary,
+    requiredCount: definition.requiredCount,
+    activeMatches: countPathMatches(quests, definition.stats, false),
+    completedMatches: countPathMatches(quests, definition.stats, true, settings.weeklyPathWeekKey),
+    recommended,
+    stats: [...definition.stats],
+    reward: {
+      title: definition.rewardTitle,
+      badge: definition.rewardBadge,
+      flair: definition.flair,
+    },
+  };
+}
+
+export function getPrimaryContract(
+  hero: Hero,
+  settings: WeeklyPathSettingsLike,
+  quests: Quest[] = [],
+): WeeklyContract {
+  const weekly = getWeeklyPathContract(hero, settings, quests);
+  if (weekly) return weekly;
+
+  const fallback = getClassContract(hero, quests);
+  return {
+    ...fallback,
+    kind: 'class',
+    stats: [hero.dominantStat],
+    reward: {
+      title: `${hero.className} Keeper`,
+      badge: 'Class Contract',
+      flair: hero.characterAppearance.classFlair ?? 'auto',
+    },
+  };
+}
+
+export function isContractComplete(contract: Pick<WeeklyContract, 'completedMatches' | 'requiredCount'>): boolean {
+  return contract.completedMatches >= contract.requiredCount;
 }

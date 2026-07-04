@@ -2,15 +2,28 @@ import { QuestType, Skill, SkillEffect, StatName } from '../types';
 import { SKILLS, getSkillById, getForgedSkills } from '../config/skills';
 import { levelFromXP } from '../config/xpTables';
 
+function normalizeUnlockedSkillIds(unlockedSkillIds: unknown, context: string): string[] {
+  if (!Array.isArray(unlockedSkillIds)) {
+    console.warn('[SkillEngine] Expected unlocked skill ids to be an array.', {
+      context,
+      received: unlockedSkillIds,
+    });
+    return [];
+  }
+
+  return unlockedSkillIds.filter((skillId): skillId is string => typeof skillId === 'string');
+}
+
 // Check which skills should be unlocked based on current stats
 export function getNewlyUnlockedSkills(
   statXP: Record<StatName, number>,
   alreadyUnlocked: string[],
 ): Skill[] {
   const newSkills: Skill[] = [];
+  const unlockedSkillIds = normalizeUnlockedSkillIds(alreadyUnlocked, 'getNewlyUnlockedSkills');
 
   for (const skill of SKILLS) {
-    if (alreadyUnlocked.includes(skill.id)) continue;
+    if (unlockedSkillIds.includes(skill.id)) continue;
 
     if (skill.category === 'cross') {
       // Cross-stat skills require two stats
@@ -49,8 +62,9 @@ export function isSkillUnlockable(skill: Skill, statXP: Record<StatName, number>
 }
 
 function getResolvedSkills(unlockedSkillIds: string[]): Skill[] {
+  const normalizedSkillIds = normalizeUnlockedSkillIds(unlockedSkillIds, 'getResolvedSkills');
   return [
-    ...unlockedSkillIds.map((id) => getSkillById(id)).filter((s): s is Skill => !!s),
+    ...normalizedSkillIds.map((id) => getSkillById(id)).filter((s): s is Skill => !!s),
     ...getForgedSkills(),
   ];
 }

@@ -3,6 +3,19 @@ import { apiFetch } from './client';
 import { ApiHero } from './dto';
 import { CharacterAppearance, StatName } from '../types';
 
+export interface WeeklyCupDto {
+  pathLabel: string;
+  contractTitle: string;
+  score: number;
+  rank: string;
+  completedMatches: number;
+  requiredCount: number;
+  bossProgress: number;
+  streakBoost: number;
+  rewardTitle: string;
+  rewardBadge: string;
+}
+
 export const heroApi = {
   getMine: () => apiFetch<ApiHero>('/api/v1/heroes/me'),
 
@@ -22,6 +35,8 @@ export const heroApi = {
       method: 'PUT',
       body: { appearance, characterAppearance },
     }),
+
+  getWeeklyCup: () => apiFetch<WeeklyCupDto>('/api/v1/heroes/me/weekly-cup'),
 
   deleteMine: () => apiFetch<void>('/api/v1/heroes/me', { method: 'DELETE' }),
 };

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Share } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Hero, STAT_NAMES, STAT_COLORS, STAT_ICONS } from '../../types';
-import { colors, spacing, fontSize, radius } from '../../config/theme';
+import { colors, spacing, fontSize, radius, typography } from '../../config/theme';
 import { getStatDisplayProgress } from '../../engine/xpEngine';
 import { NiceAvatarCharacter } from '../avatar/NiceAvatarCharacter';
 import { Button } from '../layout/Button';
@@ -9,6 +10,10 @@ import { guidanceApi } from '../../api/guidanceApi';
 import { useAuthStore } from '../../store/authStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { env } from '../../config/env';
+import { HeroCrest } from '../avatar/HeroCrest';
+import { Badge } from '../layout/Badge';
+import { FadeIn } from '../animated/FadeIn';
+import { PulseGlow } from '../animated/PulseGlow';
 
 interface Props {
   hero: Hero;
@@ -71,33 +76,68 @@ export function HeroShareCard({ hero }: Props) {
 
   return (
     <View style={styles.card}>
-      {/* Visual card */}
       <View style={styles.cardInner}>
-        <View style={styles.cardHeader}>
-          <NiceAvatarCharacter
-            appearance={hero.characterAppearance}
-            dominantStat={hero.dominantStat}
-            classTier={hero.classTier}
-            size={70}
-          />
-          <View style={styles.cardInfo}>
-            <Text style={styles.cardName}>{hero.name}</Text>
-            <Text style={[styles.cardClass, { color: STAT_COLORS[hero.dominantStat] }]}>
-              {hero.className}
-            </Text>
-            <Text style={styles.cardLevel}>Hero Level {hero.heroLevel}</Text>
+        <LinearGradient
+          colors={['rgba(255,255,255,0.08)', 'rgba(124,92,252,0.06)', 'rgba(196,169,98,0.04)']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
+        />
+        <View pointerEvents="none" style={styles.cardVeil} />
+        <View pointerEvents="none" style={styles.cornerAccent} />
+        <FadeIn slideFrom="none" scaleFrom={0.97} duration={500}>
+          <View style={styles.cardHeader}>
+            <View style={styles.identityBlock}>
+              <PulseGlow
+                color={STAT_COLORS[hero.dominantStat]}
+                intensity="strong"
+                style={styles.avatarGlow}
+              >
+                <NiceAvatarCharacter
+                  appearance={hero.characterAppearance}
+                  dominantStat={hero.dominantStat}
+                  classTier={hero.classTier}
+                  size={78}
+                />
+              </PulseGlow>
+              <View style={styles.cardInfo}>
+                <Text style={styles.overline}>Hero Chronicle</Text>
+                <Text style={styles.cardName}>{hero.name}</Text>
+                <Badge
+                  label={`${hero.className} • Tier ${hero.classTier}`}
+                  color={STAT_COLORS[hero.dominantStat]}
+                />
+                <Text style={styles.cardLevel}>Hero Level {hero.heroLevel}</Text>
+              </View>
+            </View>
+            <HeroCrest hero={hero} size={90} variant="compact" />
           </View>
+        </FadeIn>
+
+        <View style={styles.bannerRow}>
+          <Text style={styles.bannerLabel}>Dominant Path</Text>
+          <Text style={[styles.bannerValue, { color: STAT_COLORS[hero.dominantStat] }]}>
+            {hero.dominantStat.toUpperCase()}
+          </Text>
         </View>
 
         <View style={styles.statsGrid}>
-          {STAT_NAMES.map((stat) => {
+          {STAT_NAMES.map((stat, index) => {
             const p = getStatDisplayProgress(hero.statXP[stat]);
             return (
-              <View key={stat} style={styles.statItem}>
+              <FadeIn
+                key={stat}
+                delay={index * 45}
+                duration={420}
+                slideFrom="bottom"
+                slideDistance={10}
+                scaleFrom={0.96}
+                style={styles.statItem}
+              >
                 <Text style={styles.statIcon}>{STAT_ICONS[stat]}</Text>
                 <Text style={[styles.statLevel, { color: STAT_COLORS[stat] }]}>Lv.{p.level}</Text>
                 <Text style={styles.statName}>{stat.slice(0, 3).toUpperCase()}</Text>
-              </View>
+              </FadeIn>
             );
           })}
         </View>
@@ -105,15 +145,17 @@ export function HeroShareCard({ hero }: Props) {
         <View style={styles.cardFooter}>
           <View style={styles.footerStat}>
             <Text style={styles.footerNum}>{hero.totalQuestsCompleted}</Text>
-            <Text style={styles.footerLabel}>Quests</Text>
+            <Text style={styles.footerLabel}>Quests Honored</Text>
           </View>
+          <View style={styles.footerDivider} />
           <View style={styles.footerStat}>
             <Text style={styles.footerNum}>{hero.currentStreak}</Text>
-            <Text style={styles.footerLabel}>Streak</Text>
+            <Text style={styles.footerLabel}>Sacred Streak</Text>
           </View>
+          <View style={styles.footerDivider} />
           <View style={styles.footerStat}>
             <Text style={styles.footerNum}>{hero.longestStreak}</Text>
-            <Text style={styles.footerLabel}>Best</Text>
+            <Text style={styles.footerLabel}>Best Vigil</Text>
           </View>
         </View>
       </View>
@@ -139,35 +181,135 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bgCard,
     borderRadius: radius.xl,
     borderWidth: 2,
-    borderColor: colors.gold,
+    borderColor: colors.goldLight,
+    overflow: 'hidden',
     padding: spacing.lg,
     marginBottom: spacing.sm,
+    shadowColor: colors.gold,
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 6,
   },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg },
-  cardInfo: { marginLeft: spacing.md, flex: 1 },
-  cardName: { color: colors.textPrimary, fontSize: fontSize.xxl, fontWeight: '900' },
-  cardClass: { fontSize: fontSize.md, fontWeight: '700', marginTop: 2 },
-  cardLevel: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: 2 },
+  cardVeil: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.veil,
+  },
+  cornerAccent: {
+    position: 'absolute',
+    top: -28,
+    right: -18,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: colors.amethystGlow,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.md,
+    gap: spacing.sm,
+  },
+  identityBlock: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  avatarGlow: {
+    width: 104,
+    height: 104,
+    marginRight: spacing.md,
+  },
+  cardInfo: { flex: 1 },
+  overline: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    textTransform: 'uppercase',
+    marginBottom: spacing.xs,
+    ...typography.headingWide,
+  },
+  cardName: {
+    color: colors.textPrimary,
+    fontSize: fontSize.title,
+    fontWeight: '900',
+    marginBottom: spacing.xs,
+    ...typography.heading,
+  },
+  cardLevel: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    marginTop: spacing.sm,
+    ...typography.body,
+  },
+  bannerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.md,
+    backgroundColor: 'rgba(15, 15, 26, 0.45)',
+  },
+  bannerLabel: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    textTransform: 'uppercase',
+    ...typography.headingWide,
+  },
+  bannerValue: {
+    fontSize: fontSize.sm,
+    fontWeight: '800',
+    ...typography.headingWide,
+  },
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    gap: spacing.sm,
     marginBottom: spacing.md,
   },
-  statItem: { alignItems: 'center', width: '30%', marginBottom: spacing.sm },
-  statIcon: { fontSize: 18 },
-  statLevel: { fontSize: fontSize.md, fontWeight: '800' },
-  statName: { color: colors.textMuted, fontSize: fontSize.xs },
+  statItem: {
+    alignItems: 'center',
+    width: '31%',
+    backgroundColor: 'rgba(15, 15, 26, 0.55)',
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    paddingVertical: spacing.sm + 2,
+  },
+  statIcon: { fontSize: 18, marginBottom: 2 },
+  statLevel: { fontSize: fontSize.md, fontWeight: '800', ...typography.headingWide },
+  statName: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: 2, ...typography.headingWide },
   cardFooter: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingTop: spacing.sm,
+    justifyContent: 'space-between',
+    alignItems: 'stretch',
+    paddingTop: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: colors.borderLight,
   },
-  footerStat: { alignItems: 'center' },
-  footerNum: { color: colors.textAccent, fontSize: fontSize.xl, fontWeight: '900' },
-  footerLabel: { color: colors.textMuted, fontSize: fontSize.xs },
+  footerStat: { alignItems: 'center', flex: 1 },
+  footerDivider: {
+    width: 1,
+    backgroundColor: colors.border,
+    marginVertical: spacing.xs,
+  },
+  footerNum: {
+    color: colors.textAccent,
+    fontSize: fontSize.xl,
+    fontWeight: '900',
+    ...typography.heading,
+  },
+  footerLabel: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    marginTop: 2,
+    textAlign: 'center',
+    ...typography.headingWide,
+  },
   shareBtn: {
     marginBottom: spacing.sm,
   },

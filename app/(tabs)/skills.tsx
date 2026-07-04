@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity } from 'react-native';
 import { ScreenWrapper } from '../../src/components/layout/ScreenWrapper';
-import { PageHeader } from '../../src/components/layout/PageHeader';
 import { SkillNode } from '../../src/components/game/SkillNode';
 import { Card } from '../../src/components/layout/Card';
 import { Button } from '../../src/components/layout/Button';
@@ -14,12 +13,10 @@ import { useUIStore } from '../../src/store/uiStore';
 import { getSkillsByCategory } from '../../src/config/skills';
 import { getSkillProgress } from '../../src/engine/skillEngine';
 import { env } from '../../src/config/env';
-import { colors, spacing, fontSize, radius, typography } from '../../src/config/theme';
-import { useResponsive } from '../../src/hooks/useResponsive';
+import { colors, spacing, fontSize, radius } from '../../src/config/theme';
 import { Skill, STAT_NAMES, STAT_COLORS, STAT_ICONS } from '../../src/types';
 
 export default function SkillsScreen() {
-  const { isDesktop } = useResponsive();
   const { hero } = useHeroStore();
   const { isSkillUnlocked } = useSkillStore();
   const aiSkillsEnabled = useSettingsStore((s) => s.aiSkillsEnabled);
@@ -53,27 +50,21 @@ export default function SkillsScreen() {
   ];
 
   return (
-    <ScreenWrapper contentWidth="wide">
-      <PageHeader
-        eyebrow="Ascension Paths"
-        title="Skill Trees"
-        subtitle="Unlock enduring bonuses as your stats mature. Each path reflects how your real-life habits are shaping your class."
-      />
+    <ScreenWrapper>
+      <Text style={styles.title}>Skill Trees</Text>
+      <Text style={styles.subtitle}>Unlock skills by leveling your stats</Text>
 
       {/* AI-Forged skills (opt-in, online-only) */}
       {aiSkillsEnabled && (
-        <Card style={styles.treeCard} accentColor={colors.gold}>
+        <Card style={styles.treeCard}>
           <View style={styles.treeHeader}>
             <Text style={styles.treeIcon}>✨</Text>
-            <View style={styles.treeHeaderCopy}>
-              <Text style={[styles.treeEyebrow, { color: colors.gold }]}>Rare boon</Text>
-              <Text style={[styles.treeName, { color: colors.gold }]}>Forged</Text>
-            </View>
+            <Text style={[styles.treeName, { color: colors.gold }]}>Forged</Text>
           </View>
           {canForge ? (
             <>
               {forged.length > 0 && (
-                <View style={[styles.nodesRow, isDesktop && styles.nodesRowWide]}>
+                <View style={styles.nodesRow}>
                   {forged.map((skill) => (
                     <SkillNode
                       key={skill.id}
@@ -106,15 +97,12 @@ export default function SkillsScreen() {
         if (skills.length === 0) return null;
 
         return (
-          <Card key={cat.key} style={styles.treeCard} accentColor={cat.color}>
+          <Card key={cat.key} style={styles.treeCard}>
             <View style={styles.treeHeader}>
               <Text style={styles.treeIcon}>{cat.icon}</Text>
-              <View style={styles.treeHeaderCopy}>
-                <Text style={[styles.treeEyebrow, { color: cat.color }]}>Discipline path</Text>
-                <Text style={[styles.treeName, { color: cat.color }]}>{cat.label}</Text>
-              </View>
+              <Text style={[styles.treeName, { color: cat.color }]}>{cat.label}</Text>
             </View>
-            <View style={[styles.nodesRow, isDesktop && styles.nodesRowWide]}>
+            <View style={styles.nodesRow}>
               {skills.map((skill) => (
                 <SkillNode
                   key={skill.id}
@@ -180,6 +168,17 @@ export default function SkillsScreen() {
 }
 
 const styles = StyleSheet.create({
+  title: {
+    color: colors.textPrimary,
+    fontSize: fontSize.title,
+    fontWeight: '900',
+    marginTop: spacing.md,
+  },
+  subtitle: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    marginBottom: spacing.lg,
+  },
   treeCard: {
     marginBottom: spacing.md,
   },
@@ -187,54 +186,42 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   hint: {
-    ...typography.body,
     color: colors.textSecondary,
     fontSize: fontSize.sm,
+    lineHeight: 20,
   },
   treeHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: spacing.md,
-    gap: spacing.sm,
+    marginBottom: spacing.sm,
   },
   treeIcon: {
-    fontSize: 22,
-  },
-  treeHeaderCopy: {
-    flex: 1,
-  },
-  treeEyebrow: {
-    ...typography.eyebrow,
-    marginBottom: spacing.xxs,
+    fontSize: 20,
+    marginRight: spacing.sm,
   },
   treeName: {
-    ...typography.sectionTitle,
-    color: colors.textPrimary,
+    fontSize: fontSize.lg,
+    fontWeight: '700',
   },
   nodesRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'flex-start',
-  },
-  nodesRowWide: {
-    gap: spacing.xs,
+    justifyContent: 'center',
   },
   // Modal
   modalOverlay: {
     flex: 1,
-    backgroundColor: colors.bgOverlay,
+    backgroundColor: 'rgba(0,0,0,0.7)',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: spacing.lg,
   },
   modalContent: {
-    backgroundColor: colors.bgCardElevated,
-    borderRadius: radius.xxl,
+    backgroundColor: colors.bgCard,
+    borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: colors.borderLight,
+    borderColor: colors.border,
     padding: spacing.lg,
-    width: '100%',
-    maxWidth: 460,
+    width: '85%',
     alignItems: 'center',
   },
   modalIcon: {
@@ -242,17 +229,17 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   modalName: {
-    ...typography.pageTitle,
+    color: colors.textPrimary,
     fontSize: fontSize.xl,
+    fontWeight: '900',
     marginBottom: spacing.xs,
-    textAlign: 'center',
   },
   modalDesc: {
-    ...typography.journalItalic,
     color: colors.textSecondary,
     fontSize: fontSize.md,
     textAlign: 'center',
     marginBottom: spacing.md,
+    fontStyle: 'italic',
   },
   modalDivider: {
     height: 1,
@@ -261,8 +248,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   modalEffect: {
-    ...typography.bodyStrong,
     color: colors.textAccent,
+    fontSize: fontSize.md,
+    fontWeight: '600',
     textAlign: 'center',
     marginBottom: spacing.md,
   },
@@ -270,13 +258,14 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   modalReqLabel: {
-    ...typography.eyebrow,
     color: colors.textMuted,
+    fontSize: fontSize.sm,
     textAlign: 'center',
   },
   modalReqText: {
-    ...typography.bodyStrong,
     color: colors.textSecondary,
+    fontSize: fontSize.md,
+    fontWeight: '600',
     textAlign: 'center',
   },
   modalStatus: {
@@ -291,7 +280,8 @@ const styles = StyleSheet.create({
     backgroundColor: `${colors.error}20`,
   },
   modalStatusText: {
-    ...typography.eyebrow,
     color: colors.textPrimary,
+    fontSize: fontSize.sm,
+    fontWeight: '600',
   },
 });

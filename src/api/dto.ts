@@ -1,4 +1,4 @@
-import { CharacterAppearance, HeroAppearance, StatName, UnlockedSkill } from '../types';
+import { CharacterAppearance, HeroAppearance, StatName, UnlockedSkill, WeeklyPath } from '../types';
 
 // Wire shapes returned by the .NET API (camelCase). Stat blocks come back as objects keyed by stat.
 export interface ApiStatBlock {
@@ -38,6 +38,12 @@ export interface ApiHero {
     hapticEnabled: boolean;
     reminderTime: string;
     aiSkillsEnabled: boolean;
+    weeklyPath: WeeklyPath | null;
+    weeklyPathWeekKey: string | null;
+    weeklyPathStartedAt: string | null;
+    weeklyRewardWeekKey: string | null;
+    weeklyRewardTitle: string | null;
+    weeklyRewardBadge: string | null;
   };
 }
 

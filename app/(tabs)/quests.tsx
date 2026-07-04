@@ -1,20 +1,15 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { ScreenWrapper } from '../../src/components/layout/ScreenWrapper';
 import { QuestCard } from '../../src/components/game/QuestCard';
 import { XPPopup } from '../../src/components/game/XPPopup';
 import { useQuestStore } from '../../src/store/questStore';
 import { useHeroStore } from '../../src/store/heroStore';
-import { useSkillStore } from '../../src/store/skillStore';
-import { useJournalStore } from '../../src/store/journalStore';
+import { useGameplayStore } from '../../src/store/gameplayStore';
 import { useUIStore } from '../../src/store/uiStore';
 import { Card } from '../../src/components/layout/Card';
 import { colors, spacing, fontSize, radius } from '../../src/config/theme';
 import { STAT_COLORS, STAT_ICONS, DIFFICULTY_XP } from '../../src/types';
-import { calculateXPReward } from '../../src/engine/xpEngine';
-import { getStreakMultiplier } from '../../src/engine/streakEngine';
-import { getSkillBonusForQuest } from '../../src/engine/skillEngine';
-import { generateQuestNarrative } from '../../src/engine/journalEngine';
 import { getAllTemplates, QuestTemplate } from '../../src/config/questTemplates';
 
 type Tab = 'daily' | 'side' | 'boss';
@@ -24,18 +19,13 @@ export default function QuestsScreen() {
   const {
     quests,
     addQuest,
-    completeQuest,
-    completeBossStep,
     deleteQuest,
     getDailyQuests,
     getSideQuests,
     getBossQuests,
-    resetDailyQuests,
   } = useQuestStore();
-  const { hero, addXP, beginDailyActivity, recordQuestCompletion, checkAppearanceUnlocks } =
-    useHeroStore();
-  const { checkAndUnlockSkills, getUnlockedSkillIds } = useSkillStore();
-  const { updateTodayEntry } = useJournalStore();
+  const hero = useHeroStore((state) => state.hero);
+  const completeQuestFlow = useGameplayStore((state) => state.completeQuest);
   const {
     showXP,
     setLevelUp,
@@ -77,118 +67,76 @@ export default function QuestsScreen() {
 
   const handleComplete = useCallback(
     (questId: string) => {
-      if (!hero) return;
+      void (async () => {
+        try {
+          const result = await completeQuestFlow(questId);
+          if (!result) {
+            console.warn('[QuestsScreen] Quest completion returned no result.', {
+              questId,
+            });
+            return;
+          }
 
-      resetDailyQuests();
+          if (result.stepAdvancedOnly || !result.completed) {
+            return;
+          }
 
-      const currentQuest = useQuestStore.getState().quests.find((item) => item.id === questId);
-      if (!currentQuest) return;
+          showXP(result.quest.stat, result.xpAwarded);
 
-      const quest =
-        currentQuest.type === 'boss' && currentQuest.totalSteps
-          ? completeBossStep(questId)
-          : completeQuest(questId);
-      if (!quest) return;
-      if (!quest.isCompleted) return;
+          setCharacterEvent('questComplete');
+          setTimeout(() => setCharacterEvent('idle'), 1500);
 
-      const unlockedSkillIds = getUnlockedSkillIds();
-      const streak = beginDailyActivity({
-        hasRegenerationSkill: unlockedSkillIds.includes('vit-2'),
-        hasUnbreakableSkill: unlockedSkillIds.includes('wil-2'),
-      });
-      if (streak === null) return;
+          if (result.levelResult) {
+            const { stat, newLevel, tierUp } = result.levelResult;
+            setTimeout(() => {
+              setLevelUp(stat, newLevel);
+            }, 1200);
 
-      // Calculate XP
-      const streakMult = getStreakMultiplier(streak);
-      const skillBonus = getSkillBonusForQuest(
-        { stat: quest.stat, type: quest.type },
-        unlockedSkillIds,
-      );
-      const xpReward = calculateXPReward(quest.difficulty, streakMult, skillBonus);
+            if (tierUp) {
+              setTimeout(() => {
+                setTierUp(tierUp.newTier, tierUp.newClass);
+              }, 2500);
+            }
+          }
 
-      // Apply XP
-      const levelResult = addXP(quest.stat, xpReward.totalXP);
-      recordQuestCompletion();
+          if (result.newSkills.length > 0) {
+            setTimeout(() => {
+              setSkillUnlock(result.newSkills[0]);
+            }, result.levelResult ? 3000 : 1200);
+          }
 
-      // Show XP popup
-      showXP(quest.stat, xpReward.totalXP);
-
-      // Trigger character celebration
-      setCharacterEvent('questComplete');
-      setTimeout(() => setCharacterEvent('idle'), 1500);
-
-      // Check level up
-      if (levelResult) {
-        setTimeout(() => {
-          setLevelUp(levelResult.stat, levelResult.newLevel);
-        }, 1200);
-
-        // Check tier up
-        if (levelResult.tierUp) {
-          setTimeout(() => {
-            setTierUp(levelResult.tierUp!.newTier, levelResult.tierUp!.newClass);
-          }, 2500);
+          if (result.appearanceUnlock) {
+            const { shapes, sigils } = result.appearanceUnlock;
+            const delay = result.levelResult ? 4000 : 2000;
+            if (shapes.length > 0) {
+              setTimeout(() => setAppearanceUnlock('shape', shapes[0]), delay);
+            } else if (sigils.length > 0) {
+              setTimeout(() => setAppearanceUnlock('sigil', sigils[0]), delay);
+            }
+          }
+        } catch (error) {
+          console.error('[QuestsScreen] Failed to complete quest.', {
+            questId,
+            error,
+          });
         }
-      }
-
-      // Check skill unlocks
-      const updatedHero = useHeroStore.getState().hero;
-      if (updatedHero) {
-        const newSkills = checkAndUnlockSkills(updatedHero.statXP);
-        if (newSkills.length > 0) {
-          setTimeout(() => {
-            setSkillUnlock(newSkills[0]);
-          }, levelResult ? 3000 : 1200);
-        }
-      }
-
-      // Check appearance unlocks
-      const appearanceResult = checkAppearanceUnlocks();
-      if (appearanceResult) {
-        const delay = levelResult ? 4000 : 2000;
-        if (appearanceResult.shapes.length > 0) {
-          setTimeout(() => setAppearanceUnlock('shape', appearanceResult.shapes[0]), delay);
-        } else if (appearanceResult.sigils.length > 0) {
-          setTimeout(() => setAppearanceUnlock('sigil', appearanceResult.sigils[0]), delay);
-        }
-      }
-
-      // Update journal
-      const narrative = generateQuestNarrative(quest);
-      updateTodayEntry({
-        narrative,
-        questsCompleted: [quest.id],
-        xpGained: {
-          ...{ strength: 0, vitality: 0, intelligence: 0, charisma: 0, dexterity: 0, willpower: 0 },
-          [quest.stat]: xpReward.totalXP,
-        },
-      });
+      })();
     },
     [
-      hero,
-      completeQuest,
-      completeBossStep,
-      resetDailyQuests,
-      getUnlockedSkillIds,
-      beginDailyActivity,
-      addXP,
-      recordQuestCompletion,
-      checkAndUnlockSkills,
-      checkAppearanceUnlocks,
+      completeQuestFlow,
       showXP,
       setCharacterEvent,
       setLevelUp,
       setTierUp,
       setSkillUnlock,
       setAppearanceUnlock,
-      updateTodayEntry,
     ],
   );
 
   const filteredQuests = tabQuests[activeTab];
 
   return (
-    <ScreenWrapper scroll={false}>
+    <ScreenWrapper showScrollIndicator>
       {showXPPopup && xpPopupData && (
         <XPPopup stat={xpPopupData.stat} amount={xpPopupData.amount} onDone={dismissXP} />
       )}
@@ -265,14 +213,8 @@ export default function QuestsScreen() {
       )}
 
       {/* Quest List */}
-      <FlatList
-        data={filteredQuests}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <QuestCard quest={item} onComplete={handleComplete} onDelete={deleteQuest} />
-        )}
-        contentContainerStyle={styles.list}
-        ListEmptyComponent={
+      <View style={styles.list}>
+        {filteredQuests.length === 0 ? (
           <View style={styles.empty}>
             <Text style={styles.emptyIcon}>📜</Text>
             <Text style={styles.emptyText}>No {activeTab} quests yet.</Text>
@@ -282,8 +224,12 @@ export default function QuestsScreen() {
                 : 'Browse suggestions above or tap + to create one!'}
             </Text>
           </View>
-        }
-      />
+        ) : (
+          filteredQuests.map((item) => (
+            <QuestCard key={item.id} quest={item} onComplete={handleComplete} onDelete={deleteQuest} />
+          ))
+        )}
+      </View>
 
       {/* FAB */}
       <TouchableOpacity
@@ -346,6 +292,7 @@ const styles = StyleSheet.create({
   },
   list: {
     paddingBottom: 100,
+    minWidth: 0,
   },
   empty: {
     alignItems: 'center',
@@ -391,6 +338,7 @@ const styles = StyleSheet.create({
   },
   suggestionInfo: {
     flex: 1,
+    minWidth: 0,
   },
   suggestionHeader: {
     flexDirection: 'row',
@@ -412,6 +360,7 @@ const styles = StyleSheet.create({
   },
   suggestionMeta: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.sm,
     marginTop: spacing.xs,
   },

@@ -7,6 +7,7 @@ interface Props {
   duration?: number;
   slideFrom?: 'bottom' | 'left' | 'right' | 'none';
   slideDistance?: number;
+  scaleFrom?: number;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -16,10 +17,12 @@ export function FadeIn({
   duration = 400,
   slideFrom = 'bottom',
   slideDistance = 20,
+  scaleFrom = 1,
   style,
 }: Props) {
   const opacity = useRef(new Animated.Value(0)).current;
   const translate = useRef(new Animated.Value(slideFrom === 'none' ? 0 : slideDistance)).current;
+  const scale = useRef(new Animated.Value(scaleFrom)).current;
 
   useEffect(() => {
     const animations = [
@@ -30,6 +33,17 @@ export function FadeIn({
         useNativeDriver: true,
       }),
     ];
+
+    if (scaleFrom !== 1) {
+      animations.push(
+        Animated.timing(scale, {
+          toValue: 1,
+          duration,
+          delay,
+          useNativeDriver: true,
+        }),
+      );
+    }
 
     if (slideFrom !== 'none') {
       animations.push(
@@ -43,7 +57,7 @@ export function FadeIn({
     }
 
     Animated.parallel(animations).start();
-  }, []);
+  }, [delay, duration, opacity, scale, scaleFrom, slideFrom, translate]);
 
   const transform =
     slideFrom === 'bottom'
@@ -54,5 +68,5 @@ export function FadeIn({
           ? [{ translateX: translate }]
           : [];
 
-  return <Animated.View style={[{ opacity, transform }, style]}>{children}</Animated.View>;
+  return <Animated.View style={[{ opacity, transform: [...transform, { scale }] }, style]}>{children}</Animated.View>;
 }

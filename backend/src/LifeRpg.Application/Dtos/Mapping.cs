@@ -25,7 +25,13 @@ public static class Mapping
         h.Settings.NotificationsEnabled,
         h.Settings.HapticEnabled,
         h.Settings.ReminderTime,
-        h.Settings.AiSkillsEnabled);
+        h.Settings.AiSkillsEnabled,
+        h.Settings.WeeklyPath,
+        h.Settings.WeeklyPathWeekKey,
+        h.Settings.WeeklyPathStartedAt,
+        h.Settings.WeeklyRewardWeekKey,
+        h.Settings.WeeklyRewardTitle,
+        h.Settings.WeeklyRewardBadge);
 
     public static SkillDto ToDto(this SkillDefinition s) => new(
         s.Id, s.Name, s.Description, s.Category.ToString().ToLowerInvariant(), s.Icon, s.Effect);

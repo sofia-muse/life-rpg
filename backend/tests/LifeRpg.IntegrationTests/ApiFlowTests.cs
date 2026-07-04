@@ -147,4 +147,57 @@ public class ApiFlowTests : IClassFixture<LifeRpgApiFactory>
         secondStep.Quest.IsCompleted.Should().BeTrue();
         secondStep.Completion!.Hero.TotalQuestsCompleted.Should().Be(1);
     }
+
+    [Fact]
+    public async Task Weekly_cup_returns_read_only_progress_snapshot()
+    {
+        var client = await AuthedClientAsync("cup@example.com");
+        await client.PostAsJsonAsync("/api/v1/heroes",
+            new CreateHeroRequest("Pax", "pax", new() { Domain.Enums.StatName.Strength }));
+
+        var weekKey = DateTime.UtcNow.Date.AddDays(-((int)DateTime.UtcNow.DayOfWeek + 6) % 7).ToString("yyyy-MM-dd");
+        var syncRes = await client.PostAsJsonAsync("/api/v1/sync",
+            new SyncBatchRequest(null, new()
+            {
+                new SyncOperation(
+                    "cup-settings-1",
+                    "hero",
+                    "upsert",
+                    JsonSerializer.SerializeToElement(new
+                    {
+                        settings = new
+                        {
+                            notificationsEnabled = true,
+                            hapticEnabled = true,
+                            reminderTime = "09:00",
+                            aiSkillsEnabled = false,
+                            weeklyPath = "power",
+                            weeklyPathWeekKey = weekKey,
+                            weeklyPathStartedAt = DateTimeOffset.UtcNow.ToString("O"),
+                            weeklyRewardWeekKey = (string?)null,
+                            weeklyRewardTitle = (string?)null,
+                            weeklyRewardBadge = (string?)null,
+                        },
+                        updatedAt = DateTimeOffset.UtcNow.ToString("O"),
+                    }))
+            }));
+        syncRes.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var quest1 = await (await client.PostAsJsonAsync("/api/v1/quests",
+            new CreateQuestRequest("Deadlift", "", Domain.Enums.QuestType.Side, Domain.Enums.QuestDifficulty.Hard,
+                Domain.Enums.StatName.Strength, null))).Content.ReadFromJsonAsync<QuestDto>(Json);
+        var quest2 = await (await client.PostAsJsonAsync("/api/v1/quests",
+            new CreateQuestRequest("Recovery Walk", "", Domain.Enums.QuestType.Side, Domain.Enums.QuestDifficulty.Medium,
+                Domain.Enums.StatName.Vitality, null))).Content.ReadFromJsonAsync<QuestDto>(Json);
+
+        (await client.PostAsync($"/api/v1/quests/{quest1!.Id}/complete", null)).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await client.PostAsync($"/api/v1/quests/{quest2!.Id}/complete", null)).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var cup = await client.GetFromJsonAsync<WeeklyCupDto>("/api/v1/heroes/me/weekly-cup", Json);
+        cup!.PathLabel.Should().Be("Power Cup");
+        cup.ContractTitle.Should().Be("Power Path");
+        cup.CompletedMatches.Should().Be(2);
+        cup.Score.Should().BeGreaterThan(0);
+        cup.Rank.Should().NotBeNullOrWhiteSpace();
+    }
 }

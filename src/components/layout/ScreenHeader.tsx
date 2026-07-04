@@ -1,18 +1,17 @@
 import React from 'react';
-import { View, Text, StyleSheet, ViewStyle, StyleProp } from 'react-native';
-import { colors, spacing, typography } from '../../config/theme';
+import { View, Text, StyleSheet } from 'react-native';
+import { colors, spacing, fontSize, typography } from '../../config/theme';
 
 interface Props {
   eyebrow?: string;
   title: string;
   subtitle?: string;
   action?: React.ReactNode;
-  style?: StyleProp<ViewStyle>;
 }
 
-export function PageHeader({ eyebrow, title, subtitle, action, style }: Props) {
+export function ScreenHeader({ eyebrow, title, subtitle, action }: Props) {
   return (
-    <View style={[styles.header, style]}>
+    <View style={styles.container}>
       <View style={styles.copy}>
         {eyebrow ? <Text style={styles.eyebrow}>{eyebrow}</Text> : null}
         <Text style={styles.title}>{title}</Text>
@@ -24,29 +23,37 @@ export function PageHeader({ eyebrow, title, subtitle, action, style }: Props) {
 }
 
 const styles = StyleSheet.create({
-  header: {
+  container: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: spacing.md,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
   copy: {
     flex: 1,
-    gap: spacing.xs,
+    minWidth: 0,
   },
   eyebrow: {
-    ...typography.eyebrow,
+    color: colors.textAccent,
+    fontSize: fontSize.xs,
+    marginBottom: spacing.xs,
+    textTransform: 'uppercase',
+    ...typography.headingWide,
   },
   title: {
-    ...typography.pageTitle,
+    color: colors.textPrimary,
+    fontSize: fontSize.title,
+    marginBottom: spacing.xs,
+    ...typography.heading,
   },
   subtitle: {
-    ...typography.body,
     color: colors.textSecondary,
-    maxWidth: 560,
+    fontSize: fontSize.md,
+    lineHeight: 22,
+    ...typography.body,
   },
   action: {
-    paddingTop: spacing.xs,
+    flexShrink: 0,
   },
 });
