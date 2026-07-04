@@ -12,6 +12,9 @@ interface Props {
 
 export function SkillNode({ skill, isUnlocked, progress, onPress }: Props) {
   const statColor = skill.requiredStat ? STAT_COLORS[skill.requiredStat] : colors.gold;
+  const requirement = skill.secondaryStat
+    ? `${skill.requiredLevel}/${skill.secondaryLevel}`
+    : `Lv ${skill.requiredLevel}`;
 
   return (
     <TouchableOpacity
@@ -23,8 +26,12 @@ export function SkillNode({ skill, isUnlocked, progress, onPress }: Props) {
       activeOpacity={0.7}
     >
       <Text style={styles.icon}>{skill.icon}</Text>
+      <Text style={styles.requirement}>{requirement}</Text>
       <Text style={[styles.name, isUnlocked ? { color: statColor } : styles.lockedText]}>
         {skill.name}
+      </Text>
+      <Text style={styles.effect} numberOfLines={2}>
+        {skill.effect}
       </Text>
       {!isUnlocked && (
         <View style={styles.progressBar}>
@@ -43,14 +50,14 @@ export function SkillNode({ skill, isUnlocked, progress, onPress }: Props) {
 
 const styles = StyleSheet.create({
   node: {
-    width: 100,
-    height: 100,
+    width: 126,
+    minHeight: 134,
     borderRadius: radius.lg,
     borderWidth: 2,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     margin: spacing.xs,
-    padding: spacing.xs,
+    padding: spacing.sm,
   },
   locked: {
     borderColor: colors.border,
@@ -60,6 +67,11 @@ const styles = StyleSheet.create({
   icon: {
     fontSize: 24,
     marginBottom: 4,
+  },
+  requirement: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    marginBottom: spacing.xs,
   },
   name: {
     fontSize: fontSize.xs,
@@ -74,17 +86,25 @@ const styles = StyleSheet.create({
     height: 3,
     backgroundColor: colors.bgInput,
     borderRadius: radius.full,
-    marginTop: 4,
+    marginTop: spacing.sm,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
     borderRadius: radius.full,
   },
+  effect: {
+    color: colors.textSecondary,
+    fontSize: fontSize.xs,
+    textAlign: 'center',
+    marginTop: spacing.xs,
+    lineHeight: 16,
+    flex: 1,
+  },
   unlocked: {
     color: colors.success,
     fontSize: fontSize.xs,
     fontWeight: '700',
-    marginTop: 2,
+    marginTop: spacing.sm,
   },
 });

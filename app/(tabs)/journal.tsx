@@ -3,12 +3,15 @@ import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { Card } from '../../src/components/layout/Card';
 import { EmptyState } from '../../src/components/layout/EmptyState';
 import { ScreenWrapper } from '../../src/components/layout/ScreenWrapper';
+import { ScreenHeader } from '../../src/components/layout/ScreenHeader';
 import { colors, fontSize, radius, spacing } from '../../src/config/theme';
+import { useHeroStore } from '../../src/store/heroStore';
 import { useJournalStore } from '../../src/store/journalStore';
 import { STAT_COLORS, STAT_ICONS, StatName } from '../../src/types';
 
 export default function JournalScreen() {
   const { entries } = useJournalStore();
+  const hero = useHeroStore((s) => s.hero);
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -22,14 +25,28 @@ export default function JournalScreen() {
 
   return (
     <ScreenWrapper scroll={false}>
-      <Text style={styles.title}>Journal</Text>
-      <Text style={styles.subtitle}>A chronicle of your adventures</Text>
+      <ScreenHeader
+        eyebrow="Legend Archive"
+        title="Journal"
+        subtitle="A codex of quests honored, levels gained, and the moments that turned into class identity."
+      />
+
+      <Card style={styles.summaryCard}>
+        <Text style={styles.summaryEyebrow}>Chronicle Status</Text>
+        <Text style={styles.summaryTitle}>{hero ? `${hero.name}'s archive` : 'A fresh archive'}</Text>
+        <Text style={styles.summaryText}>
+          {entries.length > 0
+            ? `${entries.length} chapter${entries.length === 1 ? '' : 's'} recorded so far. Each completed quest writes into the legend.`
+            : 'No chapters written yet. Complete a first quest to begin the legend.'}
+        </Text>
+      </Card>
 
       <FlatList
         data={entries}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <Card style={styles.entryCard}>
+            <Text style={styles.chapterLabel}>Chapter {entries.length - entries.indexOf(item)}</Text>
             <Text style={styles.date}>{formatDate(item.date)}</Text>
 
             {item.narrative ? <Text style={styles.narrative}>{item.narrative}</Text> : null}
@@ -83,23 +100,39 @@ export default function JournalScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: {
-    color: colors.textPrimary,
-    fontSize: fontSize.title,
-    fontWeight: '900',
-    marginTop: spacing.md,
+  summaryCard: {
+    marginBottom: spacing.md,
   },
-  subtitle: {
+  summaryEyebrow: {
+    color: colors.textAccent,
+    fontSize: fontSize.xs,
+    textTransform: 'uppercase',
+    fontWeight: '700',
+    marginBottom: spacing.xs,
+  },
+  summaryTitle: {
+    color: colors.textPrimary,
+    fontSize: fontSize.lg,
+    fontWeight: '800',
+    marginBottom: spacing.xs,
+  },
+  summaryText: {
     color: colors.textSecondary,
     fontSize: fontSize.sm,
-    marginBottom: spacing.lg,
-    fontStyle: 'italic',
+    lineHeight: 20,
   },
   list: {
     paddingBottom: spacing.xxl,
   },
   entryCard: {
     marginBottom: spacing.md,
+  },
+  chapterLabel: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    textTransform: 'uppercase',
+    marginBottom: spacing.xs,
+    fontWeight: '700',
   },
   date: {
     color: colors.textAccent,

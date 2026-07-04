@@ -20,6 +20,9 @@ import { STAT_NAMES, STAT_COLORS, StatName } from '../../src/types';
 import { getStatDisplayProgress } from '../../src/engine/xpEngine';
 import { HeroCrest } from '../../src/components/avatar/HeroCrest';
 import { PulseGlow } from '../../src/components/animated/PulseGlow';
+import { WeeklyContractPanel } from '../../src/components/game/WeeklyContractPanel';
+import { SanctuaryActionTile } from '../../src/components/game/SanctuaryActionTile';
+import { getLeadingEvolutionQuest } from '../../src/engine/questProgression';
 import {
   getContentMaxWidth,
   getScreenHorizontalPadding,
@@ -67,6 +70,7 @@ export default function DashboardScreen() {
   const activeQuests = getActiveQuests();
   const unlockedSkillCount = getUnlockedSkillIds().length;
   const todayQuests = activeQuests.filter((q) => q.type === 'daily');
+  const leadingArc = getLeadingEvolutionQuest(activeQuests);
   const viewport = getViewportSize(width);
   const useTwoColumns = width >= 980;
   const stackHero = width < 820;
@@ -197,13 +201,60 @@ export default function DashboardScreen() {
             </View>
           </FadeIn>
 
+          <FadeIn delay={60} slideFrom="bottom">
+            <WeeklyContractPanel variant="compact" onOpenQuests={() => router.push('/quests')} />
+          </FadeIn>
+
           <View style={[styles.contentGrid, useTwoColumns && styles.contentGridWide]}>
             <View style={[styles.mainColumn, useTwoColumns && styles.mainColumnWide]}>
               <FadeIn delay={100} slideFrom="bottom">
+                <Card style={styles.sanctuaryCard}>
+                  <View style={styles.sanctuaryHeader}>
+                    <View>
+                      <Text style={styles.sectionTitle}>Sanctuary Paths</Text>
+                      <Text style={styles.sanctuaryText}>
+                        Move through the world like a hero: choose the next board, ritual, or archive.
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.sanctuaryGrid}>
+                    <SanctuaryActionTile
+                      icon="⚔"
+                      title="Quest Board"
+                      subtitle="Advance daily missions, side contracts, and boss arcs."
+                      accentColor={colors.strength}
+                      onPress={() => router.push('/quests')}
+                    />
+                    <SanctuaryActionTile
+                      icon="✦"
+                      title="Build Hall"
+                      subtitle="Inspect your unlocked skills and shape the current build."
+                      accentColor={colors.amethyst}
+                      onPress={() => router.push('/skills')}
+                    />
+                    <SanctuaryActionTile
+                      icon="✎"
+                      title="Legend Codex"
+                      subtitle="Read the campaign chronicle and your growing record."
+                      accentColor={colors.intelligence}
+                      onPress={() => router.push('/codex')}
+                    />
+                    <SanctuaryActionTile
+                      icon="✦"
+                      title="Atelier"
+                      subtitle="Refine the crest, silhouette, and visual identity of your class."
+                      accentColor={colors.gold}
+                      onPress={() => router.push('/customize')}
+                    />
+                  </View>
+                </Card>
+              </FadeIn>
+
+              <FadeIn delay={140} slideFrom="bottom">
                 <StreakBanner streakDays={hero.currentStreak} />
               </FadeIn>
 
-              <FadeIn delay={200} slideFrom="bottom">
+              <FadeIn delay={220} slideFrom="bottom">
                 <Card style={styles.statsCard}>
                   <Text style={styles.sectionTitle}>Heroic Attributes</Text>
                   {STAT_NAMES.map((stat, i) => {
@@ -225,7 +276,33 @@ export default function DashboardScreen() {
             </View>
 
             <View style={[styles.sideColumn, useTwoColumns && styles.sideColumnWide]}>
-              <FadeIn delay={500} slideFrom="bottom">
+              <FadeIn delay={460} slideFrom="bottom">
+                <Card style={styles.arcCard}>
+                  <Text style={styles.sectionTitle}>Current Arc</Text>
+                  {leadingArc ? (
+                    <>
+                      <Text style={styles.arcTitle}>{leadingArc.title}</Text>
+                      <Text style={styles.arcText}>{leadingArc.description}</Text>
+                      <TouchableOpacity
+                        onPress={() => router.push('/quests')}
+                        style={styles.arcAction}
+                        activeOpacity={0.85}
+                      >
+                        <Text style={styles.arcActionText}>Continue this training path</Text>
+                      </TouchableOpacity>
+                    </>
+                  ) : (
+                    <>
+                      <Text style={styles.arcTitle}>No active training arc yet</Text>
+                      <Text style={styles.arcText}>
+                        Pick a small daily mission and let it evolve into a higher-rank ritual over time.
+                      </Text>
+                    </>
+                  )}
+                </Card>
+              </FadeIn>
+
+              <FadeIn delay={520} slideFrom="bottom">
                 <Card style={styles.questSummary}>
                   <Text style={styles.sectionTitle}>Today&apos;s Quests</Text>
                   {todayQuests.length === 0 ? (
@@ -481,6 +558,49 @@ const styles = StyleSheet.create({
     ...typography.headingWide,
   },
   statsCard: {},
+  sanctuaryCard: {},
+  sanctuaryHeader: {
+    marginBottom: spacing.md,
+  },
+  sanctuaryText: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    lineHeight: 20,
+    ...typography.body,
+  },
+  sanctuaryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  arcCard: {},
+  arcTitle: {
+    color: colors.textPrimary,
+    fontSize: fontSize.lg,
+    marginBottom: spacing.xs,
+    ...typography.heading,
+  },
+  arcText: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    lineHeight: 20,
+    ...typography.body,
+  },
+  arcAction: {
+    marginTop: spacing.md,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    backgroundColor: 'rgba(15, 15, 26, 0.55)',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    alignSelf: 'flex-start',
+  },
+  arcActionText: {
+    color: colors.textAccent,
+    fontSize: fontSize.sm,
+    ...typography.headingWide,
+  },
   sectionTitle: {
     color: colors.textAccent,
     fontSize: fontSize.lg,

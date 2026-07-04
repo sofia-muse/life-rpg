@@ -33,7 +33,12 @@ export function StatBar({ stat, level, currentXP, xpNeeded, progress }: Props) {
       <View style={styles.header}>
         <View style={styles.statInfo}>
           <Text style={styles.icon}>{STAT_ICONS[stat]}</Text>
-          <Text style={styles.statName}>{stat.charAt(0).toUpperCase() + stat.slice(1)}</Text>
+          <View>
+            <Text style={styles.statName}>{stat.charAt(0).toUpperCase() + stat.slice(1)}</Text>
+            <Text style={styles.rankLabel}>
+              {level >= 15 ? 'Mythic' : level >= 7 ? 'Veteran' : level >= 3 ? 'Adept' : 'Initiate'}
+            </Text>
+          </View>
         </View>
         <Text style={[styles.level, { color: statColor }]}>Lv. {level}</Text>
       </View>
@@ -64,15 +69,20 @@ const styles = StyleSheet.create({
   statInfo: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: spacing.xs,
   },
   icon: {
     fontSize: 16,
-    marginRight: spacing.xs,
   },
   statName: {
     color: colors.textPrimary,
     fontSize: fontSize.md,
     fontWeight: '600',
+  },
+  rankLabel: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    marginTop: 1,
   },
   level: {
     fontSize: fontSize.md,

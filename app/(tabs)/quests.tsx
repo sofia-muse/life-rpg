@@ -1,16 +1,21 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { ScreenWrapper } from '../../src/components/layout/ScreenWrapper';
+import { ScreenHeader } from '../../src/components/layout/ScreenHeader';
 import { QuestCard } from '../../src/components/game/QuestCard';
 import { XPPopup } from '../../src/components/game/XPPopup';
 import { useQuestStore } from '../../src/store/questStore';
 import { useHeroStore } from '../../src/store/heroStore';
 import { useGameplayStore } from '../../src/store/gameplayStore';
+import { useSettingsStore } from '../../src/store/settingsStore';
 import { useUIStore } from '../../src/store/uiStore';
 import { Card } from '../../src/components/layout/Card';
+import { WeeklyContractPanel } from '../../src/components/game/WeeklyContractPanel';
 import { colors, spacing, fontSize, radius } from '../../src/config/theme';
 import { STAT_COLORS, STAT_ICONS, DIFFICULTY_XP } from '../../src/types';
 import { getAllTemplates, QuestTemplate } from '../../src/config/questTemplates';
+import { getPrimaryContract } from '../../src/config/classContracts';
+import { getActiveWeeklyPath, isQuestAlignedToWeeklyPath } from '../../src/config/weeklyPaths';
 
 type Tab = 'daily' | 'side' | 'boss';
 
@@ -25,6 +30,7 @@ export default function QuestsScreen() {
     getBossQuests,
   } = useQuestStore();
   const hero = useHeroStore((state) => state.hero);
+  const settings = useSettingsStore();
   const completeQuestFlow = useGameplayStore((state) => state.completeQuest);
   const {
     showXP,
@@ -46,6 +52,9 @@ export default function QuestsScreen() {
   };
 
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const activeWeeklyPath = getActiveWeeklyPath(settings);
+  const contract = hero ? getPrimaryContract(hero, settings, quests) : null;
+  const contractTitles = new Set(contract?.recommended.map((template) => template.title) ?? []);
 
   const handleAddFromTemplate = useCallback(
     (template: QuestTemplate) => {
@@ -134,6 +143,16 @@ export default function QuestsScreen() {
   );
 
   const filteredQuests = tabQuests[activeTab];
+  const suggestedTemplates = getAllTemplates(activeTab, undefined, hero?.characterAppearance?.gender)
+    .filter((t) => !quests.some((q) => q.title === t.title && q.type === t.type))
+    .sort((left, right) => Number(contractTitles.has(right.title)) - Number(contractTitles.has(left.title)))
+    .slice(0, 6);
+  const boardCopy = {
+    daily: 'Small rituals that keep momentum alive and feed the weekly contract.',
+    side: 'Focused contracts for sharper wins, cleaner pivots, and meaningful progress.',
+    boss: 'Long-form sagas with phases, pressure, and a clear reward line.',
+  }[activeTab];
+  const activeCount = filteredQuests.filter((quest) => quest.isActive && !quest.isCompleted).length;
 
   return (
     <ScreenWrapper showScrollIndicator>
@@ -141,7 +160,23 @@ export default function QuestsScreen() {
         <XPPopup stat={xpPopupData.stat} amount={xpPopupData.amount} onDone={dismissXP} />
       )}
 
-      <Text style={styles.title}>Quests</Text>
+      <ScreenHeader
+        eyebrow="Mission Board"
+        title="Quests"
+        subtitle="Choose the next rite, contract, or saga and let the board push the journey forward."
+      />
+
+      <WeeklyContractPanel />
+
+      <Card style={styles.boardCard}>
+        <Text style={styles.boardTitle}>
+          {activeTab === 'daily' ? 'Daily Rites' : activeTab === 'side' ? 'Side Contracts' : 'Boss Sagas'}
+        </Text>
+        <Text style={styles.boardText}>{boardCopy}</Text>
+        <Text style={styles.boardMeta}>
+          {activeCount} active on the board · {filteredQuests.length} total in this lane
+        </Text>
+      </Card>
 
       {/* Tabs */}
       <View style={styles.tabs}>
@@ -177,10 +212,7 @@ export default function QuestsScreen() {
           <Text style={styles.suggestionsTitle}>
             Suggested {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Quests
           </Text>
-          {getAllTemplates(activeTab, undefined, hero?.characterAppearance?.gender)
-            .filter((t) => !quests.some((q) => q.title === t.title && q.type === t.type))
-            .slice(0, 6)
-            .map((template, i) => (
+          {suggestedTemplates.map((template, i) => (
               <Card key={`${template.title}-${i}`} style={styles.suggestionCard}>
                 <View style={styles.suggestionContent}>
                   <View style={styles.suggestionInfo}>
@@ -198,6 +230,7 @@ export default function QuestsScreen() {
                       {template.totalSteps && (
                         <Text style={styles.suggestionSteps}>{template.totalSteps} steps</Text>
                       )}
+                      {contractTitles.has(template.title) && <Text style={styles.contractTag}>contract-aligned</Text>}
                     </View>
                   </View>
                   <TouchableOpacity
@@ -226,7 +259,16 @@ export default function QuestsScreen() {
           </View>
         ) : (
           filteredQuests.map((item) => (
-            <QuestCard key={item.id} quest={item} onComplete={handleComplete} onDelete={deleteQuest} />
+            <QuestCard
+              key={item.id}
+              quest={item}
+              onComplete={handleComplete}
+              onDelete={deleteQuest}
+              highlighted={
+                contractTitles.has(item.title) ||
+                (activeWeeklyPath ? isQuestAlignedToWeeklyPath(activeWeeklyPath, item) : false)
+              }
+            />
           ))
         )}
       </View>
@@ -244,12 +286,26 @@ export default function QuestsScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: {
-    color: colors.textPrimary,
-    fontSize: fontSize.title,
-    fontWeight: '900',
-    marginTop: spacing.md,
+  boardCard: {
     marginBottom: spacing.md,
+  },
+  boardTitle: {
+    color: colors.textPrimary,
+    fontSize: fontSize.lg,
+    fontWeight: '800',
+    marginBottom: spacing.xs,
+  },
+  boardText: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    lineHeight: 20,
+    marginBottom: spacing.sm,
+  },
+  boardMeta: {
+    color: colors.textAccent,
+    fontSize: fontSize.xs,
+    textTransform: 'uppercase',
+    fontWeight: '700',
   },
   tabs: {
     flexDirection: 'row',
@@ -371,6 +427,12 @@ const styles = StyleSheet.create({
   suggestionSteps: {
     color: colors.textMuted,
     fontSize: fontSize.xs,
+  },
+  contractTag: {
+    color: colors.goldBright,
+    fontSize: fontSize.xs,
+    textTransform: 'uppercase',
+    fontWeight: '700',
   },
   addBtn: {
     width: 36,

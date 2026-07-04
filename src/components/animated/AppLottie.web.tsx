@@ -7,6 +7,7 @@ const AppLottie = React.forwardRef<AppLottieHandle, AppLottieProps>(
   ({ autoPlay = false, loop = false, style }, ref) => {
     const pulse = useRef(new Animated.Value(autoPlay ? 0.28 : 0)).current;
     const burst = useRef(new Animated.Value(0)).current;
+    const orbit = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
       if (!autoPlay) return undefined;
@@ -24,10 +25,21 @@ const AppLottie = React.forwardRef<AppLottieHandle, AppLottieProps>(
         }),
       ]);
       const animation = loop ? Animated.loop(baseAnimation) : baseAnimation;
+      const orbitAnimation = Animated.loop(
+        Animated.timing(orbit, {
+          toValue: 1,
+          duration: 5000,
+          useNativeDriver: true,
+        }),
+      );
 
       animation.start();
-      return () => animation.stop();
-    }, [autoPlay, loop, pulse]);
+      orbitAnimation.start();
+      return () => {
+        animation.stop();
+        orbitAnimation.stop();
+      };
+    }, [autoPlay, loop, orbit, pulse]);
 
     useImperativeHandle(
       ref,
@@ -47,6 +59,11 @@ const AppLottie = React.forwardRef<AppLottieHandle, AppLottieProps>(
       [burst],
     );
 
+    const orbitRotation = orbit.interpolate({
+      inputRange: [0, 1],
+      outputRange: ['0deg', '360deg'],
+    });
+
     return (
       <View pointerEvents="none" style={style}>
         <Animated.View
@@ -58,6 +75,20 @@ const AppLottie = React.forwardRef<AppLottieHandle, AppLottieProps>(
             },
           ]}
         />
+        <Animated.View
+          style={[
+            styles.orbitRing,
+            {
+              opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.16, 0.44] }),
+              transform: [{ rotate: orbitRotation }, { scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1.08] }) }],
+            },
+          ]}
+        >
+          <View style={[styles.spark, styles.sparkTop]} />
+          <View style={[styles.spark, styles.sparkRight]} />
+          <View style={[styles.spark, styles.sparkBottom]} />
+          <View style={[styles.spark, styles.sparkLeft]} />
+        </Animated.View>
         <Animated.View
           style={[
             styles.burst,
@@ -91,5 +122,42 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 0 },
+  },
+  orbitRing: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.goldSoft,
+  },
+  spark: {
+    position: 'absolute',
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.goldBright,
+    shadowColor: colors.gold,
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  sparkTop: {
+    top: -1,
+    left: '50%',
+    marginLeft: -3,
+  },
+  sparkRight: {
+    right: -1,
+    top: '50%',
+    marginTop: -3,
+  },
+  sparkBottom: {
+    bottom: -1,
+    left: '50%',
+    marginLeft: -3,
+  },
+  sparkLeft: {
+    left: -1,
+    top: '50%',
+    marginTop: -3,
   },
 });
