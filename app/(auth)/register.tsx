@@ -1,12 +1,19 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
-import { Link, useRouter } from 'expo-router';
+import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { Button } from '../../src/components/layout/Button';
 import { useAuthStore } from '../../src/store/authStore';
 import { colors, spacing, fontSize, radius } from '../../src/config/theme';
 
+function resolveReturnPath(returnTo: string | string[] | undefined): string {
+  const value = Array.isArray(returnTo) ? returnTo[0] : returnTo;
+  if (value === 'raids') return '/raids';
+  return '/';
+}
+
 export default function RegisterScreen() {
   const router = useRouter();
+  const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
   const register = useAuthStore((s) => s.register);
   const error = useAuthStore((s) => s.error);
 
@@ -14,18 +21,23 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const forRaids = resolveReturnPath(returnTo) === '/raids';
 
   const onSubmit = async () => {
     setLoading(true);
     const ok = await register(email.trim(), password, displayName.trim() || email.trim());
     setLoading(false);
-    if (ok) router.replace('/');
+    if (ok) router.replace(resolveReturnPath(returnTo));
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Begin Your Legend</Text>
-      <Text style={styles.subtitle}>Create an account to save and sync your progress.</Text>
+      <Text style={styles.subtitle}>
+        {forRaids
+          ? 'Create an account to host or join party raids with friends.'
+          : 'Create an account to save and sync your progress.'}
+      </Text>
 
       <TextInput
         style={styles.input}
@@ -67,7 +79,10 @@ export default function RegisterScreen() {
 
       <Text style={styles.footer}>
         Already have an account?{' '}
-        <Link href="/login" style={styles.link}>
+        <Link
+          href={forRaids ? { pathname: '/login', params: { returnTo: 'raids' } } : '/login'}
+          style={styles.link}
+        >
           Sign in
         </Link>
       </Text>

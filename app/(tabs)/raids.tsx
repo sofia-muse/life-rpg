@@ -119,22 +119,28 @@ export default function RaidsScreen() {
           subtitle="Pool a huge real-world goal with friends — invite codes only."
         />
         <Card style={styles.gateCard}>
-          <Text style={styles.gateTitle}>Registration required</Text>
+          <Text style={styles.gateTitle}>Register to join party raids</Text>
           <Text style={styles.gateBody}>
             {env.demoMode
-              ? 'Demo mode is solo-only. Turn off EXPO_PUBLIC_DEMO_MODE, register, and sign in to create or join party raids. Shared progress lives on the server so every contribution stays honest.'
+              ? 'Demo mode is solo-only. Create an account (with demo mode off) to host or join invite-code parties. Shared progress lives on the server so every contribution stays honest.'
               : 'Sign in to create invite-code parties, log your real contributions, and earn shared raid victories plus personal credit.'}
           </Text>
-          {!env.demoMode ? (
-            <View style={styles.gateActions}>
-              <Button title="Create account" onPress={() => router.push('/register')} />
-              <Button title="Sign in" onPress={() => router.push('/login')} variant="secondary" />
-            </View>
-          ) : (
+          <View style={styles.gateActions}>
+            <Button
+              title="Create account"
+              onPress={() => router.push({ pathname: '/register', params: { returnTo: 'raids' } })}
+            />
+            <Button
+              title="Sign in"
+              onPress={() => router.push({ pathname: '/login', params: { returnTo: 'raids' } })}
+              variant="secondary"
+            />
+          </View>
+          {env.demoMode ? (
             <Text style={styles.gateHint}>
-              Solo quests, campaigns, and the avatar atelier stay available in demo. Party raids unlock after registration.
+              Solo quests, campaigns, and the avatar atelier stay available in demo. Set EXPO_PUBLIC_DEMO_MODE=false, then register to unlock co-op.
             </Text>
-          )}
+          ) : null}
         </Card>
       </ScreenWrapper>
     );

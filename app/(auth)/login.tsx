@@ -1,30 +1,42 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
-import { Link, useRouter } from 'expo-router';
+import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { Button } from '../../src/components/layout/Button';
 import { useAuthStore } from '../../src/store/authStore';
 import { colors, spacing, fontSize, radius } from '../../src/config/theme';
 
+function resolveReturnPath(returnTo: string | string[] | undefined): string {
+  const value = Array.isArray(returnTo) ? returnTo[0] : returnTo;
+  if (value === 'raids') return '/raids';
+  return '/';
+}
+
 export default function LoginScreen() {
   const router = useRouter();
+  const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
   const login = useAuthStore((s) => s.login);
   const error = useAuthStore((s) => s.error);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const forRaids = resolveReturnPath(returnTo) === '/raids';
 
   const onSubmit = async () => {
     setLoading(true);
     const ok = await login(email.trim(), password);
     setLoading(false);
-    if (ok) router.replace('/');
+    if (ok) router.replace(resolveReturnPath(returnTo));
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Welcome Back, Hero</Text>
-      <Text style={styles.subtitle}>Sign in to sync your adventure across devices.</Text>
+      <Text style={styles.subtitle}>
+        {forRaids
+          ? 'Sign in to rejoin your party and log raid contributions.'
+          : 'Sign in to sync your adventure across devices.'}
+      </Text>
 
       <TextInput
         style={styles.input}
@@ -58,7 +70,10 @@ export default function LoginScreen() {
 
       <Text style={styles.footer}>
         New here?{' '}
-        <Link href="/register" style={styles.link}>
+        <Link
+          href={forRaids ? { pathname: '/register', params: { returnTo: 'raids' } } : '/register'}
+          style={styles.link}
+        >
           Create a hero
         </Link>
       </Text>

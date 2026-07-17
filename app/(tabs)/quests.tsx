@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useRouter } from 'expo-router';
 import { ScreenWrapper } from '../../src/components/layout/ScreenWrapper';
 import { QuestCard } from '../../src/components/game/QuestCard';
 import { ContractHeader } from '../../src/components/game/ContractHeader';
@@ -23,6 +24,7 @@ import { playGameFeedback } from '../../src/utils/gameFeedback';
 type Tab = 'daily' | 'side' | 'boss';
 
 export default function QuestsScreen() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab>('daily');
   const [showBossPlanner, setShowBossPlanner] = useState(false);
   const {
@@ -195,6 +197,15 @@ export default function QuestsScreen() {
       <Text style={styles.title}>Adventures</Text>
       <Text style={styles.subtitle}>Contracts, side ventures, and boss arcs</Text>
 
+      <TouchableOpacity onPress={() => router.push('/raids')} accessibilityRole="button">
+        <Card style={styles.raidCallout}>
+          <Text style={styles.raidCalloutTitle}>Guild Raid</Text>
+          <Text style={styles.raidCalloutBody}>
+            Party up with invite codes and pool a huge real-world goal. Registration unlocks co-op.
+          </Text>
+        </Card>
+      </TouchableOpacity>
+
       {contract && <ContractHeader contract={contract} />}
 
       <GuildmasterSuggestions onAddQuest={handleAddFromTemplate} existingTitles={existingTitles} />
@@ -319,6 +330,23 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     fontStyle: 'italic',
     marginBottom: spacing.md,
+  },
+  raidCallout: {
+    marginBottom: spacing.md,
+    padding: spacing.md,
+    borderColor: colors.goldSoft,
+    borderWidth: 1,
+  },
+  raidCalloutTitle: {
+    color: colors.gold,
+    fontSize: fontSize.md,
+    fontWeight: '700',
+    marginBottom: spacing.xs,
+  },
+  raidCalloutBody: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    lineHeight: 20,
   },
   tabs: {
     flexDirection: 'row',
