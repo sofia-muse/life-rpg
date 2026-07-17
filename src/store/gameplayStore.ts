@@ -15,6 +15,7 @@ import { useForgedSkillStore } from './forgedSkillStore';
 import { useHeroStore } from './heroStore';
 import { useJournalStore } from './journalStore';
 import { useQuestStore } from './questStore';
+import { useRaidStore } from './raidStore';
 import { useSettingsStore } from './settingsStore';
 import { useSkillStore } from './skillStore';
 import { Quest, Skill, StatLevelUpResult, StatName } from '../types';
@@ -274,6 +275,7 @@ export const useGameplayStore = create<GameplayState>((set) => ({
       useSettingsStore.getState().replaceSettings(apiHero.settings);
       useQuestStore.getState().replaceQuests(apiQuests.map(mapApiQuest));
       await useForgedSkillStore.getState().load();
+      await useRaidStore.getState().load();
     } catch (error) {
       if (error instanceof ApiError && error.status === 404) {
         useHeroStore.getState().clearHero();
@@ -281,6 +283,7 @@ export const useGameplayStore = create<GameplayState>((set) => ({
         useSkillStore.getState().clearUnlockedSkills();
         useJournalStore.getState().clearEntries();
         useForgedSkillStore.getState().clear();
+        useRaidStore.getState().clear();
         return;
       }
       throw error;
@@ -336,5 +339,6 @@ export const useGameplayStore = create<GameplayState>((set) => ({
     useSkillStore.getState().clearUnlockedSkills();
     useJournalStore.getState().clearEntries();
     useForgedSkillStore.getState().clear();
+    useRaidStore.getState().clear();
   },
 }));

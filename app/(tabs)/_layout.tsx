@@ -71,6 +71,12 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="raids"
+        options={{
+          tabBarIcon: ({ focused }) => <TabIcon label="Raids" icon="⛨" focused={focused} wide={floatingDock} />,
+        }}
+      />
+      <Tabs.Screen
         name="skills"
         options={{
           tabBarIcon: ({ focused }) => <TabIcon label="Skills" icon="✦" focused={focused} wide={floatingDock} />,

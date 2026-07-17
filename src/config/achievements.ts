@@ -39,6 +39,10 @@ export const ACHIEVEMENT_DEFINITIONS: AchievementDefinition[] = [
   { id: 'weekly_contract', title: 'Contract Keeper', description: 'Complete a weekly contract.', icon: '📜', tier: 'gold' },
   { id: 'forged_skill', title: 'Artificer', description: 'Forge an AI skill.', icon: '🔨', tier: 'gold' },
   { id: 'login_30', title: 'Dedicated Adventurer', description: 'Log in 30 days.', icon: '📅', tier: 'bronze' },
+  { id: 'raid_clear', title: 'Raid Victor', description: 'Clear a party raid with your guild.', icon: '🛡️', tier: 'gold' },
+  { id: 'raid_contributor', title: 'Raid Contributor', description: 'Contribute at least 20% of a raid goal.', icon: '🪓', tier: 'bronze' },
+  { id: 'raid_pillar', title: 'Raid Pillar', description: 'Contribute at least 40% of a raid goal.', icon: '🏛️', tier: 'silver' },
+  { id: 'raid_legend', title: 'Raid Legend', description: 'Contribute 200+ total across party raids.', icon: '⚔️', tier: 'mythic' },
 ];
 
 export const EQUIPPABLE_TITLES: { id: string; label: string; condition: string }[] = [
@@ -52,6 +56,8 @@ export const EQUIPPABLE_TITLES: { id: string; label: string; condition: string }
   { id: 'boss_slayer', label: 'Boss Slayer', condition: 'Clear a boss arc' },
   { id: 'yearly_legend', label: 'Yearly Legend', condition: '365-day streak' },
   { id: 'paragon', label: 'Paragon', condition: 'Hero level 50' },
+  { id: 'raid_victor', label: 'Raid Victor', condition: 'Clear a party raid' },
+  { id: 'raid_pillar', label: 'Raid Pillar', condition: 'Contribute 40% of a raid goal' },
 ];
 
 interface AchievementContext {
@@ -62,6 +68,9 @@ interface AchievementContext {
   hasLegendaryQuest: boolean;
   weeklyContractsCompleted: number;
   weeklyRewardTitles: string[];
+  raidsCleared: number;
+  raidTotalContribution: number;
+  raidBestContributionShare: number;
 }
 
 function isUnlocked(definition: AchievementDefinition, ctx: AchievementContext): boolean {
@@ -111,6 +120,14 @@ function isUnlocked(definition: AchievementDefinition, ctx: AchievementContext):
       return ctx.forgedSkillCount >= 1;
     case 'login_30':
       return hero.totalLoginDays >= 30;
+    case 'raid_clear':
+      return ctx.raidsCleared >= 1;
+    case 'raid_contributor':
+      return ctx.raidBestContributionShare >= 0.2;
+    case 'raid_pillar':
+      return ctx.raidBestContributionShare >= 0.4;
+    case 'raid_legend':
+      return ctx.raidTotalContribution >= 200;
     default:
       return false;
   }
@@ -135,6 +152,8 @@ export function getUnlockedTitleIds(ctx: AchievementContext): string[] {
   if (ctx.completedBossCount >= 1) ids.push('boss_slayer');
   if (ctx.hero.longestStreak >= 365) ids.push('yearly_legend');
   if (ctx.hero.heroLevel >= 50) ids.push('paragon');
+  if (ctx.raidsCleared >= 1) ids.push('raid_victor');
+  if (ctx.raidBestContributionShare >= 0.4) ids.push('raid_pillar');
   return ids;
 }
 
@@ -145,6 +164,11 @@ export function buildAchievementContext(
   forgedSkillCount: number,
   settings: WeeklyPathSettingsLike & { weeklyRewardTitle?: string | null },
   contractsCompleted = 0,
+  raidStats: {
+    raidsCleared?: number;
+    totalContribution?: number;
+    bestContributionShare?: number;
+  } = {},
 ): AchievementContext {
   return {
     hero,
@@ -154,6 +178,9 @@ export function buildAchievementContext(
     hasLegendaryQuest: quests.some((q) => q.difficulty === 'legendary' && q.isCompleted),
     weeklyContractsCompleted: contractsCompleted,
     weeklyRewardTitles: settings.weeklyRewardTitle ? [settings.weeklyRewardTitle] : [],
+    raidsCleared: raidStats.raidsCleared ?? 0,
+    raidTotalContribution: raidStats.totalContribution ?? 0,
+    raidBestContributionShare: raidStats.bestContributionShare ?? 0,
   };
 }
 

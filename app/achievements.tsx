@@ -8,6 +8,7 @@ import { useHeroStore } from '../src/store/heroStore';
 import { useQuestStore } from '../src/store/questStore';
 import { useSkillStore } from '../src/store/skillStore';
 import { useForgedSkillStore } from '../src/store/forgedSkillStore';
+import { useRaidStore } from '../src/store/raidStore';
 import { useSettingsStore } from '../src/store/settingsStore';
 import {
   ACHIEVEMENT_DEFINITIONS,
@@ -31,6 +32,7 @@ export default function AchievementsScreen() {
   const { quests } = useQuestStore();
   const unlockedSkillIds = useSkillStore((s) => s.getUnlockedSkillIds());
   const forged = useForgedSkillStore((s) => s.forged);
+  const raidPersonal = useRaidStore((s) => s.personal);
   const settings = useSettingsStore();
 
   const ctx = useMemo(() => {
@@ -42,8 +44,13 @@ export default function AchievementsScreen() {
       forged.length,
       settings,
       settings.weeklyContractsCompleted,
+      {
+        raidsCleared: raidPersonal.raidsCleared,
+        totalContribution: raidPersonal.totalContribution,
+        bestContributionShare: raidPersonal.bestContributionShare,
+      },
     );
-  }, [hero, quests, unlockedSkillIds.length, forged.length, settings]);
+  }, [hero, quests, unlockedSkillIds.length, forged.length, settings, raidPersonal]);
 
   const earned = useMemo(
     () => (ctx ? getEarnedAchievements(ctx) : []),

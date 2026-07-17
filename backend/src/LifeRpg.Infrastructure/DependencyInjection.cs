@@ -63,6 +63,7 @@ public static class DependencyInjection
         services.AddScoped<SyncService>();
         services.AddScoped<SkillForgeService>();
         services.AddScoped<GuidanceService>();
+        services.AddScoped<RaidService>();
 
         return services;
     }
