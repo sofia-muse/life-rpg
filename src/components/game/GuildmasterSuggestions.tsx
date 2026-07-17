@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Card } from '../layout/Card';
 import { colors, spacing, fontSize, radius } from '../../config/theme';
@@ -23,9 +23,7 @@ export function GuildmasterSuggestions({ onAddQuest, existingTitles }: Props) {
   const authenticated = useAuthStore((s) => s.status === 'authenticated');
   const canUseGuidance = aiSkillsEnabled && !env.demoMode && authenticated;
 
-  useEffect(() => {
-    if (!canUseGuidance || !expanded) return;
-
+  const loadSuggestions = () => {
     setLoading(true);
     setError(null);
     void guidanceApi
@@ -33,7 +31,15 @@ export function GuildmasterSuggestions({ onAddQuest, existingTitles }: Props) {
       .then(setPack)
       .catch((err) => setError(err instanceof Error ? err.message : 'Suggestions unavailable'))
       .finally(() => setLoading(false));
-  }, [canUseGuidance, expanded]);
+  };
+
+  const toggleExpanded = () => {
+    const next = !expanded;
+    setExpanded(next);
+    if (next && canUseGuidance && !pack && !loading) {
+      loadSuggestions();
+    }
+  };
 
   if (!canUseGuidance) {
     return (
@@ -48,7 +54,7 @@ export function GuildmasterSuggestions({ onAddQuest, existingTitles }: Props) {
 
   return (
     <Card style={styles.card}>
-      <TouchableOpacity onPress={() => setExpanded(!expanded)} style={styles.header}>
+      <TouchableOpacity onPress={toggleExpanded} style={styles.header}>
         <Text style={styles.title}>
           {expanded ? '▼' : '▶'} The Guildmaster Recommends
         </Text>

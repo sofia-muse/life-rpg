@@ -66,7 +66,11 @@ public class LifeRpgDbContext : IdentityDbContext<ApplicationUser, IdentityRole<
                 {
                     entry.Entity.CreatedAt = now;
                 }
-                entry.Entity.UpdatedAt = now;
+                // Preserve client-provided UpdatedAt for sync LWW; only stamp when unset.
+                if (entry.Entity.UpdatedAt == default)
+                {
+                    entry.Entity.UpdatedAt = now;
+                }
             }
             else if (entry.State == EntityState.Modified)
             {

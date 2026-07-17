@@ -30,8 +30,8 @@ function loadScreenWrapperForPlatform(os: PlatformOs) {
 }
 
 function findContainerStyle(tree: renderer.ReactTestRenderer, ReactNative: typeof import('react-native')) {
-  const container = tree.root.findAllByType(ReactNative.View).find((node) => {
-    const style = ReactNative.StyleSheet.flatten(node.props.style);
+  const container = tree.root.findAllByType(ReactNative.View).find((node: { props: { style?: unknown } }) => {
+    const style = ReactNative.StyleSheet.flatten(node.props.style) as { paddingHorizontal?: number } | undefined;
     return style?.paddingHorizontal === 16;
   });
 

@@ -16,6 +16,7 @@ export const colors = {
   textPrimary: '#E8E8F0',
   textSecondary: '#9CA3AF',
   textMuted: '#6B7280',
+  textSoft: '#B8BCC8',
   textAccent: '#C4A962',
 
   // Accents
@@ -27,6 +28,7 @@ export const colors = {
   goldSoft: 'rgba(196, 169, 98, 0.1)',
   starlight: 'rgba(240, 232, 196, 0.65)',
   veil: 'rgba(9, 11, 20, 0.72)',
+  moon: '#C9D1E3',
   amethyst: '#7C5CFC',
   amethystGlow: 'rgba(124, 92, 252, 0.25)',
   sapphire: '#4E82FF',
@@ -40,10 +42,15 @@ export const colors = {
   dexterity: '#8B5CF6',
   willpower: '#EC4899',
 
+  // Surfaces / glass
+  bgGlass: 'rgba(22, 33, 62, 0.55)',
+  bgGlassStrong: 'rgba(15, 15, 26, 0.78)',
+
   // UI
   border: '#2A2A4A',
   borderLight: '#3A3A5A',
   borderStrong: '#60547A',
+  borderGlow: 'rgba(196, 169, 98, 0.35)',
   success: '#22C55E',
   error: '#EF4444',
   warning: '#F59E0B',
@@ -113,9 +120,18 @@ export const typography = {
     fontFamily: fonts.heading,
     letterSpacing: 1.2,
   },
+  overline: {
+    fontFamily: fonts.heading,
+    letterSpacing: 1.4,
+  },
   body: {
     fontFamily: fonts.body,
     letterSpacing: 0.15,
+  },
+  bodyStrong: {
+    fontFamily: fonts.body,
+    letterSpacing: 0.2,
+    fontWeight: '600' as const,
   },
   journal: {
     fontFamily: fonts.journal,

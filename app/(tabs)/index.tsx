@@ -55,6 +55,7 @@ export default function DashboardScreen() {
   const { quests } = useQuestStore();
   const hallEntries = useHallOfFameStore((s) => s.entries);
   const addHallEntry = useHallOfFameStore((s) => s.addEntry);
+  const forged = useForgedSkillStore((s) => s.forged);
   const { greeting, period } = getTimeOfDayGreeting();
   const equippedTitle =
     EQUIPPABLE_TITLES.find((t) => t.id === settings.equippedTitleId)?.label ?? 'Humble Adventurer';
@@ -113,7 +114,6 @@ export default function DashboardScreen() {
   const activeQuests = getActiveQuests();
   const unlockedSkillCount = getUnlockedSkillIds().length;
   const unlockedSkillIds = getUnlockedSkillIds();
-  const forged = useForgedSkillStore((s) => s.forged);
   const todayQuests = activeQuests.filter((q) => q.type === 'daily');
   const contract = getPrimaryContract(hero, settings, quests);
   const cup = getActiveWeeklyPath(settings)

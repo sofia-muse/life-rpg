@@ -3,17 +3,25 @@ import { View, StyleSheet, ViewStyle, StyleProp } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, radius, spacing } from '../../config/theme';
 
+type CardTone = 'default' | 'accent';
+
 interface Props {
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
   padded?: boolean;
+  /** Visual emphasis — accent uses stronger gold border treatment. */
+  tone?: CardTone;
 }
 
-export function Card({ children, style, padded = true }: Props) {
+export function Card({ children, style, padded = true, tone = 'default' }: Props) {
   return (
-    <View style={[styles.card, style]}>
+    <View style={[styles.card, tone === 'accent' && styles.cardAccent, style]}>
       <LinearGradient
-        colors={[colors.bgCardRaised, colors.bgCard]}
+        colors={
+          tone === 'accent'
+            ? [colors.bgPanel, colors.bgCard]
+            : [colors.bgCardRaised, colors.bgCard]
+        }
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFillObject}
@@ -38,6 +46,10 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 8 },
     elevation: 3,
+  },
+  cardAccent: {
+    borderColor: colors.borderGlow,
+    shadowOpacity: 0.14,
   },
   content: {
     position: 'relative',

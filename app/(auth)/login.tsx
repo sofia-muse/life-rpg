@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
-import { Link, useLocalSearchParams, useRouter } from 'expo-router';
+import { Link, useLocalSearchParams, useRouter, Href } from 'expo-router';
 import { Button } from '../../src/components/layout/Button';
 import { useAuthStore } from '../../src/store/authStore';
 import { colors, spacing, fontSize, radius } from '../../src/config/theme';
 
-function resolveReturnPath(returnTo: string | string[] | undefined): string {
+function resolveReturnPath(returnTo: string | string[] | undefined): Href {
   const value = Array.isArray(returnTo) ? returnTo[0] : returnTo;
   if (value === 'raids') return '/raids';
   return '/';
