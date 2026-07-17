@@ -4,7 +4,6 @@ import { colors, spacing, fontSize, radius } from '../../config/theme';
 import {
   getStreakMultiplier,
   getCurrentMilestone,
-  getNextMilestone,
   daysUntilNextMilestone,
 } from '../../engine/streakEngine';
 
@@ -15,14 +14,7 @@ interface Props {
 export function StreakBanner({ streakDays }: Props) {
   const multiplier = getStreakMultiplier(streakDays);
   const currentMilestone = getCurrentMilestone(streakDays);
-  const nextMilestone = getNextMilestone(streakDays);
   const daysToNext = daysUntilNextMilestone(streakDays);
-  const nextProgress =
-    nextMilestone && currentMilestone
-      ? (streakDays - currentMilestone.days) / Math.max(nextMilestone.days - currentMilestone.days, 1)
-      : nextMilestone
-        ? streakDays / Math.max(nextMilestone.days, 1)
-        : 1;
 
   const fireScale = useRef(new Animated.Value(1)).current;
 
@@ -62,17 +54,6 @@ export function StreakBanner({ streakDays }: Props) {
         )}
       </View>
       {currentMilestone && <Text style={styles.milestone}>{currentMilestone.title}</Text>}
-      {nextMilestone && (
-        <View style={styles.progressWrap}>
-          <View style={styles.progressHeader}>
-            <Text style={styles.nextLabel}>Next rite: {nextMilestone.title}</Text>
-            <Text style={styles.nextLabel}>{Math.round(nextProgress * 100)}%</Text>
-          </View>
-          <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, { width: `${Math.min(nextProgress, 1) * 100}%` }]} />
-          </View>
-        </View>
-      )}
       {daysToNext !== null && (
         <Text style={styles.next}>
           {daysToNext} day{daysToNext !== 1 ? 's' : ''} to next milestone
@@ -131,29 +112,5 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: fontSize.xs,
     marginTop: 2,
-  },
-  progressWrap: {
-    marginTop: spacing.sm,
-  },
-  progressHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.xs,
-  },
-  nextLabel: {
-    color: colors.textMuted,
-    fontSize: fontSize.xs,
-  },
-  progressTrack: {
-    height: 8,
-    borderRadius: radius.full,
-    backgroundColor: colors.bgInput,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: radius.full,
-    backgroundColor: colors.warning,
   },
 });

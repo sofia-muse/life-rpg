@@ -9,7 +9,10 @@ import { Button } from '../layout/Button';
 import { guidanceApi } from '../../api/guidanceApi';
 import { useAuthStore } from '../../store/authStore';
 import { useSettingsStore } from '../../store/settingsStore';
+import { useQuestStore } from '../../store/questStore';
 import { env } from '../../config/env';
+import { getPrimaryContract } from '../../config/classContracts';
+import { buildWeeklyChallengePayload, formatWeeklySnapshot } from '../../config/weeklyCompetition';
 import { HeroCrest } from '../avatar/HeroCrest';
 import { Badge } from '../layout/Badge';
 import { FadeIn } from '../animated/FadeIn';
@@ -23,8 +26,30 @@ export function HeroShareCard({ hero }: Props) {
   const [sharingChronicle, setSharingChronicle] = useState(false);
   const [chronicleError, setChronicleError] = useState<string | null>(null);
   const aiSkillsEnabled = useSettingsStore((s) => s.aiSkillsEnabled);
+  const settings = useSettingsStore();
+  const { quests } = useQuestStore();
   const authenticated = useAuthStore((s) => s.status === 'authenticated');
   const canUseGuidance = aiSkillsEnabled && !env.demoMode && authenticated;
+
+  const handleShareWeekly = async () => {
+    const contract = getPrimaryContract(hero, settings, quests);
+    const payload = buildWeeklyChallengePayload(hero, settings, contract, quests);
+    if (!payload) {
+      await Share.share({
+        message: `${hero.name} is on a Life RPG campaign. Choose a weekly path on the sanctuary to begin!`,
+        title: 'Life RPG Weekly Challenge',
+      });
+      return;
+    }
+    try {
+      await Share.share({
+        message: formatWeeklySnapshot(payload),
+        title: 'Life RPG Weekly Snapshot',
+      });
+    } catch {
+      // cancelled
+    }
+  };
 
   const handleShare = async () => {
     const statLines = STAT_NAMES.map((stat) => {
@@ -161,6 +186,12 @@ export function HeroShareCard({ hero }: Props) {
       </View>
 
       <Button title="Share Hero Card" onPress={handleShare} style={styles.shareBtn} />
+      <Button
+        title="Share Weekly Snapshot"
+        onPress={() => void handleShareWeekly()}
+        variant="secondary"
+        style={styles.chronicleBtn}
+      />
       {canUseGuidance && (
         <Button
           title={sharingChronicle ? 'Writing Chronicle…' : 'Share AI Chronicle'}

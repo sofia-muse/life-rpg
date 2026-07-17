@@ -3,27 +3,30 @@ import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native
 import { Quest, STAT_COLORS, STAT_ICONS } from '../../types';
 import { colors, spacing, fontSize, radius } from '../../config/theme';
 import { Card } from '../layout/Card';
-import { getBossSagaState, getQuestEvolutionState } from '../../engine/questProgression';
+import { getQuestEvolutionState, getBossSagaState } from '../../engine/questProgression';
+import { getQuestDisplayTitle, getQuestDisplayDescription } from '../../config/questFlavor';
 
 interface Props {
   quest: Quest;
   onComplete: (questId: string) => void;
   onDelete?: (questId: string) => void;
-  highlighted?: boolean;
+  contractAligned?: boolean;
+  useFantasyNames?: boolean;
 }
 
-const TYPE_LABELS = {
-  daily: 'Daily Rite',
-  side: 'Side Contract',
-  boss: 'Boss Saga',
-} as const;
-
-export function QuestCard({ quest, onComplete, onDelete, highlighted = false }: Props) {
+export function QuestCard({
+  quest,
+  onComplete,
+  onDelete,
+  contractAligned = false,
+  useFantasyNames = false,
+}: Props) {
   const statColor = STAT_COLORS[quest.stat];
   const scaleAnim = useRef(new Animated.Value(1)).current;
-  const saga = getBossSagaState(quest);
   const evolution = getQuestEvolutionState(quest);
-  const bossProgress = quest.type === 'boss' && quest.totalSteps ? (quest.completedSteps || 0) / quest.totalSteps : 0;
+  const saga = getBossSagaState(quest);
+  const displayTitle = getQuestDisplayTitle(quest, useFantasyNames);
+  const displayDescription = getQuestDisplayDescription(quest, useFantasyNames);
 
   const handlePressIn = () => {
     Animated.spring(scaleAnim, {
@@ -43,7 +46,6 @@ export function QuestCard({ quest, onComplete, onDelete, highlighted = false }: 
 
   const handlePress = () => {
     if (quest.isCompleted) return;
-    // Bounce effect on complete
     Animated.sequence([
       Animated.timing(scaleAnim, { toValue: 1.05, duration: 100, useNativeDriver: true }),
       Animated.spring(scaleAnim, { toValue: 1, friction: 3, useNativeDriver: true }),
@@ -57,40 +59,48 @@ export function QuestCard({ quest, onComplete, onDelete, highlighted = false }: 
         style={[
           styles.card,
           quest.isCompleted ? styles.completed : undefined,
-          highlighted ? { borderColor: `${statColor}80` } : undefined,
+          contractAligned ? { borderColor: statColor, borderWidth: 1 } : undefined,
         ]}
       >
-        <TouchableOpacity
-          style={styles.content}
-          onPress={handlePress}
-          onPressIn={handlePressIn}
-          onPressOut={handlePressOut}
-          activeOpacity={1}
-        >
-          <View style={styles.left}>
-            <View
-              style={[
-                styles.checkbox,
-                quest.isCompleted && { backgroundColor: statColor, borderColor: statColor },
-              ]}
-            >
-              {quest.isCompleted && <Text style={styles.checkmark}>✓</Text>}
-            </View>
+        {contractAligned && (
+          <View style={[styles.alignedBadge, { backgroundColor: `${statColor}30` }]}>
+            <Text style={[styles.alignedText, { color: statColor }]}>Contract Aligned</Text>
           </View>
+        )}
 
+        <View style={styles.content}>
           <View style={styles.info}>
-            <View style={styles.topRow}>
-              <View style={[styles.typePill, { borderColor: `${statColor}55` }]}>
-                <Text style={[styles.typePillText, { color: statColor }]}>{TYPE_LABELS[quest.type]}</Text>
+            {evolution && (
+              <View style={styles.rankRow}>
+                <Text style={[styles.rankBadge, { color: statColor }]}>{evolution.rankName}</Text>
+                {evolution.nextUnlockAt !== undefined && (
+                  <Text style={styles.evolutionHint}>
+                    Evolves at day {evolution.nextUnlockAt} → {evolution.nextRankName}
+                  </Text>
+                )}
               </View>
-              {highlighted && <Text style={styles.highlightTag}>aligned</Text>}
-            </View>
+            )}
+
+            {saga && (
+              <View style={styles.sagaBlock}>
+                <Text style={styles.sagaTitle}>{saga.sagaTitle}</Text>
+                <Text style={styles.sagaPhase}>
+                  Phase: {saga.currentPhase}
+                  {saga.nextPhase ? ` → ${saga.nextPhase}` : ''}
+                </Text>
+                <Text style={styles.sagaReward}>Relic: {saga.rewardTitle}</Text>
+              </View>
+            )}
+
             <Text style={[styles.title, quest.isCompleted && styles.titleCompleted]}>
-              {quest.title}
+              {displayTitle}
             </Text>
-            {quest.description ? (
-              <Text style={styles.description} numberOfLines={1}>
-                {quest.description}
+            {useFantasyNames && quest.title !== displayTitle && (
+              <Text style={styles.realTitle}>{quest.title}</Text>
+            )}
+            {displayDescription ? (
+              <Text style={styles.description} numberOfLines={2}>
+                {displayDescription}
               </Text>
             ) : null}
             <View style={styles.meta}>
@@ -100,42 +110,34 @@ export function QuestCard({ quest, onComplete, onDelete, highlighted = false }: 
               <Text style={[styles.xpBadge, { color: statColor }]}>+{quest.xpReward} XP</Text>
               {quest.streak > 0 && <Text style={styles.streak}>🔥 {quest.streak}</Text>}
             </View>
-
-            {evolution && quest.type === 'daily' && !quest.isCompleted && (
-              <View style={styles.progressPanel}>
-                <Text style={styles.progressTitle}>
-                  {evolution.rankName} path · stage {evolution.currentStageIndex + 1}/{evolution.totalStages}
-                </Text>
-                <Text style={styles.progressText}>
-                  {evolution.nextTitle
-                    ? `${Math.max((evolution.nextUnlockAt ?? 0) - quest.daysCompleted, 0)} more clears to unlock ${evolution.nextTitle}`
-                    : 'Final rank reached for this ritual'}
-                </Text>
-              </View>
-            )}
-
-            {saga && quest.type === 'boss' && (
-              <View style={styles.progressPanel}>
-                <Text style={styles.progressTitle}>{saga.sagaTitle}</Text>
-                <Text style={styles.progressText}>
-                  {saga.currentPhase}
-                  {saga.nextPhase ? ` -> ${saga.nextPhase}` : ' -> final triumph'}
-                </Text>
-                <View style={styles.progressTrack}>
-                  <View style={[styles.progressFill, { width: `${bossProgress * 100}%`, backgroundColor: statColor }]} />
-                </View>
-              </View>
-            )}
           </View>
 
           {quest.type === 'boss' && quest.totalSteps && (
-            <View style={[styles.bossProgress, { borderColor: `${statColor}40` }]}>
+            <View style={styles.bossProgress}>
               <Text style={styles.bossText}>
                 {quest.completedSteps || 0}/{quest.totalSteps}
               </Text>
             </View>
           )}
-        </TouchableOpacity>
+        </View>
+
+        {!quest.isCompleted && (
+          <TouchableOpacity
+            style={[styles.claimBtn, { backgroundColor: statColor }]}
+            onPress={handlePress}
+            onPressIn={handlePressIn}
+            onPressOut={handlePressOut}
+            activeOpacity={0.9}
+          >
+            <Text style={styles.claimBtnText}>Claim Victory</Text>
+          </TouchableOpacity>
+        )}
+
+        {quest.isCompleted && (
+          <View style={styles.completedBanner}>
+            <Text style={styles.completedText}>✓ Victorious</Text>
+          </View>
+        )}
 
         {onDelete && !quest.isCompleted && (
           <TouchableOpacity style={styles.deleteBtn} onPress={() => onDelete(quest.id)}>
@@ -153,61 +155,73 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   completed: {
-    opacity: 0.6,
+    opacity: 0.7,
+  },
+  alignedBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: radius.full,
+    marginBottom: spacing.xs,
+  },
+  alignedText: {
+    fontSize: fontSize.xs,
+    fontWeight: '700',
+    textTransform: 'uppercase',
   },
   content: {
     flexDirection: 'row',
-    alignItems: 'center',
-  },
-  left: {
-    marginRight: spacing.sm + 4,
-  },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: radius.sm,
-    borderWidth: 2,
-    borderColor: colors.borderLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkmark: {
-    color: colors.bgPrimary,
-    fontSize: 14,
-    fontWeight: '700',
+    alignItems: 'flex-start',
   },
   info: {
     flex: 1,
   },
-  topRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
+  rankRow: {
     marginBottom: spacing.xs,
   },
-  typePill: {
-    borderRadius: radius.full,
-    borderWidth: 1,
-    backgroundColor: 'rgba(15, 15, 26, 0.45)',
-    paddingVertical: 3,
-    paddingHorizontal: spacing.sm,
+  rankBadge: {
+    fontSize: fontSize.xs,
+    fontWeight: '800',
+    textTransform: 'uppercase',
   },
-  typePillText: {
+  evolutionHint: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    marginTop: 2,
+    fontStyle: 'italic',
+  },
+  sagaBlock: {
+    marginBottom: spacing.xs,
+    padding: spacing.xs,
+    borderRadius: radius.sm,
+    backgroundColor: colors.bgInset,
+  },
+  sagaTitle: {
+    color: colors.gold,
     fontSize: fontSize.xs,
     fontWeight: '700',
     textTransform: 'uppercase',
   },
-  highlightTag: {
-    color: colors.goldBright,
+  sagaPhase: {
+    color: colors.textSecondary,
     fontSize: fontSize.xs,
-    textTransform: 'uppercase',
-    fontWeight: '700',
+    marginTop: 2,
+  },
+  sagaReward: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    marginTop: 2,
+    fontStyle: 'italic',
   },
   title: {
     color: colors.textPrimary,
     fontSize: fontSize.md,
     fontWeight: '600',
+  },
+  realTitle: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    marginTop: 2,
   },
   titleCompleted: {
     textDecorationLine: 'line-through',
@@ -223,36 +237,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: spacing.xs,
     gap: spacing.sm,
-  },
-  progressPanel: {
-    marginTop: spacing.sm,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    backgroundColor: 'rgba(15, 15, 26, 0.45)',
-    padding: spacing.sm,
-  },
-  progressTitle: {
-    color: colors.textPrimary,
-    fontSize: fontSize.xs,
-    fontWeight: '700',
-    marginBottom: 2,
-  },
-  progressText: {
-    color: colors.textSecondary,
-    fontSize: fontSize.xs,
-    lineHeight: 17,
-  },
-  progressTrack: {
-    height: 6,
-    borderRadius: radius.full,
-    backgroundColor: colors.bgInput,
-    overflow: 'hidden',
-    marginTop: spacing.xs,
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: radius.full,
+    flexWrap: 'wrap',
   },
   statBadge: {
     color: colors.textMuted,
@@ -268,13 +253,35 @@ const styles = StyleSheet.create({
   },
   bossProgress: {
     backgroundColor: colors.bgInput,
-    borderWidth: 1,
     borderRadius: radius.sm,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
+    marginLeft: spacing.sm,
   },
   bossText: {
     color: colors.textAccent,
+    fontSize: fontSize.sm,
+    fontWeight: '700',
+  },
+  claimBtn: {
+    marginTop: spacing.sm,
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+  },
+  claimBtnText: {
+    color: colors.bgPrimary,
+    fontSize: fontSize.sm,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
+  completedBanner: {
+    marginTop: spacing.sm,
+    alignItems: 'center',
+    paddingVertical: spacing.xs,
+  },
+  completedText: {
+    color: colors.success,
     fontSize: fontSize.sm,
     fontWeight: '700',
   },

@@ -99,6 +99,18 @@ export function useCharacterAnimations(event: CharacterEvent = 'idle') {
         Animated.timing(bounceY, { toValue: 4, duration: 220, useNativeDriver: true }),
         Animated.spring(bounceY, { toValue: 0, friction: 6, useNativeDriver: true }),
       ]).start();
+    } else if (event === 'bossPhase' || event === 'evolution') {
+      Animated.sequence([
+        Animated.timing(bounceY, { toValue: -5, duration: 120, useNativeDriver: true }),
+        Animated.spring(bounceY, { toValue: 0, friction: 4, useNativeDriver: true }),
+      ]).start();
+    } else if (event === 'contractComplete') {
+      Animated.sequence([
+        Animated.timing(bounceY, { toValue: -10, duration: 180, useNativeDriver: true }),
+        Animated.spring(bounceY, { toValue: 0, friction: 2.5, useNativeDriver: true }),
+        Animated.timing(flashOpacity, { toValue: 0.5, duration: 180, useNativeDriver: true }),
+        Animated.timing(flashOpacity, { toValue: 0, duration: 400, useNativeDriver: true }),
+      ]).start();
     }
   }, [event]);
 

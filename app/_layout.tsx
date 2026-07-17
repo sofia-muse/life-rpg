@@ -73,6 +73,9 @@ export default function RootLayout() {
         <Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal', headerShown: false }} />
         <Stack.Screen name="customize" options={{ presentation: 'modal', headerShown: false }} />
+        <Stack.Screen name="codex" options={{ headerShown: false }} />
+        <Stack.Screen name="map" options={{ headerShown: false }} />
+        <Stack.Screen name="achievements" options={{ headerShown: false }} />
       </Stack>
       {mustSignIn ? <Redirect href="/login" /> : !isOnboarded && <Redirect href="/onboarding" />}
       <GlobalModals />

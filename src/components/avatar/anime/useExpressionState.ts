@@ -2,7 +2,15 @@ import { useMemo } from 'react';
 import { Hero } from '../../../types';
 
 export type Mood = 'happy' | 'neutral' | 'sad';
-export type CharacterEvent = 'idle' | 'questComplete' | 'levelUp' | 'tierUp' | 'rest';
+export type CharacterEvent =
+  | 'idle'
+  | 'questComplete'
+  | 'levelUp'
+  | 'tierUp'
+  | 'rest'
+  | 'bossPhase'
+  | 'evolution'
+  | 'contractComplete';
 
 export function useExpressionState(hero: Hero | null): {
   mood: Mood;

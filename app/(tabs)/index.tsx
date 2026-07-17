@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, useWindowDimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useRouter, Href } from 'expo-router';
 import { useHeroStore } from '../../src/store/heroStore';
 import { useQuestStore } from '../../src/store/questStore';
 import { useSkillStore } from '../../src/store/skillStore';
 import { useUIStore } from '../../src/store/uiStore';
+import { useSettingsStore } from '../../src/store/settingsStore';
 import { Card } from '../../src/components/layout/Card';
 import { Badge } from '../../src/components/layout/Badge';
 import { StatBar } from '../../src/components/game/StatBar';
@@ -15,14 +16,22 @@ import { XPPopup } from '../../src/components/game/XPPopup';
 import { FadeIn } from '../../src/components/animated/FadeIn';
 import { HeroShareCard } from '../../src/components/game/HeroShareCard';
 import { DailyRewardModal } from '../../src/components/game/DailyRewardModal';
+import { WeeklyCampaignPanel } from '../../src/components/game/WeeklyCampaignPanel';
+import { MentorQuote } from '../../src/components/game/MentorQuote';
+import { BuildSummaryCard } from '../../src/components/game/BuildSummaryCard';
+import { HallOfChampions } from '../../src/components/game/HallOfChampions';
 import { colors, spacing, fontSize, typography } from '../../src/config/theme';
 import { STAT_NAMES, STAT_COLORS, StatName } from '../../src/types';
 import { getStatDisplayProgress } from '../../src/engine/xpEngine';
 import { HeroCrest } from '../../src/components/avatar/HeroCrest';
 import { PulseGlow } from '../../src/components/animated/PulseGlow';
-import { WeeklyContractPanel } from '../../src/components/game/WeeklyContractPanel';
-import { SanctuaryActionTile } from '../../src/components/game/SanctuaryActionTile';
-import { getLeadingEvolutionQuest } from '../../src/engine/questProgression';
+import { getPrimaryContract } from '../../src/config/classContracts';
+import { buildWeeklyCupSummary, getActiveWeeklyPath } from '../../src/config/weeklyPaths';
+import { buildWeeklyChallengePayload } from '../../src/config/weeklyCompetition';
+import { buildHallOfFameEntry, useHallOfFameStore } from '../../src/store/hallOfFameStore';
+import { EQUIPPABLE_TITLES } from '../../src/config/achievements';
+import { useForgedSkillStore } from '../../src/store/forgedSkillStore';
+import { getTimeOfDayGreeting, PERIOD_GRADIENTS } from '../../src/utils/gameFeedback';
 import {
   getContentMaxWidth,
   getScreenHorizontalPadding,
@@ -42,6 +51,40 @@ export default function DashboardScreen() {
   const xpPopupData = useUIStore((s) => s.xpPopupData);
   const dismissXP = useUIStore((s) => s.dismissXP);
   const characterEvent = useUIStore((s) => s.characterEvent);
+  const settings = useSettingsStore();
+  const { quests } = useQuestStore();
+  const hallEntries = useHallOfFameStore((s) => s.entries);
+  const addHallEntry = useHallOfFameStore((s) => s.addEntry);
+  const { greeting, period } = getTimeOfDayGreeting();
+  const equippedTitle =
+    EQUIPPABLE_TITLES.find((t) => t.id === settings.equippedTitleId)?.label ?? 'Humble Adventurer';
+
+  useEffect(() => {
+    settings.clearStaleWeeklyPath();
+  }, [settings.clearStaleWeeklyPath]);
+
+  const handleClaimWeeklyReward = (reward: { title: string; badge: string }) => {
+    if (!hero) return;
+    settings.claimWeeklyReward(reward);
+    settings.incrementWeeklyContractsCompleted();
+    const contract = getPrimaryContract(hero, settings, quests);
+    const payload = buildWeeklyChallengePayload(hero, settings, contract, quests);
+    if (payload && settings.weeklyPathWeekKey) {
+      addHallEntry(
+        buildHallOfFameEntry(
+          settings.weeklyPathWeekKey,
+          payload.heroName,
+          payload.className,
+          payload.pathLabel,
+          payload.cupScore,
+          payload.cupRank,
+          payload.contractTitle,
+        ),
+      );
+    }
+    useUIStore.getState().setCharacterEvent('contractComplete');
+    setTimeout(() => useUIStore.getState().setCharacterEvent('idle'), 2000);
+  };
 
   const [dailyReward, setDailyReward] = useState<{
     xp: number;
@@ -69,8 +112,19 @@ export default function DashboardScreen() {
 
   const activeQuests = getActiveQuests();
   const unlockedSkillCount = getUnlockedSkillIds().length;
+  const unlockedSkillIds = getUnlockedSkillIds();
+  const forged = useForgedSkillStore((s) => s.forged);
   const todayQuests = activeQuests.filter((q) => q.type === 'daily');
-  const leadingArc = getLeadingEvolutionQuest(activeQuests);
+  const contract = getPrimaryContract(hero, settings, quests);
+  const cup = getActiveWeeklyPath(settings)
+    ? buildWeeklyCupSummary(
+        settings,
+        quests,
+        hero.currentStreak,
+        contract.completedMatches,
+        contract.requiredCount,
+      )
+    : null;
   const viewport = getViewportSize(width);
   const useTwoColumns = width >= 980;
   const stackHero = width < 820;
@@ -112,7 +166,7 @@ export default function DashboardScreen() {
           <FadeIn delay={0} slideFrom="none" duration={650} scaleFrom={0.98}>
             <View style={styles.heroPanel}>
               <LinearGradient
-                colors={['rgba(255,255,255,0.06)', 'rgba(124,92,252,0.08)', 'rgba(196,169,98,0.04)']}
+                colors={PERIOD_GRADIENTS[period] as [string, string]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={StyleSheet.absoluteFillObject}
@@ -148,26 +202,35 @@ export default function DashboardScreen() {
 
                 <View style={[styles.headerInfo, stackHero && styles.headerInfoStacked]}>
                   <Text style={styles.heroName}>{hero.name}</Text>
+                  <Text style={styles.heroTitle}>{equippedTitle}</Text>
                   <Badge
                     label={`${hero.className} • Tier ${hero.classTier}`}
                     color={STAT_COLORS[hero.dominantStat]}
                   />
-                  <Text style={styles.heroBlessing}>{homeBlessing}</Text>
+                  <Text style={styles.heroBlessing}>{greeting}</Text>
+                  <Text style={styles.heroSubBlessing}>{homeBlessing}</Text>
                   <Text style={styles.heroLevel}>Hero Level {hero.heroLevel}</Text>
                   <View style={styles.heroActions}>
                     <TouchableOpacity
-                      onPress={() => router.push('/customize')}
+                      onPress={() => router.push('/map' as Href)}
                       style={styles.primaryAction}
                       activeOpacity={0.85}
                     >
-                      <Text style={styles.primaryActionText}>Enter Atelier</Text>
+                      <Text style={styles.primaryActionText}>World Map</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                      onPress={() => router.push('/modal')}
+                      onPress={() => router.push('/customize')}
                       style={styles.secondaryAction}
                       activeOpacity={0.85}
                     >
-                      <Text style={styles.secondaryActionText}>Settings</Text>
+                      <Text style={styles.secondaryActionText}>Atelier</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => router.push('/achievements' as Href)}
+                      style={styles.secondaryAction}
+                      activeOpacity={0.85}
+                    >
+                      <Text style={styles.secondaryActionText}>Trophies</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -201,60 +264,37 @@ export default function DashboardScreen() {
             </View>
           </FadeIn>
 
-          <FadeIn delay={60} slideFrom="bottom">
-            <WeeklyContractPanel variant="compact" onOpenQuests={() => router.push('/quests')} />
+          <FadeIn delay={80} slideFrom="bottom">
+            <WeeklyCampaignPanel
+              hero={hero}
+              settings={settings}
+              quests={quests}
+              onChoosePath={settings.chooseWeeklyPath}
+              onClaimReward={handleClaimWeeklyReward}
+            />
+          </FadeIn>
+
+          <FadeIn delay={90} slideFrom="bottom">
+            <MentorQuote dominantStat={hero.dominantStat} />
           </FadeIn>
 
           <View style={[styles.contentGrid, useTwoColumns && styles.contentGridWide]}>
             <View style={[styles.mainColumn, useTwoColumns && styles.mainColumnWide]}>
               <FadeIn delay={100} slideFrom="bottom">
-                <Card style={styles.sanctuaryCard}>
-                  <View style={styles.sanctuaryHeader}>
-                    <View>
-                      <Text style={styles.sectionTitle}>Sanctuary Paths</Text>
-                      <Text style={styles.sanctuaryText}>
-                        Move through the world like a hero: choose the next board, ritual, or archive.
-                      </Text>
-                    </View>
-                  </View>
-                  <View style={styles.sanctuaryGrid}>
-                    <SanctuaryActionTile
-                      icon="⚔"
-                      title="Quest Board"
-                      subtitle="Advance daily missions, side contracts, and boss arcs."
-                      accentColor={colors.strength}
-                      onPress={() => router.push('/quests')}
-                    />
-                    <SanctuaryActionTile
-                      icon="✦"
-                      title="Build Hall"
-                      subtitle="Inspect your unlocked skills and shape the current build."
-                      accentColor={colors.amethyst}
-                      onPress={() => router.push('/skills')}
-                    />
-                    <SanctuaryActionTile
-                      icon="✎"
-                      title="Legend Codex"
-                      subtitle="Read the campaign chronicle and your growing record."
-                      accentColor={colors.intelligence}
-                      onPress={() => router.push('/codex')}
-                    />
-                    <SanctuaryActionTile
-                      icon="✦"
-                      title="Atelier"
-                      subtitle="Refine the crest, silhouette, and visual identity of your class."
-                      accentColor={colors.gold}
-                      onPress={() => router.push('/customize')}
-                    />
-                  </View>
-                </Card>
-              </FadeIn>
-
-              <FadeIn delay={140} slideFrom="bottom">
                 <StreakBanner streakDays={hero.currentStreak} />
               </FadeIn>
 
-              <FadeIn delay={220} slideFrom="bottom">
+              <FadeIn delay={150} slideFrom="bottom">
+                <BuildSummaryCard
+                  hero={hero}
+                  settings={settings}
+                  unlockedSkillIds={unlockedSkillIds}
+                  forgedSkillCount={forged.length}
+                  sampleQuest={todayQuests[0]}
+                />
+              </FadeIn>
+
+              <FadeIn delay={200} slideFrom="bottom">
                 <Card style={styles.statsCard}>
                   <Text style={styles.sectionTitle}>Heroic Attributes</Text>
                   {STAT_NAMES.map((stat, i) => {
@@ -276,33 +316,7 @@ export default function DashboardScreen() {
             </View>
 
             <View style={[styles.sideColumn, useTwoColumns && styles.sideColumnWide]}>
-              <FadeIn delay={460} slideFrom="bottom">
-                <Card style={styles.arcCard}>
-                  <Text style={styles.sectionTitle}>Current Arc</Text>
-                  {leadingArc ? (
-                    <>
-                      <Text style={styles.arcTitle}>{leadingArc.title}</Text>
-                      <Text style={styles.arcText}>{leadingArc.description}</Text>
-                      <TouchableOpacity
-                        onPress={() => router.push('/quests')}
-                        style={styles.arcAction}
-                        activeOpacity={0.85}
-                      >
-                        <Text style={styles.arcActionText}>Continue this training path</Text>
-                      </TouchableOpacity>
-                    </>
-                  ) : (
-                    <>
-                      <Text style={styles.arcTitle}>No active training arc yet</Text>
-                      <Text style={styles.arcText}>
-                        Pick a small daily mission and let it evolve into a higher-rank ritual over time.
-                      </Text>
-                    </>
-                  )}
-                </Card>
-              </FadeIn>
-
-              <FadeIn delay={520} slideFrom="bottom">
+              <FadeIn delay={500} slideFrom="bottom">
                 <Card style={styles.questSummary}>
                   <Text style={styles.sectionTitle}>Today&apos;s Quests</Text>
                   {todayQuests.length === 0 ? (
@@ -325,6 +339,14 @@ export default function DashboardScreen() {
                     ))
                   )}
                 </Card>
+              </FadeIn>
+
+              <FadeIn delay={650} slideFrom="bottom">
+                <HallOfChampions
+                  entries={hallEntries}
+                  currentScore={cup?.score}
+                  currentRank={cup?.rank}
+                />
               </FadeIn>
 
               <FadeIn delay={700} slideFrom="bottom">
@@ -466,14 +488,29 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: fontSize.hero,
     fontWeight: '900',
-    marginBottom: spacing.xs,
+    marginBottom: 2,
     ...typography.heading,
   },
+  heroTitle: {
+    color: colors.gold,
+    fontSize: fontSize.sm,
+    fontStyle: 'italic',
+    marginBottom: spacing.xs,
+    ...typography.journal,
+  },
   heroBlessing: {
-    color: colors.textSecondary,
+    color: colors.textAccent,
     fontSize: fontSize.sm,
     lineHeight: 18,
     marginTop: spacing.sm,
+    ...typography.body,
+    fontWeight: '600',
+  },
+  heroSubBlessing: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    lineHeight: 18,
+    marginTop: spacing.xs,
     ...typography.journal,
   },
   heroLevel: {
@@ -558,49 +595,6 @@ const styles = StyleSheet.create({
     ...typography.headingWide,
   },
   statsCard: {},
-  sanctuaryCard: {},
-  sanctuaryHeader: {
-    marginBottom: spacing.md,
-  },
-  sanctuaryText: {
-    color: colors.textSecondary,
-    fontSize: fontSize.sm,
-    lineHeight: 20,
-    ...typography.body,
-  },
-  sanctuaryGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  arcCard: {},
-  arcTitle: {
-    color: colors.textPrimary,
-    fontSize: fontSize.lg,
-    marginBottom: spacing.xs,
-    ...typography.heading,
-  },
-  arcText: {
-    color: colors.textSecondary,
-    fontSize: fontSize.sm,
-    lineHeight: 20,
-    ...typography.body,
-  },
-  arcAction: {
-    marginTop: spacing.md,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    backgroundColor: 'rgba(15, 15, 26, 0.55)',
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    alignSelf: 'flex-start',
-  },
-  arcActionText: {
-    color: colors.textAccent,
-    fontSize: fontSize.sm,
-    ...typography.headingWide,
-  },
   sectionTitle: {
     color: colors.textAccent,
     fontSize: fontSize.lg,

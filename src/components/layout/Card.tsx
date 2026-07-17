@@ -7,24 +7,20 @@ interface Props {
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
   padded?: boolean;
-  tone?: 'default' | 'accent';
 }
 
-export function Card({ children, style, padded = true, tone = 'default' }: Props) {
-  const gradientColors =
-    tone === 'accent' ? [colors.bgPanel, colors.bgCardRaised, colors.bgCard] : [colors.bgCardRaised, colors.bgCard];
-
+export function Card({ children, style, padded = true }: Props) {
   return (
     <View style={[styles.card, style]}>
       <LinearGradient
-        colors={gradientColors}
+        colors={[colors.bgCardRaised, colors.bgCard]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFillObject}
       />
-      <View pointerEvents="none" style={[styles.innerBorder, tone === 'accent' && styles.innerBorderAccent]} />
-      <View pointerEvents="none" style={[styles.topAccent, tone === 'accent' && styles.topAccentStrong]} />
-      <View pointerEvents="none" style={[styles.glowOrb, tone === 'accent' && styles.glowOrbAccent]} />
+      <View pointerEvents="none" style={styles.innerBorder} />
+      <View pointerEvents="none" style={styles.topAccent} />
+      <View pointerEvents="none" style={styles.glowOrb} />
       <View style={[styles.content, padded && styles.padded]}>{children}</View>
     </View>
   );
@@ -60,9 +56,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.goldSoft,
   },
-  innerBorderAccent: {
-    borderColor: colors.borderGlow,
-  },
   topAccent: {
     position: 'absolute',
     top: 0,
@@ -70,9 +63,6 @@ const styles = StyleSheet.create({
     right: spacing.lg,
     height: 2,
     backgroundColor: colors.goldGlow,
-  },
-  topAccentStrong: {
-    backgroundColor: colors.goldLight,
   },
   glowOrb: {
     position: 'absolute',
@@ -82,8 +72,5 @@ const styles = StyleSheet.create({
     height: 88,
     borderRadius: 44,
     backgroundColor: colors.goldSoft,
-  },
-  glowOrbAccent: {
-    backgroundColor: colors.amethystGlow,
   },
 });

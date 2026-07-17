@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, Href } from 'expo-router';
 import { ScreenWrapper } from '../src/components/layout/ScreenWrapper';
 import { ScreenHeader } from '../src/components/layout/ScreenHeader';
 import { Card } from '../src/components/layout/Card';
@@ -8,17 +8,33 @@ import { Badge } from '../src/components/layout/Badge';
 import { Button } from '../src/components/layout/Button';
 import { useHeroStore } from '../src/store/heroStore';
 import { useSettingsStore } from '../src/store/settingsStore';
+import { useQuestStore } from '../src/store/questStore';
+import { useSkillStore } from '../src/store/skillStore';
 import { getWeeklyPathDefinition } from '../src/config/weeklyPaths';
+import { getClassDefinition } from '../src/config/classes';
+import { SKILLS } from '../src/config/skills';
+import { STREAK_MILESTONES } from '../src/engine/streakEngine';
+import { getBossSagaState } from '../src/engine/questProgression';
 import { colors, spacing, fontSize, radius, typography } from '../src/config/theme';
-import { STAT_ICONS, STAT_NAMES } from '../src/types';
+import { STAT_ICONS, STAT_NAMES, ClassTier } from '../src/types';
 
 export default function CodexScreen() {
   const router = useRouter();
   const hero = useHeroStore((s) => s.hero);
   const weeklyPath = useSettingsStore((s) => s.weeklyPath);
   const weeklyRewardTitle = useSettingsStore((s) => s.weeklyRewardTitle);
+  const { quests } = useQuestStore();
+  const { isSkillUnlocked } = useSkillStore();
 
   const activePathDefinition = weeklyPath ? getWeeklyPathDefinition(weeklyPath) : null;
+  const classLineage = hero
+    ? ([1, 2, 3, 4, 5] as ClassTier[]).map((tier) => getClassDefinition(hero.dominantStat, tier))
+    : [];
+  const unlockedSkills = SKILLS.filter((s) => isSkillUnlocked(s.id));
+  const completedBosses = quests.filter((q) => q.type === 'boss' && q.isCompleted);
+  const streakMilestones = hero
+    ? STREAK_MILESTONES.filter((m) => hero.longestStreak >= m.days)
+    : [];
 
   return (
     <ScreenWrapper contentWidth="regular">
@@ -128,10 +144,79 @@ export default function CodexScreen() {
         ) : null}
       </Card>
 
+      {hero && classLineage.length > 0 && (
+        <Card>
+          <Text style={styles.sectionTitle}>Class Lineage — {hero.dominantStat}</Text>
+          {classLineage.map((tier) => (
+            <View
+              key={tier.tier}
+              style={[
+                styles.lineageRow,
+                hero.classTier >= tier.tier && styles.lineageUnlocked,
+              ]}
+            >
+              <Text style={styles.lineageTier}>Tier {tier.tier}</Text>
+              <Text style={styles.lineageName}>{tier.name}</Text>
+              <Text style={styles.lineageDesc} numberOfLines={1}>
+                {tier.description}
+              </Text>
+            </View>
+          ))}
+        </Card>
+      )}
+
+      {unlockedSkills.length > 0 && (
+        <Card>
+          <Text style={styles.sectionTitle}>Discovered Abilities</Text>
+          {unlockedSkills.slice(0, 8).map((skill) => (
+            <View key={skill.id} style={styles.skillRow}>
+              <Text style={styles.skillIcon}>{skill.icon}</Text>
+              <View style={styles.skillInfo}>
+                <Text style={styles.skillName}>{skill.name}</Text>
+                <Text style={styles.skillEffect} numberOfLines={1}>
+                  {skill.effect}
+                </Text>
+              </View>
+            </View>
+          ))}
+        </Card>
+      )}
+
+      {completedBosses.length > 0 && (
+        <Card>
+          <Text style={styles.sectionTitle}>Completed Boss Arcs</Text>
+          {completedBosses.map((boss) => {
+            const saga = getBossSagaState(boss);
+            return (
+              <View key={boss.id} style={styles.bossRow}>
+                <Text style={styles.bossTitle}>{saga?.sagaTitle ?? boss.title}</Text>
+                <Text style={styles.bossReward}>Relic: {saga?.rewardTitle ?? 'Campaign Relic'}</Text>
+              </View>
+            );
+          })}
+        </Card>
+      )}
+
+      {streakMilestones.length > 0 && (
+        <Card>
+          <Text style={styles.sectionTitle}>Streak Hall of Fame</Text>
+          <View style={styles.streakRow}>
+            {streakMilestones.map((m) => (
+              <View key={m.days} style={styles.streakChip}>
+                <Text style={styles.streakDays}>{m.days}d</Text>
+                <Text style={styles.streakTitle}>{m.title}</Text>
+              </View>
+            ))}
+          </View>
+        </Card>
+      )}
+
       <View style={styles.actionRow}>
-        <Button title="Open Quests" onPress={() => router.push('/quests')} style={styles.actionBtn} />
+        <Button title="Adventures" onPress={() => router.push('/quests')} style={styles.actionBtn} />
+        <Button title="World Map" onPress={() => router.push('/map' as Href)} variant="secondary" style={styles.actionBtn} />
+        <Button title="Trophy Hall" onPress={() => router.push('/achievements' as Href)} style={styles.actionBtn} />
         <Button
-          title="Visit Sanctuary"
+          title="Sanctuary"
           onPress={() => router.push('/')}
           variant="secondary"
           style={styles.actionBtn}
@@ -249,6 +334,80 @@ const styles = StyleSheet.create({
   },
   actionBtn: {
     flex: 1,
-    minWidth: 160,
+    minWidth: 140,
+  },
+  lineageRow: {
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+    opacity: 0.45,
+  },
+  lineageUnlocked: { opacity: 1 },
+  lineageTier: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    textTransform: 'uppercase',
+  },
+  lineageName: {
+    color: colors.textPrimary,
+    fontSize: fontSize.md,
+    fontWeight: '700',
+  },
+  lineageDesc: {
+    color: colors.textSecondary,
+    fontSize: fontSize.xs,
+    marginTop: 2,
+  },
+  skillRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  skillIcon: { fontSize: 20 },
+  skillInfo: { flex: 1 },
+  skillName: {
+    color: colors.textPrimary,
+    fontSize: fontSize.sm,
+    fontWeight: '600',
+  },
+  skillEffect: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+  },
+  bossRow: {
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+  bossTitle: {
+    color: colors.gold,
+    fontSize: fontSize.sm,
+    fontWeight: '700',
+  },
+  bossReward: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    marginTop: 2,
+    fontStyle: 'italic',
+  },
+  streakRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  streakChip: {
+    padding: spacing.sm,
+    borderRadius: radius.md,
+    backgroundColor: colors.bgGlass,
+    alignItems: 'center',
+    minWidth: 72,
+  },
+  streakDays: {
+    color: colors.warning,
+    fontSize: fontSize.md,
+    fontWeight: '800',
+  },
+  streakTitle: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    textAlign: 'center',
+    marginTop: 2,
   },
 });

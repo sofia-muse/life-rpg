@@ -67,7 +67,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="quests"
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon label="Quests" icon="⚔" focused={focused} wide={floatingDock} />,
+          tabBarIcon: ({ focused }) => <TabIcon label="Adventures" icon="⚔" focused={focused} wide={floatingDock} />,
         }}
       />
       <Tabs.Screen
@@ -79,7 +79,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="journal"
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon label="Journal" icon="✎" focused={focused} wide={floatingDock} />,
+          tabBarIcon: ({ focused }) => <TabIcon label="Chronicle" icon="✎" focused={focused} wide={floatingDock} />,
         }}
       />
     </Tabs>

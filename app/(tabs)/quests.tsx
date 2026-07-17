@@ -1,26 +1,30 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { ScreenWrapper } from '../../src/components/layout/ScreenWrapper';
-import { ScreenHeader } from '../../src/components/layout/ScreenHeader';
 import { QuestCard } from '../../src/components/game/QuestCard';
+import { ContractHeader } from '../../src/components/game/ContractHeader';
+import { GuildmasterSuggestions } from '../../src/components/game/GuildmasterSuggestions';
+import { BossPlannerModal } from '../../src/components/game/BossPlannerModal';
 import { XPPopup } from '../../src/components/game/XPPopup';
 import { useQuestStore } from '../../src/store/questStore';
 import { useHeroStore } from '../../src/store/heroStore';
 import { useGameplayStore } from '../../src/store/gameplayStore';
-import { useSettingsStore } from '../../src/store/settingsStore';
 import { useUIStore } from '../../src/store/uiStore';
+import { useSettingsStore } from '../../src/store/settingsStore';
 import { Card } from '../../src/components/layout/Card';
-import { WeeklyContractPanel } from '../../src/components/game/WeeklyContractPanel';
 import { colors, spacing, fontSize, radius } from '../../src/config/theme';
 import { STAT_COLORS, STAT_ICONS, DIFFICULTY_XP } from '../../src/types';
 import { getAllTemplates, QuestTemplate } from '../../src/config/questTemplates';
 import { getPrimaryContract } from '../../src/config/classContracts';
-import { getActiveWeeklyPath, isQuestAlignedToWeeklyPath } from '../../src/config/weeklyPaths';
+import { isQuestContractAligned } from '../../src/config/achievements';
+import { getQuestEvolutionState } from '../../src/engine/questProgression';
+import { playGameFeedback } from '../../src/utils/gameFeedback';
 
 type Tab = 'daily' | 'side' | 'boss';
 
 export default function QuestsScreen() {
   const [activeTab, setActiveTab] = useState<Tab>('daily');
+  const [showBossPlanner, setShowBossPlanner] = useState(false);
   const {
     quests,
     addQuest,
@@ -40,6 +44,7 @@ export default function QuestsScreen() {
     setQuestCreateModal,
     setAppearanceUnlock,
     setCharacterEvent,
+    setEvolution,
     showXPPopup,
     xpPopupData,
     dismissXP,
@@ -52,9 +57,11 @@ export default function QuestsScreen() {
   };
 
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const activeWeeklyPath = getActiveWeeklyPath(settings);
   const contract = hero ? getPrimaryContract(hero, settings, quests) : null;
-  const contractTitles = new Set(contract?.recommended.map((template) => template.title) ?? []);
+  const existingTitles = useMemo(
+    () => new Set(quests.map((q) => q.title)),
+    [quests],
+  );
 
   const handleAddFromTemplate = useCallback(
     (template: QuestTemplate) => {
@@ -78,31 +85,48 @@ export default function QuestsScreen() {
     (questId: string) => {
       void (async () => {
         try {
+          const priorQuest = useQuestStore.getState().getQuestById(questId);
+          const priorEvolution = priorQuest ? getQuestEvolutionState(priorQuest) : null;
+
           const result = await completeQuestFlow(questId);
           if (!result) {
-            console.warn('[QuestsScreen] Quest completion returned no result.', {
-              questId,
-            });
+            console.warn('[QuestsScreen] Quest completion returned no result.', { questId });
             return;
           }
 
-          if (result.stepAdvancedOnly || !result.completed) {
+          if (result.stepAdvancedOnly) {
+            void playGameFeedback('bossPhase', settings.hapticEnabled);
+            setCharacterEvent('bossPhase');
+            setTimeout(() => setCharacterEvent('idle'), 1500);
             return;
           }
 
+          if (!result.completed) return;
+
+          void playGameFeedback('questComplete', settings.hapticEnabled);
           showXP(result.quest.stat, result.xpAwarded);
-
           setCharacterEvent('questComplete');
           setTimeout(() => setCharacterEvent('idle'), 1500);
+
+          if (priorQuest && priorQuest.title !== result.quest.title && priorEvolution?.nextRankName) {
+            setTimeout(() => {
+              void playGameFeedback('evolution', settings.hapticEnabled);
+              setEvolution(priorEvolution.nextRankName!, result.quest.title);
+              setCharacterEvent('evolution');
+              setTimeout(() => setCharacterEvent('idle'), 2000);
+            }, 800);
+          }
 
           if (result.levelResult) {
             const { stat, newLevel, tierUp } = result.levelResult;
             setTimeout(() => {
+              void playGameFeedback('levelUp', settings.hapticEnabled);
               setLevelUp(stat, newLevel);
             }, 1200);
 
             if (tierUp) {
               setTimeout(() => {
+                void playGameFeedback('tierUp', settings.hapticEnabled);
                 setTierUp(tierUp.newTier, tierUp.newClass);
               }, 2500);
             }
@@ -124,10 +148,7 @@ export default function QuestsScreen() {
             }
           }
         } catch (error) {
-          console.error('[QuestsScreen] Failed to complete quest.', {
-            questId,
-            error,
-          });
+          console.error('[QuestsScreen] Failed to complete quest.', { questId, error });
         }
       })();
     },
@@ -139,20 +160,12 @@ export default function QuestsScreen() {
       setTierUp,
       setSkillUnlock,
       setAppearanceUnlock,
+      setEvolution,
+      settings.hapticEnabled,
     ],
   );
 
   const filteredQuests = tabQuests[activeTab];
-  const suggestedTemplates = getAllTemplates(activeTab, undefined, hero?.characterAppearance?.gender)
-    .filter((t) => !quests.some((q) => q.title === t.title && q.type === t.type))
-    .sort((left, right) => Number(contractTitles.has(right.title)) - Number(contractTitles.has(left.title)))
-    .slice(0, 6);
-  const boardCopy = {
-    daily: 'Small rituals that keep momentum alive and feed the weekly contract.',
-    side: 'Focused contracts for sharper wins, cleaner pivots, and meaningful progress.',
-    boss: 'Long-form sagas with phases, pressure, and a clear reward line.',
-  }[activeTab];
-  const activeCount = filteredQuests.filter((quest) => quest.isActive && !quest.isCompleted).length;
 
   return (
     <ScreenWrapper showScrollIndicator>
@@ -160,25 +173,32 @@ export default function QuestsScreen() {
         <XPPopup stat={xpPopupData.stat} amount={xpPopupData.amount} onDone={dismissXP} />
       )}
 
-      <ScreenHeader
-        eyebrow="Mission Board"
-        title="Quests"
-        subtitle="Choose the next rite, contract, or saga and let the board push the journey forward."
+      <BossPlannerModal
+        visible={showBossPlanner}
+        onClose={() => setShowBossPlanner(false)}
+        defaultStat={hero?.dominantStat}
+        onCreateBoss={(plan) =>
+          addQuest({
+            title: plan.title,
+            description: plan.description,
+            type: 'boss',
+            difficulty: plan.difficulty,
+            stat: plan.stat,
+            xpReward: DIFFICULTY_XP[plan.difficulty],
+            isActive: true,
+            totalSteps: plan.totalSteps,
+            completedSteps: 0,
+          })
+        }
       />
 
-      <WeeklyContractPanel />
+      <Text style={styles.title}>Adventures</Text>
+      <Text style={styles.subtitle}>Contracts, side ventures, and boss arcs</Text>
 
-      <Card style={styles.boardCard}>
-        <Text style={styles.boardTitle}>
-          {activeTab === 'daily' ? 'Daily Rites' : activeTab === 'side' ? 'Side Contracts' : 'Boss Sagas'}
-        </Text>
-        <Text style={styles.boardText}>{boardCopy}</Text>
-        <Text style={styles.boardMeta}>
-          {activeCount} active on the board · {filteredQuests.length} total in this lane
-        </Text>
-      </Card>
+      {contract && <ContractHeader contract={contract} />}
 
-      {/* Tabs */}
+      <GuildmasterSuggestions onAddQuest={handleAddFromTemplate} existingTitles={existingTitles} />
+
       <View style={styles.tabs}>
         {(['daily', 'side', 'boss'] as Tab[]).map((tab) => (
           <TouchableOpacity
@@ -196,7 +216,12 @@ export default function QuestsScreen() {
         ))}
       </View>
 
-      {/* Suggestions toggle */}
+      {activeTab === 'boss' && (
+        <TouchableOpacity style={styles.bossPlannerBtn} onPress={() => setShowBossPlanner(true)}>
+          <Text style={styles.bossPlannerText}>✨ Forge a Boss Arc</Text>
+        </TouchableOpacity>
+      )}
+
       <TouchableOpacity
         style={styles.suggestionsToggle}
         onPress={() => setShowSuggestions(!showSuggestions)}
@@ -206,13 +231,15 @@ export default function QuestsScreen() {
         </Text>
       </TouchableOpacity>
 
-      {/* Suggested Quests */}
       {showSuggestions && (
         <View style={styles.suggestions}>
           <Text style={styles.suggestionsTitle}>
             Suggested {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Quests
           </Text>
-          {suggestedTemplates.map((template, i) => (
+          {getAllTemplates(activeTab, undefined, hero?.characterAppearance?.gender)
+            .filter((t) => !quests.some((q) => q.title === t.title && q.type === t.type))
+            .slice(0, 6)
+            .map((template, i) => (
               <Card key={`${template.title}-${i}`} style={styles.suggestionCard}>
                 <View style={styles.suggestionContent}>
                   <View style={styles.suggestionInfo}>
@@ -230,7 +257,6 @@ export default function QuestsScreen() {
                       {template.totalSteps && (
                         <Text style={styles.suggestionSteps}>{template.totalSteps} steps</Text>
                       )}
-                      {contractTitles.has(template.title) && <Text style={styles.contractTag}>contract-aligned</Text>}
                     </View>
                   </View>
                   <TouchableOpacity
@@ -245,7 +271,6 @@ export default function QuestsScreen() {
         </View>
       )}
 
-      {/* Quest List */}
       <View style={styles.list}>
         {filteredQuests.length === 0 ? (
           <View style={styles.empty}>
@@ -264,16 +289,13 @@ export default function QuestsScreen() {
               quest={item}
               onComplete={handleComplete}
               onDelete={deleteQuest}
-              highlighted={
-                contractTitles.has(item.title) ||
-                (activeWeeklyPath ? isQuestAlignedToWeeklyPath(activeWeeklyPath, item) : false)
-              }
+              contractAligned={contract ? isQuestContractAligned(item, contract) : false}
+              useFantasyNames={settings.fantasyNames}
             />
           ))
         )}
       </View>
 
-      {/* FAB */}
       <TouchableOpacity
         style={styles.fab}
         onPress={() => setQuestCreateModal(true)}
@@ -286,26 +308,17 @@ export default function QuestsScreen() {
 }
 
 const styles = StyleSheet.create({
-  boardCard: {
-    marginBottom: spacing.md,
-  },
-  boardTitle: {
+  title: {
     color: colors.textPrimary,
-    fontSize: fontSize.lg,
-    fontWeight: '800',
-    marginBottom: spacing.xs,
+    fontSize: fontSize.title,
+    fontWeight: '900',
+    marginTop: spacing.md,
   },
-  boardText: {
+  subtitle: {
     color: colors.textSecondary,
     fontSize: fontSize.sm,
-    lineHeight: 20,
-    marginBottom: spacing.sm,
-  },
-  boardMeta: {
-    color: colors.textAccent,
-    fontSize: fontSize.xs,
-    textTransform: 'uppercase',
-    fontWeight: '700',
+    fontStyle: 'italic',
+    marginBottom: spacing.md,
   },
   tabs: {
     flexDirection: 'row',
@@ -344,6 +357,20 @@ const styles = StyleSheet.create({
   tabCountText: {
     fontSize: fontSize.xs,
     color: colors.textSecondary,
+    fontWeight: '700',
+  },
+  bossPlannerBtn: {
+    marginBottom: spacing.sm,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.goldSoft,
+    backgroundColor: 'rgba(196, 169, 98, 0.1)',
+  },
+  bossPlannerText: {
+    color: colors.gold,
+    fontSize: fontSize.sm,
     fontWeight: '700',
   },
   list: {
@@ -428,12 +455,6 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: fontSize.xs,
   },
-  contractTag: {
-    color: colors.goldBright,
-    fontSize: fontSize.xs,
-    textTransform: 'uppercase',
-    fontWeight: '700',
-  },
   addBtn: {
     width: 36,
     height: 36,
@@ -447,7 +468,6 @@ const styles = StyleSheet.create({
     color: colors.bgPrimary,
     fontSize: 20,
     fontWeight: '700',
-    marginTop: -1,
   },
   fab: {
     position: 'absolute',

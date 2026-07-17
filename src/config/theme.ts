@@ -17,7 +17,6 @@ export const colors = {
   textSecondary: '#9CA3AF',
   textMuted: '#6B7280',
   textAccent: '#C4A962',
-  textSoft: '#C7CDD9',
 
   // Accents
   gold: '#C4A962',
@@ -31,7 +30,6 @@ export const colors = {
   amethyst: '#7C5CFC',
   amethystGlow: 'rgba(124, 92, 252, 0.25)',
   sapphire: '#4E82FF',
-  moon: '#B7C8FF',
   rose: '#E879B8',
 
   // Stat colors
@@ -46,13 +44,10 @@ export const colors = {
   border: '#2A2A4A',
   borderLight: '#3A3A5A',
   borderStrong: '#60547A',
-  borderGlow: 'rgba(196, 169, 98, 0.34)',
   success: '#22C55E',
   error: '#EF4444',
   warning: '#F59E0B',
   shadowHeavy: 'rgba(5, 8, 20, 0.45)',
-  bgGlass: 'rgba(17, 22, 43, 0.55)',
-  bgGlassStrong: 'rgba(13, 18, 34, 0.8)',
 
   // Tab bar
   tabActive: '#C4A962',
@@ -122,19 +117,8 @@ export const typography = {
     fontFamily: fonts.body,
     letterSpacing: 0.15,
   },
-  bodyStrong: {
-    fontFamily: fonts.body,
-    letterSpacing: 0.15,
-    fontWeight: '600' as const,
-  },
   journal: {
     fontFamily: fonts.journal,
     letterSpacing: 0.25,
-  },
-  overline: {
-    fontFamily: fonts.heading,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase' as const,
-    fontWeight: '700' as const,
   },
 };
