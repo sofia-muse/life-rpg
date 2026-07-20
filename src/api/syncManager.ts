@@ -10,9 +10,10 @@
 // lifecycle, rest-day rewards) flow through here.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
+import { applyApiHeroSnapshot } from './applyApiHeroSnapshot';
 import { apiFetch } from './client';
 import { ApiHero, ApiQuest } from './dto';
-import { mapApiHero, mapApiQuest } from './mappers';
+import { mapApiQuest } from './mappers';
 import { env } from '../config/env';
 import { generateId } from '../utils/id';
 
@@ -29,6 +30,8 @@ export interface SyncOperation {
 const QUEUE_KEY = 'life-rpg-sync-queue';
 const LAST_SYNC_KEY = 'life-rpg-last-sync-at';
 const MAX_RETRIES = 5;
+/** Coalesce burst enqueue (quest + hero) into one disk write + one flush. */
+const PERSIST_FLUSH_DEBOUNCE_MS = 100;
 
 interface SyncBatchResponse {
   serverTime: string;
@@ -50,6 +53,7 @@ class SyncManager {
   private hydrated = false;
   private flushing = false;
   private listeners = new Set<(pending: number) => void>();
+  private persistFlushTimer: ReturnType<typeof setTimeout> | null = null;
 
   /** Load the persisted queue and start watching connectivity. Safe to call once at startup. */
   async init(): Promise<void> {
@@ -76,11 +80,45 @@ class SyncManager {
     // Sync is dormant in demo mode (no backend).
     if (env.demoMode) return;
     this.queue.push({ opId: generateId(), entity, action, payload });
-    void this.persist();
-    if (this.online) void this.flush();
+    this.listeners.forEach((l) => l(this.queue.length));
+    this.schedulePersistAndFlush();
   }
 
+  /** Immediate flush (e.g. coming back online). Cancels any pending debounce. */
   async flush(): Promise<void> {
+    this.cancelScheduledPersistFlush();
+    await this.persist();
+    await this.flushNow();
+  }
+
+  getPendingCount(): number {
+    return this.queue.length;
+  }
+
+  subscribe(listener: (pending: number) => void): () => void {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+
+  private schedulePersistAndFlush(): void {
+    if (this.persistFlushTimer) clearTimeout(this.persistFlushTimer);
+    this.persistFlushTimer = setTimeout(() => {
+      this.persistFlushTimer = null;
+      void (async () => {
+        await this.persist();
+        if (this.online) await this.flushNow();
+      })();
+    }, PERSIST_FLUSH_DEBOUNCE_MS);
+  }
+
+  private cancelScheduledPersistFlush(): void {
+    if (this.persistFlushTimer) {
+      clearTimeout(this.persistFlushTimer);
+      this.persistFlushTimer = null;
+    }
+  }
+
+  private async flushNow(): Promise<void> {
     if (env.demoMode || this.flushing || !this.online || this.queue.length === 0) return;
     this.flushing = true;
     try {
@@ -112,15 +150,6 @@ class SyncManager {
     }
   }
 
-  getPendingCount(): number {
-    return this.queue.length;
-  }
-
-  subscribe(listener: (pending: number) => void): () => void {
-    this.listeners.add(listener);
-    return () => this.listeners.delete(listener);
-  }
-
   private async persist(): Promise<void> {
     this.listeners.forEach((l) => l(this.queue.length));
     try {
@@ -136,18 +165,12 @@ class SyncManager {
   }
 
   private applyServerChanges(changes: SyncBatchResponse['serverChanges']): void {
-    const { useHeroStore } = require('../store/heroStore') as typeof import('../store/heroStore');
-    const { useQuestStore } = require('../store/questStore') as typeof import('../store/questStore');
-    const { useSettingsStore } = require('../store/settingsStore') as typeof import('../store/settingsStore');
-    const { useSkillStore } = require('../store/skillStore') as typeof import('../store/skillStore');
-
     if (changes.hero) {
-      useHeroStore.getState().setHero(mapApiHero(changes.hero), { isOnboarded: true });
-      useSkillStore.getState().replaceUnlockedSkills(changes.hero.unlockedSkills);
-      useSettingsStore.getState().replaceSettings(changes.hero.settings);
+      applyApiHeroSnapshot(changes.hero);
     }
 
     if (changes.quests.length > 0) {
+      const { useQuestStore } = require('../store/questStore') as typeof import('../store/questStore');
       useQuestStore.getState().replaceQuests(changes.quests.map(mapApiQuest));
     }
   }

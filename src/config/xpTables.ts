@@ -8,25 +8,27 @@ export function xpForLevel(level: number): number {
   return Math.floor(BASE_XP * Math.pow(level, 1.5));
 }
 
-export function totalXPForLevel(level: number): number {
-  let total = 0;
-  for (let i = 1; i <= level; i++) {
-    total += xpForLevel(i);
-  }
-  return total;
-}
-
-// Precomputed thresholds for levels 1-100
-export const XP_TABLE: XPThreshold[] = Array.from({ length: 100 }, (_, i) => {
-  const level = i + 1;
-  return {
-    level,
-    totalXP: totalXPForLevel(level),
-    xpForLevel: xpForLevel(level),
-  };
-});
-
 export const MAX_LEVEL = 100;
+
+// Precomputed thresholds for levels 1-100.
+// XP_TABLE[i].totalXP = sum of xpForLevel(1)..xpForLevel(i+1) — XP needed to *finish* level i+1.
+export const XP_TABLE: XPThreshold[] = (() => {
+  const table: XPThreshold[] = [];
+  let cumulative = 0;
+  for (let level = 1; level <= MAX_LEVEL; level++) {
+    const needed = xpForLevel(level);
+    cumulative += needed;
+    table.push({ level, totalXP: cumulative, xpForLevel: needed });
+  }
+  return table;
+})();
+
+/** Cumulative XP required to reach the end of `level` (level 0 → 0). */
+export function totalXPForLevel(level: number): number {
+  if (level <= 0) return 0;
+  if (level >= MAX_LEVEL) return XP_TABLE[MAX_LEVEL - 1].totalXP;
+  return XP_TABLE[level - 1].totalXP;
+}
 
 // Hero level = average of all stat levels
 export function computeHeroLevel(statLevels: Record<string, number>): number {
@@ -34,14 +36,22 @@ export function computeHeroLevel(statLevels: Record<string, number>): number {
   return Math.floor(levels.reduce((a, b) => a + b, 0) / levels.length);
 }
 
-// Get level from total XP
+/**
+ * Current level given accumulated total XP.
+ * Binary-searches XP_TABLE: level is the count of finished level thresholds ≤ totalXP.
+ */
 export function levelFromXP(totalXP: number): number {
-  let accumulated = 0;
-  for (let level = 1; level <= MAX_LEVEL; level++) {
-    accumulated += xpForLevel(level);
-    if (totalXP < accumulated) return level - 1;
+  if (totalXP < XP_TABLE[0].totalXP) return 0;
+  if (totalXP >= XP_TABLE[MAX_LEVEL - 1].totalXP) return MAX_LEVEL;
+
+  let lo = 0;
+  let hi = MAX_LEVEL - 1;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1;
+    if (XP_TABLE[mid].totalXP <= totalXP) lo = mid;
+    else hi = mid - 1;
   }
-  return MAX_LEVEL;
+  return lo + 1;
 }
 
 // Get XP progress within current level
@@ -52,7 +62,8 @@ export function xpProgressInLevel(totalXP: number): {
 } {
   const level = levelFromXP(totalXP);
   const xpAtLevelStart = totalXPForLevel(level);
-  const xpNeeded = xpForLevel(level + 1);
+  const xpNeeded =
+    level >= MAX_LEVEL ? XP_TABLE[MAX_LEVEL - 1].xpForLevel : xpForLevel(level + 1);
   const currentLevelXP = totalXP - xpAtLevelStart;
   return {
     currentLevelXP,

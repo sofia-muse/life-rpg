@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useShallow } from 'zustand/react/shallow';
 import { ScreenWrapper } from '../../src/components/layout/ScreenWrapper';
 import { QuestCard } from '../../src/components/game/QuestCard';
 import { ContractHeader } from '../../src/components/game/ContractHeader';
@@ -27,16 +28,22 @@ export default function QuestsScreen() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab>('daily');
   const [showBossPlanner, setShowBossPlanner] = useState(false);
-  const {
-    quests,
-    addQuest,
-    deleteQuest,
-    getDailyQuests,
-    getSideQuests,
-    getBossQuests,
-  } = useQuestStore();
+  const quests = useQuestStore((s) => s.quests);
+  const addQuest = useQuestStore((s) => s.addQuest);
+  const deleteQuest = useQuestStore((s) => s.deleteQuest);
   const hero = useHeroStore((state) => state.hero);
-  const settings = useSettingsStore();
+  const settings = useSettingsStore(
+    useShallow((s) => ({
+      weeklyPath: s.weeklyPath,
+      weeklyPathWeekKey: s.weeklyPathWeekKey,
+      weeklyPathStartedAt: s.weeklyPathStartedAt,
+      weeklyRewardWeekKey: s.weeklyRewardWeekKey,
+      weeklyRewardTitle: s.weeklyRewardTitle,
+      weeklyRewardBadge: s.weeklyRewardBadge,
+      fantasyNames: s.fantasyNames,
+      hapticEnabled: s.hapticEnabled,
+    })),
+  );
   const completeQuestFlow = useGameplayStore((state) => state.completeQuest);
   const {
     showXP,
@@ -50,13 +57,30 @@ export default function QuestsScreen() {
     showXPPopup,
     xpPopupData,
     dismissXP,
-  } = useUIStore();
+  } = useUIStore(
+    useShallow((s) => ({
+      showXP: s.showXP,
+      setLevelUp: s.setLevelUp,
+      setSkillUnlock: s.setSkillUnlock,
+      setTierUp: s.setTierUp,
+      setQuestCreateModal: s.setQuestCreateModal,
+      setAppearanceUnlock: s.setAppearanceUnlock,
+      setCharacterEvent: s.setCharacterEvent,
+      setEvolution: s.setEvolution,
+      showXPPopup: s.showXPPopup,
+      xpPopupData: s.xpPopupData,
+      dismissXP: s.dismissXP,
+    })),
+  );
 
-  const tabQuests = {
-    daily: getDailyQuests(),
-    side: getSideQuests(),
-    boss: getBossQuests(),
-  };
+  const tabQuests = useMemo(
+    () => ({
+      daily: quests.filter((q) => q.type === 'daily'),
+      side: quests.filter((q) => q.type === 'side'),
+      boss: quests.filter((q) => q.type === 'boss'),
+    }),
+    [quests],
+  );
 
   const [showSuggestions, setShowSuggestions] = useState(false);
   const contract = hero ? getPrimaryContract(hero, settings, quests) : null;

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { generateId } from '../utils/id';
+import { today } from '../utils/date';
 import { Quest } from '../types';
 import { syncManager } from '../api/syncManager';
 import { getActiveDailyQuestCapacityBonus } from '../engine/skillEngine';
@@ -38,7 +39,6 @@ interface QuestState {
   clearQuests: () => void;
 }
 
-const today = () => new Date().toISOString().split('T')[0];
 const BASE_ACTIVE_DAILY_LIMIT = 3;
 
 function canActivateDailyQuest(quests: Quest[]): boolean {

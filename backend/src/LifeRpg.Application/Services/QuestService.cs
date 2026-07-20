@@ -10,7 +10,6 @@ namespace LifeRpg.Application.Services;
 
 public class QuestService
 {
-    private const int BaseActiveDailyLimit = 3;
     private readonly IAppDbContext _db;
     private readonly ICurrentUser _user;
     private readonly IClock _clock;
@@ -32,7 +31,7 @@ public class QuestService
 
         await ResetExpiredDailyQuestsAsync(hero.Id, ct);
 
-        var query = _db.Quests.Where(q => q.HeroId == hero.Id);
+        var query = _db.Quests.AsNoTracking().Where(q => q.HeroId == hero.Id);
         if (type is { } t)
         {
             query = query.Where(q => q.Type == t);
@@ -313,26 +312,25 @@ public class QuestService
     {
         var today = _clock.Today;
         var dailyQuests = await _db.Quests
-            .Where(q => q.HeroId == heroId && q.Type == QuestType.Daily && q.IsCompleted)
+            .Where(q => q.HeroId == heroId
+                && q.Type == QuestType.Daily
+                && q.IsCompleted
+                && (q.CompletedAt == null
+                    || DateOnly.FromDateTime(q.CompletedAt.Value.UtcDateTime) != today))
             .ToListAsync(ct);
 
-        var changed = false;
+        if (dailyQuests.Count == 0)
+        {
+            return;
+        }
+
         foreach (var quest in dailyQuests)
         {
-            if (quest.CompletedAt is { } completedAt && DateOnly.FromDateTime(completedAt.UtcDateTime) == today)
-            {
-                continue;
-            }
-
             quest.IsCompleted = false;
             quest.CompletedAt = null;
-            changed = true;
         }
 
-        if (changed)
-        {
-            await _db.SaveChangesAsync(ct);
-        }
+        await _db.SaveChangesAsync(ct);
     }
 
     private async Task<bool> CanActivateDailyQuestAsync(Hero hero, Guid? currentQuestId, CancellationToken ct)
@@ -343,33 +341,15 @@ public class QuestService
                 && q.IsActive
                 && (!currentQuestId.HasValue || q.Id != currentQuestId.Value),
             ct);
-        var unlockedIds = hero.UnlockedSkills.Select(s => s.SkillId);
-        var maxActiveDailyCount = BaseActiveDailyLimit + SkillResolver.GetActiveDailyQuestCapacityBonus(unlockedIds);
-        return currentActiveDailyCount < maxActiveDailyCount;
+        return DailyQuestCapacity.CanActivate(
+            currentActiveDailyCount,
+            hero.UnlockedSkills.Select(s => s.SkillId));
     }
 
-    private static int GetWeeklyPathBonus(Hero hero, Quest quest, DateOnly today)
-    {
-        var path = hero.Settings.WeeklyPath?.Trim().ToLowerInvariant();
-        if (string.IsNullOrWhiteSpace(path) || hero.Settings.WeeklyPathWeekKey != WeekKey(today))
-        {
-            return 0;
-        }
-
-        var matches = path switch
-        {
-            "power" => quest.Stat is StatName.Strength or StatName.Vitality,
-            "focus" => quest.Stat is StatName.Intelligence or StatName.Dexterity,
-            "support" => quest.Stat is StatName.Charisma or StatName.Willpower,
-            _ => false,
-        };
-
-        return matches ? 5 : 0;
-    }
-
-    private static string WeekKey(DateOnly date)
-    {
-        var diff = ((int)date.DayOfWeek + 6) % 7;
-        return date.AddDays(-diff).ToString("yyyy-MM-dd");
-    }
+    private static int GetWeeklyPathBonus(Hero hero, Quest quest, DateOnly today) =>
+        WeeklyPathHelper.GetQuestBonus(
+            hero.Settings.WeeklyPath,
+            hero.Settings.WeeklyPathWeekKey,
+            quest.Stat,
+            today);
 }

@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, useWindowDimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, Href } from 'expo-router';
+import { useShallow } from 'zustand/react/shallow';
 import { useHeroStore } from '../../src/store/heroStore';
 import { useQuestStore } from '../../src/store/questStore';
 import { useSkillStore } from '../../src/store/skillStore';
@@ -45,20 +46,41 @@ export default function DashboardScreen() {
   const hero = useHeroStore((s) => s.hero);
   const getDailyRewardPreview = useHeroStore((s) => s.getDailyRewardPreview);
   const claimDailyReward = useHeroStore((s) => s.claimDailyReward);
-  const getActiveQuests = useQuestStore((s) => s.getActiveQuests);
-  const getUnlockedSkillIds = useSkillStore((s) => s.getUnlockedSkillIds);
+  const quests = useQuestStore((s) => s.quests);
+  const unlockedSkills = useSkillStore((s) => s.unlockedSkills);
   const showXPPopup = useUIStore((s) => s.showXPPopup);
   const xpPopupData = useUIStore((s) => s.xpPopupData);
   const dismissXP = useUIStore((s) => s.dismissXP);
   const characterEvent = useUIStore((s) => s.characterEvent);
-  const settings = useSettingsStore();
-  const { quests } = useQuestStore();
+  const settings = useSettingsStore(
+    useShallow((s) => ({
+      equippedTitleId: s.equippedTitleId,
+      weeklyPath: s.weeklyPath,
+      weeklyPathWeekKey: s.weeklyPathWeekKey,
+      weeklyPathStartedAt: s.weeklyPathStartedAt,
+      weeklyRewardWeekKey: s.weeklyRewardWeekKey,
+      weeklyRewardTitle: s.weeklyRewardTitle,
+      weeklyRewardBadge: s.weeklyRewardBadge,
+      clearStaleWeeklyPath: s.clearStaleWeeklyPath,
+      claimWeeklyReward: s.claimWeeklyReward,
+      incrementWeeklyContractsCompleted: s.incrementWeeklyContractsCompleted,
+    })),
+  );
   const hallEntries = useHallOfFameStore((s) => s.entries);
   const addHallEntry = useHallOfFameStore((s) => s.addEntry);
   const forged = useForgedSkillStore((s) => s.forged);
   const { greeting, period } = getTimeOfDayGreeting();
   const equippedTitle =
     EQUIPPABLE_TITLES.find((t) => t.id === settings.equippedTitleId)?.label ?? 'Humble Adventurer';
+
+  const unlockedSkillIds = useMemo(
+    () => unlockedSkills.map((skill) => skill.skillId),
+    [unlockedSkills],
+  );
+  const activeQuests = useMemo(
+    () => quests.filter((q) => q.isActive && !q.isCompleted),
+    [quests],
+  );
 
   useEffect(() => {
     settings.clearStaleWeeklyPath();
@@ -103,7 +125,7 @@ export default function DashboardScreen() {
   }, [hero?.id, hero?.lastRewardDate, getDailyRewardPreview]);
 
   const handleClaimReward = () => {
-    if (dailyReward) claimDailyReward(getUnlockedSkillIds());
+    if (dailyReward) claimDailyReward(unlockedSkillIds);
     setDailyReward(null);
   };
 
@@ -111,9 +133,7 @@ export default function DashboardScreen() {
     return <View style={styles.center} />;
   }
 
-  const activeQuests = getActiveQuests();
-  const unlockedSkillCount = getUnlockedSkillIds().length;
-  const unlockedSkillIds = getUnlockedSkillIds();
+  const unlockedSkillCount = unlockedSkillIds.length;
   const todayQuests = activeQuests.filter((q) => q.type === 'daily');
   const contract = getPrimaryContract(hero, settings, quests);
   const cup = getActiveWeeklyPath(settings)
