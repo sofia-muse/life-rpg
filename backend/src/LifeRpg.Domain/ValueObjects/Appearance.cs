@@ -35,6 +35,11 @@ public sealed class HeroSettings
 
     /// <summary>Opt-in to AI-forged skills (off by default; online-only).</summary>
     public bool AiSkillsEnabled { get; set; }
+
+    public string EquippedTitleId { get; set; } = "adventurer";
+    public List<string> UnlockedTitleIds { get; set; } = new() { "adventurer" };
+    public Dictionary<string, string> CustomTitleLabels { get; set; } = new();
+
     public string? WeeklyPath { get; set; }
     public string? WeeklyPathWeekKey { get; set; }
     public string? WeeklyPathStartedAt { get; set; }

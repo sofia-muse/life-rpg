@@ -18,8 +18,10 @@ import { STAT_COLORS, STAT_ICONS, DIFFICULTY_XP } from '../../src/types';
 import { getAllTemplates, QuestTemplate } from '../../src/config/questTemplates';
 import { getPrimaryContract } from '../../src/config/classContracts';
 import { isQuestContractAligned } from '../../src/config/achievements';
-import { getQuestEvolutionState } from '../../src/engine/questProgression';
-import { playGameFeedback } from '../../src/utils/gameFeedback';
+import { resolveEvolutionPathId } from '../../src/engine/questProgression';
+import { isDifficultyAllowed, getWeeklyCapacityBonus } from '../../src/engine/skillEngine';
+import { useSkillStore } from '../../src/store/skillStore';
+import { presentQuestCompletionFeedback } from '../../src/utils/questCompletionFeedback';
 
 type Tab = 'daily' | 'side' | 'boss';
 
@@ -38,15 +40,10 @@ export default function QuestsScreen() {
   const hero = useHeroStore((state) => state.hero);
   const settings = useSettingsStore();
   const completeQuestFlow = useGameplayStore((state) => state.completeQuest);
+  const unlockedSkills = useSkillStore((s) => s.unlockedSkills);
+  const unlockedSkillIds = unlockedSkills.map((s) => s.skillId);
   const {
-    showXP,
-    setLevelUp,
-    setSkillUnlock,
-    setTierUp,
     setQuestCreateModal,
-    setAppearanceUnlock,
-    setCharacterEvent,
-    setEvolution,
     showXPPopup,
     xpPopupData,
     dismissXP,
@@ -59,7 +56,9 @@ export default function QuestsScreen() {
   };
 
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const contract = hero ? getPrimaryContract(hero, settings, quests) : null;
+  const contract = hero
+    ? getPrimaryContract(hero, settings, quests, getWeeklyCapacityBonus(unlockedSkillIds))
+    : null;
   const existingTitles = useMemo(
     () => new Set(quests.map((q) => q.title)),
     [quests],
@@ -67,6 +66,9 @@ export default function QuestsScreen() {
 
   const handleAddFromTemplate = useCallback(
     (template: QuestTemplate) => {
+      if (!isDifficultyAllowed(template.difficulty, template.stat, unlockedSkillIds)) {
+        return;
+      }
       addQuest({
         title: template.title,
         description: template.description,
@@ -75,12 +77,14 @@ export default function QuestsScreen() {
         stat: template.stat,
         xpReward: DIFFICULTY_XP[template.difficulty],
         isActive: true,
+        evolutionPathId: resolveEvolutionPathId(template.title),
+        templateTitle: template.title,
         ...(template.type === 'boss' && template.totalSteps
           ? { totalSteps: template.totalSteps, completedSteps: 0 }
           : {}),
       });
     },
-    [addQuest],
+    [addQuest, unlockedSkillIds],
   );
 
   const handleComplete = useCallback(
@@ -88,83 +92,18 @@ export default function QuestsScreen() {
       void (async () => {
         try {
           const priorQuest = useQuestStore.getState().getQuestById(questId);
-          const priorEvolution = priorQuest ? getQuestEvolutionState(priorQuest) : null;
-
           const result = await completeQuestFlow(questId);
           if (!result) {
             console.warn('[QuestsScreen] Quest completion returned no result.', { questId });
             return;
           }
-
-          if (result.stepAdvancedOnly) {
-            void playGameFeedback('bossPhase', settings.hapticEnabled);
-            setCharacterEvent('bossPhase');
-            setTimeout(() => setCharacterEvent('idle'), 1500);
-            return;
-          }
-
-          if (!result.completed) return;
-
-          void playGameFeedback('questComplete', settings.hapticEnabled);
-          showXP(result.quest.stat, result.xpAwarded);
-          setCharacterEvent('questComplete');
-          setTimeout(() => setCharacterEvent('idle'), 1500);
-
-          if (priorQuest && priorQuest.title !== result.quest.title && priorEvolution?.nextRankName) {
-            setTimeout(() => {
-              void playGameFeedback('evolution', settings.hapticEnabled);
-              setEvolution(priorEvolution.nextRankName!, result.quest.title);
-              setCharacterEvent('evolution');
-              setTimeout(() => setCharacterEvent('idle'), 2000);
-            }, 800);
-          }
-
-          if (result.levelResult) {
-            const { stat, newLevel, tierUp } = result.levelResult;
-            setTimeout(() => {
-              void playGameFeedback('levelUp', settings.hapticEnabled);
-              setLevelUp(stat, newLevel);
-            }, 1200);
-
-            if (tierUp) {
-              setTimeout(() => {
-                void playGameFeedback('tierUp', settings.hapticEnabled);
-                setTierUp(tierUp.newTier, tierUp.newClass);
-              }, 2500);
-            }
-          }
-
-          if (result.newSkills.length > 0) {
-            setTimeout(() => {
-              setSkillUnlock(result.newSkills[0]);
-            }, result.levelResult ? 3000 : 1200);
-          }
-
-          if (result.appearanceUnlock) {
-            const { shapes, sigils } = result.appearanceUnlock;
-            const delay = result.levelResult ? 4000 : 2000;
-            if (shapes.length > 0) {
-              setTimeout(() => setAppearanceUnlock('shape', shapes[0]), delay);
-            } else if (sigils.length > 0) {
-              setTimeout(() => setAppearanceUnlock('sigil', sigils[0]), delay);
-            }
-          }
+          presentQuestCompletionFeedback(priorQuest, result);
         } catch (error) {
           console.error('[QuestsScreen] Failed to complete quest.', { questId, error });
         }
       })();
     },
-    [
-      completeQuestFlow,
-      showXP,
-      setCharacterEvent,
-      setLevelUp,
-      setTierUp,
-      setSkillUnlock,
-      setAppearanceUnlock,
-      setEvolution,
-      settings.hapticEnabled,
-    ],
+    [completeQuestFlow],
   );
 
   const filteredQuests = tabQuests[activeTab];

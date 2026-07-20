@@ -1,4 +1,4 @@
-import { QuestType, Skill, SkillEffect, StatName } from '../types';
+import { QuestDifficulty, QuestType, Skill, SkillEffect, StatName } from '../types';
 
 const questXpBonus = (
   percent: number,
@@ -31,6 +31,25 @@ const streakFreeze = (missesPerWeek: number): SkillEffect => ({
 
 const activeDailyQuestCapacity = (additionalSlots: number): SkillEffect => ({
   type: 'activeDailyQuestCapacity',
+  additionalSlots,
+});
+
+const difficultyUnlock = (
+  difficulty: QuestDifficulty,
+  stats?: StatName[],
+): SkillEffect => ({
+  type: 'difficultyUnlock',
+  difficulty,
+  stats,
+});
+
+const bossStepXp = (percent: number): SkillEffect => ({
+  type: 'bossStepXp',
+  percent,
+});
+
+const weeklyCapacity = (additionalSlots: number): SkillEffect => ({
+  type: 'weeklyCapacity',
   additionalSlots,
 });
 
@@ -74,6 +93,15 @@ function formatSkillEffect(effect: SkillEffect): string {
       return `Streak freeze: ${effect.missesPerWeek} free miss per week`;
     case 'activeDailyQuestCapacity':
       return `Can have +${effect.additionalSlots} active daily quests`;
+    case 'difficultyUnlock': {
+      const label = effect.difficulty.charAt(0).toUpperCase() + effect.difficulty.slice(1);
+      const stats = effect.stats?.map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join('/') ?? 'all';
+      return `Unlock ${label} difficulty for ${stats} quests`;
+    }
+    case 'bossStepXp':
+      return `+${effect.percent}% XP on boss quests`;
+    case 'weeklyCapacity':
+      return `+${effect.additionalSlots} weekly contract quest slots`;
   }
 }
 
@@ -104,7 +132,7 @@ export const SKILLS: Skill[] = [
     requiredStat: 'strength',
     requiredLevel: 7,
     icon: '🏋️',
-    effects: [displayText('Unlock Hard difficulty Strength quests')],
+    effects: [difficultyUnlock('hard', ['strength'])],
   }),
   buildSkill({
     id: 'str-3',
@@ -114,8 +142,31 @@ export const SKILLS: Skill[] = [
     requiredStat: 'strength',
     requiredLevel: 15,
     icon: '⚔️',
-    effects: [questXpBonus(10, { stats: ['strength', 'vitality', 'dexterity'] })],
-    effect: '+10% XP on all physical quests',
+    effects: [
+      questXpBonus(10, { stats: ['strength', 'vitality', 'dexterity'] }),
+      difficultyUnlock('legendary', ['strength']),
+    ],
+    effect: '+10% XP on all physical quests · Unlock Legendary Strength quests',
+  }),
+  buildSkill({
+    id: 'str-4',
+    name: 'Mountain Breaker',
+    description: 'Even legendary burdens yield to your training.',
+    category: 'strength',
+    requiredStat: 'strength',
+    requiredLevel: 25,
+    icon: '🏔️',
+    effects: [questXpBonus(8, { questTypes: ['boss'] }), bossStepXp(10)],
+  }),
+  buildSkill({
+    id: 'str-5',
+    name: 'Worldshaper',
+    description: 'Your strength reshapes what a day can hold.',
+    category: 'strength',
+    requiredStat: 'strength',
+    requiredLevel: 40,
+    icon: '🌍',
+    effects: [questXpBonus(12, { stats: ['strength'] }), weeklyCapacity(1)],
   }),
 
   // ─── Vitality Skills (3) ───
@@ -137,8 +188,8 @@ export const SKILLS: Skill[] = [
     requiredStat: 'vitality',
     requiredLevel: 7,
     icon: '💚',
-    effects: [streakRetention(50)],
-    effect: 'Streak breaks lose only 50% multiplier',
+    effects: [streakRetention(50), difficultyUnlock('hard', ['vitality'])],
+    effect: 'Streak breaks lose only 50% multiplier · Unlock Hard Vitality quests',
   }),
   buildSkill({
     id: 'vit-3',
@@ -148,8 +199,28 @@ export const SKILLS: Skill[] = [
     requiredStat: 'vitality',
     requiredLevel: 15,
     icon: '❤️‍🔥',
-    effects: [questXpBonus(10, { stats: ['vitality'] })],
-    effect: '+10% XP on all health quests',
+    effects: [questXpBonus(10, { stats: ['vitality'] }), difficultyUnlock('legendary', ['vitality'])],
+    effect: '+10% XP on all health quests · Unlock Legendary Vitality quests',
+  }),
+  buildSkill({
+    id: 'vit-4',
+    name: 'Phoenix Recovery',
+    description: 'Rest days become true restoration rites.',
+    category: 'vitality',
+    requiredStat: 'vitality',
+    requiredLevel: 25,
+    icon: '🕊️',
+    effects: [restDayXp('vitality', 35), streakFreeze(1)],
+  }),
+  buildSkill({
+    id: 'vit-5',
+    name: 'Eternal Vessel',
+    description: 'Your recovery cadence carries the whole week.',
+    category: 'vitality',
+    requiredStat: 'vitality',
+    requiredLevel: 40,
+    icon: '♾️',
+    effects: [questXpBonus(12, { stats: ['vitality'] }), weeklyCapacity(1)],
   }),
 
   // ─── Intelligence Skills (3) ───
@@ -171,7 +242,7 @@ export const SKILLS: Skill[] = [
     requiredStat: 'intelligence',
     requiredLevel: 7,
     icon: '🧠',
-    effects: [questXpBonus(10, { questTypes: ['side'] })],
+    effects: [questXpBonus(10, { questTypes: ['side'] }), difficultyUnlock('hard', ['intelligence'])],
   }),
   buildSkill({
     id: 'int-3',
@@ -181,8 +252,31 @@ export const SKILLS: Skill[] = [
     requiredStat: 'intelligence',
     requiredLevel: 15,
     icon: '🔮',
-    effects: [questXpBonus(10, { stats: ['intelligence'] })],
-    effect: '+10% XP on all learning quests',
+    effects: [
+      questXpBonus(10, { stats: ['intelligence'] }),
+      difficultyUnlock('legendary', ['intelligence']),
+    ],
+    effect: '+10% XP on all learning quests · Unlock Legendary Intelligence quests',
+  }),
+  buildSkill({
+    id: 'int-4',
+    name: 'Archivist',
+    description: 'Boss campaigns yield deeper insight with each step.',
+    category: 'intelligence',
+    requiredStat: 'intelligence',
+    requiredLevel: 25,
+    icon: '📚',
+    effects: [bossStepXp(15), questXpBonus(8, { questTypes: ['boss'] })],
+  }),
+  buildSkill({
+    id: 'int-5',
+    name: 'Oracle',
+    description: 'Your mind opens room for more weekly vows.',
+    category: 'intelligence',
+    requiredStat: 'intelligence',
+    requiredLevel: 40,
+    icon: '👁️',
+    effects: [questXpBonus(12, { stats: ['intelligence'] }), weeklyCapacity(1)],
   }),
 
   // ─── Charisma Skills (3) ───
@@ -204,7 +298,7 @@ export const SKILLS: Skill[] = [
     requiredStat: 'charisma',
     requiredLevel: 7,
     icon: '👑',
-    effects: [questXpBonus(10, { questTypes: ['boss'] })],
+    effects: [questXpBonus(10, { questTypes: ['boss'] }), difficultyUnlock('hard', ['charisma'])],
   }),
   buildSkill({
     id: 'cha-3',
@@ -214,8 +308,31 @@ export const SKILLS: Skill[] = [
     requiredStat: 'charisma',
     requiredLevel: 15,
     icon: '✨',
-    effects: [questXpBonus(10, { stats: ['charisma'] })],
-    effect: '+10% XP on all social quests',
+    effects: [
+      questXpBonus(10, { stats: ['charisma'] }),
+      difficultyUnlock('legendary', ['charisma']),
+    ],
+    effect: '+10% XP on all social quests · Unlock Legendary Charisma quests',
+  }),
+  buildSkill({
+    id: 'cha-4',
+    name: 'Rallying Cry',
+    description: 'Boss steps inspire extra growth for the party you lead.',
+    category: 'charisma',
+    requiredStat: 'charisma',
+    requiredLevel: 25,
+    icon: '📣',
+    effects: [bossStepXp(10), questXpBonus(8, { questTypes: ['boss'] })],
+  }),
+  buildSkill({
+    id: 'cha-5',
+    name: 'Beacon',
+    description: 'Your presence expands what a week can hold.',
+    category: 'charisma',
+    requiredStat: 'charisma',
+    requiredLevel: 40,
+    icon: '🗼',
+    effects: [questXpBonus(12, { stats: ['charisma'] }), weeklyCapacity(1)],
   }),
 
   // ─── Dexterity Skills (3) ───
@@ -237,7 +354,7 @@ export const SKILLS: Skill[] = [
     requiredStat: 'dexterity',
     requiredLevel: 7,
     icon: '🎯',
-    effects: [activeDailyQuestCapacity(2)],
+    effects: [activeDailyQuestCapacity(2), difficultyUnlock('hard', ['dexterity'])],
   }),
   buildSkill({
     id: 'dex-3',
@@ -247,8 +364,31 @@ export const SKILLS: Skill[] = [
     requiredStat: 'dexterity',
     requiredLevel: 15,
     icon: '💨',
-    effects: [questXpBonus(10, { stats: ['dexterity'] })],
-    effect: '+10% XP on all productivity quests',
+    effects: [
+      questXpBonus(10, { stats: ['dexterity'] }),
+      difficultyUnlock('legendary', ['dexterity']),
+    ],
+    effect: '+10% XP on all productivity quests · Unlock Legendary Dexterity quests',
+  }),
+  buildSkill({
+    id: 'dex-4',
+    name: 'Clockwork',
+    description: 'Daily capacity expands as your craft sharpens.',
+    category: 'dexterity',
+    requiredStat: 'dexterity',
+    requiredLevel: 25,
+    icon: '⚙️',
+    effects: [activeDailyQuestCapacity(2), questXpBonus(8, { stats: ['dexterity'] })],
+  }),
+  buildSkill({
+    id: 'dex-5',
+    name: 'Warp Weaver',
+    description: 'You braid more vows into each week.',
+    category: 'dexterity',
+    requiredStat: 'dexterity',
+    requiredLevel: 40,
+    icon: '🧵',
+    effects: [questXpBonus(12, { stats: ['dexterity'] }), weeklyCapacity(1)],
   }),
 
   // ─── Willpower Skills (3) ───
@@ -270,7 +410,7 @@ export const SKILLS: Skill[] = [
     requiredStat: 'willpower',
     requiredLevel: 7,
     icon: '🛡️',
-    effects: [streakFreeze(1)],
+    effects: [streakFreeze(1), difficultyUnlock('hard', ['willpower'])],
   }),
   buildSkill({
     id: 'wil-3',
@@ -280,8 +420,31 @@ export const SKILLS: Skill[] = [
     requiredStat: 'willpower',
     requiredLevel: 15,
     icon: '⭐',
-    effects: [questXpBonus(10, { stats: ['willpower'] })],
-    effect: '+10% XP on all discipline quests',
+    effects: [
+      questXpBonus(10, { stats: ['willpower'] }),
+      difficultyUnlock('legendary', ['willpower']),
+    ],
+    effect: '+10% XP on all discipline quests · Unlock Legendary Willpower quests',
+  }),
+  buildSkill({
+    id: 'wil-4',
+    name: 'Stoic Anchor',
+    description: 'Misses barely dent the chain you forged.',
+    category: 'willpower',
+    requiredStat: 'willpower',
+    requiredLevel: 25,
+    icon: '⚓',
+    effects: [streakRetention(75), streakFreeze(2)],
+  }),
+  buildSkill({
+    id: 'wil-5',
+    name: 'Unyielding Crown',
+    description: 'Your discipline expands the week itself.',
+    category: 'willpower',
+    requiredStat: 'willpower',
+    requiredLevel: 40,
+    icon: '👑',
+    effects: [questXpBonus(12, { stats: ['willpower'] }), weeklyCapacity(1)],
   }),
 
   // ─── Cross-Stat Skills (6) ───

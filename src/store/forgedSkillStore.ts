@@ -4,6 +4,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Skill, StatName, STAT_NAMES } from '../types';
 import { ForgedSkillDto, skillApi } from '../api/skillApi';
 import { registerForgedSkills } from '../config/skills';
+import { getDemoForgedSkills } from '../config/demoForgedSkills';
+import { env } from '../config/env';
 
 function toSkill(dto: ForgedSkillDto): Skill {
   const stat = (STAT_NAMES as string[]).includes(dto.category)
@@ -15,7 +17,7 @@ function toSkill(dto: ForgedSkillDto): Skill {
     description: dto.description,
     category: (stat ?? 'cross') as Skill['category'],
     requiredStat: stat,
-    requiredLevel: 0, // forged skills are immediately active
+    requiredLevel: 0,
     icon: dto.icon,
     effect: dto.effect,
     effects: stat
@@ -30,14 +32,24 @@ function toSkill(dto: ForgedSkillDto): Skill {
   };
 }
 
+function mergeRegistered(skills: Skill[]) {
+  const demo = getDemoForgedSkills();
+  const byId = new Map<string, Skill>();
+  for (const skill of [...demo, ...skills]) {
+    byId.set(skill.id, skill);
+  }
+  const merged = [...byId.values()];
+  registerForgedSkills(merged);
+  return merged;
+}
+
 interface ForgedSkillState {
   forged: Skill[];
   loading: boolean;
   error: string | null;
-  /** Pull the hero's forged skills from the backend and register them for bonus resolution. */
   load: () => Promise<void>;
-  /** Forge one new skill; returns it (or null on failure). */
   forge: () => Promise<Skill | null>;
+  seedDemo: () => void;
   clear: () => void;
 }
 
@@ -48,13 +60,24 @@ export const useForgedSkillStore = create<ForgedSkillState>()(
       loading: false,
       error: null,
 
+      seedDemo: () => {
+        if (!env.demoMode) return;
+        const real = get().forged.filter((s) => !s.id.startsWith('demo-forge-'));
+        set({ forged: mergeRegistered(real) });
+      },
+
       load: async () => {
         try {
+          if (env.demoMode) {
+            set({ forged: mergeRegistered([]) });
+            return;
+          }
           const dtos = await skillApi.listForged();
-          const skills = dtos.map(toSkill);
-          set({ forged: skills });
-          registerForgedSkills(skills);
+          set({ forged: mergeRegistered(dtos.map(toSkill)), error: null });
         } catch (e) {
+          if (env.demoMode) {
+            set({ forged: mergeRegistered([]) });
+          }
           set({ error: e instanceof Error ? e.message : 'Failed to load forged skills' });
         }
       },
@@ -63,9 +86,11 @@ export const useForgedSkillStore = create<ForgedSkillState>()(
         set({ loading: true, error: null });
         try {
           const skill = toSkill(await skillApi.forge());
-          const next = [skill, ...get().forged];
+          const next = mergeRegistered([
+            skill,
+            ...get().forged.filter((s) => s.id !== skill.id && !s.id.startsWith('demo-forge-')),
+          ]);
           set({ forged: next, loading: false });
-          registerForgedSkills(next);
           return skill;
         } catch (e) {
           set({ loading: false, error: e instanceof Error ? e.message : 'Forge failed' });
@@ -75,15 +100,18 @@ export const useForgedSkillStore = create<ForgedSkillState>()(
 
       clear: () => {
         set({ forged: [], loading: false, error: null });
-        registerForgedSkills([]);
+        registerForgedSkills(env.demoMode ? getDemoForgedSkills() : []);
       },
     }),
     {
       name: 'life-rpg-forged-skills',
       storage: createJSONStorage(() => AsyncStorage),
       onRehydrateStorage: () => (state) => {
-        // Re-register persisted forged skills so XP bonuses resolve after a cold start.
-        if (state?.forged?.length) registerForgedSkills(state.forged);
+        if (env.demoMode) {
+          state?.seedDemo();
+        } else if (state?.forged?.length) {
+          registerForgedSkills(state.forged);
+        }
       },
     },
   ),

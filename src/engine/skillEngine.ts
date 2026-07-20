@@ -1,4 +1,4 @@
-import { QuestType, Skill, SkillEffect, StatName } from '../types';
+import { QuestDifficulty, QuestType, Skill, SkillEffect, StatName } from '../types';
 import { SKILLS, getSkillById, getForgedSkills } from '../config/skills';
 import { levelFromXP } from '../config/xpTables';
 
@@ -141,6 +141,44 @@ export function getWeeklyStreakFreezeAllowance(unlockedSkillIds: string[]): numb
 
 export function getActiveDailyQuestCapacityBonus(unlockedSkillIds: string[]): number {
   return findSkillEffects(unlockedSkillIds, 'activeDailyQuestCapacity').reduce(
+    (sum, effect) => sum + effect.additionalSlots,
+    0,
+  );
+}
+
+const DIFFICULTY_RANK: Record<QuestDifficulty, number> = {
+  easy: 0,
+  medium: 1,
+  hard: 2,
+  legendary: 3,
+};
+
+/** Whether the hero may create/select a difficulty for a given stat (skill-gated). */
+export function isDifficultyAllowed(
+  difficulty: QuestDifficulty,
+  stat: StatName,
+  unlockedSkillIds: string[],
+): boolean {
+  if (DIFFICULTY_RANK[difficulty] <= DIFFICULTY_RANK.medium) {
+    return true;
+  }
+
+  const unlocks = findSkillEffects(unlockedSkillIds, 'difficultyUnlock').filter(
+    (effect) => !effect.stats?.length || effect.stats.includes(stat),
+  );
+
+  return unlocks.some((effect) => DIFFICULTY_RANK[effect.difficulty] >= DIFFICULTY_RANK[difficulty]);
+}
+
+export function getBossStepXpBonus(unlockedSkillIds: string[]): number {
+  return findSkillEffects(unlockedSkillIds, 'bossStepXp').reduce(
+    (sum, effect) => sum + effect.percent,
+    0,
+  );
+}
+
+export function getWeeklyCapacityBonus(unlockedSkillIds: string[]): number {
+  return findSkillEffects(unlockedSkillIds, 'weeklyCapacity').reduce(
     (sum, effect) => sum + effect.additionalSlots,
     0,
   );

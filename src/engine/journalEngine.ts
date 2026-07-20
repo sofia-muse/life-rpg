@@ -1,4 +1,6 @@
 import { StatName, Quest, STAT_ICONS } from '../types';
+import { STAT_MENTORS } from '../config/npcMentors';
+import { getDailyTemplates } from '../config/questTemplates';
 
 // Narrative templates for quest completions
 const QUEST_NARRATIVES: Record<StatName, string[]> = {
@@ -91,6 +93,37 @@ export function generateDailySummary(
   }
 
   return parts.join('');
+}
+
+export interface TomorrowVow {
+  vowText: string;
+  mentorName: string;
+  templateTitle: string;
+  templateDescription: string;
+  stat: StatName;
+}
+
+/** Build a next-day vow from mentor quote + class-contract recommended template. */
+export function buildTomorrowVow(
+  dominantStat: StatName,
+  recommendedTitles: string[],
+): TomorrowVow | null {
+  const mentor = STAT_MENTORS[dominantStat];
+  const quote = mentor.quotes[Math.floor(Math.random() * mentor.quotes.length)];
+  const templates = getDailyTemplates(dominantStat);
+  const preferred =
+    templates.find((t) => recommendedTitles.includes(t.title)) ??
+    templates[Math.floor(Math.random() * templates.length)];
+
+  if (!preferred) return null;
+
+  return {
+    vowText: `${mentor.name}: "${quote}" — Tomorrow's vow: ${preferred.title}.`,
+    mentorName: mentor.name,
+    templateTitle: preferred.title,
+    templateDescription: preferred.description,
+    stat: preferred.stat,
+  };
 }
 
 // Generate milestone narrative

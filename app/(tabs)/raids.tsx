@@ -19,6 +19,7 @@ import { env } from '../../src/config/env';
 import { colors, spacing, fontSize, radius, typography } from '../../src/config/theme';
 import { StatName, STAT_COLORS, STAT_ICONS, STAT_NAMES } from '../../src/types';
 import { RaidDto } from '../../src/api/raidApi';
+import { guidanceApi } from '../../src/api/guidanceApi';
 
 type FormMode = 'create' | 'join' | 'contribute' | null;
 
@@ -119,7 +120,15 @@ export default function RaidsScreen() {
           subtitle="Pool a huge real-world goal with friends — invite codes only."
         />
         <Card style={styles.gateCard}>
-          <Text style={styles.gateTitle}>Register to join party raids</Text>
+          <Text style={styles.gateTitle}>Preview: Iron Cohort Raid</Text>
+          <Text style={styles.gateBody}>
+            Sample party goal — 500 push-ups pooled across guildmates. Progress, invite codes, and
+            clear rewards unlock when you register (demo mode off).
+          </Text>
+          <View style={styles.previewMeter}>
+            <View style={[styles.previewFill, { width: '42%' }]} />
+          </View>
+          <Text style={styles.previewMeta}>210 / 500 push-ups · 3 members · Relic: Iron Cohort</Text>
           <Text style={styles.gateBody}>
             {env.demoMode
               ? 'Demo mode is solo-only. Create an account (with demo mode off) to host or join invite-code parties. Shared progress lives on the server so every contribution stays honest.'
@@ -214,10 +223,34 @@ export default function RaidsScreen() {
                 <Text style={styles.modalSubtitle}>Invite-code party · max 8 heroes</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="Raid title"
+                  placeholder="Raid title / real-world goal"
                   placeholderTextColor={colors.textMuted}
                   value={title}
                   onChangeText={setTitle}
+                />
+                <Button
+                  title="Suggest Saga"
+                  variant="secondary"
+                  onPress={async () => {
+                    if (!title.trim()) return;
+                    try {
+                      const plan = await guidanceApi.planRaidSaga(
+                        title.trim(),
+                        unitLabel || undefined,
+                        Number.parseInt(targetAmount, 10) || undefined,
+                        stat,
+                      );
+                      setTitle(plan.title);
+                      setSagaTitle(plan.sagaTitle);
+                      setDescription(plan.description);
+                      setUnitLabel(plan.unitLabel);
+                      setTargetAmount(String(plan.targetAmount));
+                      setStat(plan.stat);
+                      setRewardTitle(plan.rewardTitle);
+                    } catch {
+                      // keep form as-is on failure
+                    }
+                  }}
                 />
                 <TextInput
                   style={styles.input}
@@ -435,6 +468,22 @@ const styles = StyleSheet.create({
   gateBody: { color: colors.textSecondary, fontSize: fontSize.md, lineHeight: 22, marginBottom: spacing.md },
   gateHint: { color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 },
   gateActions: { gap: spacing.sm, marginTop: spacing.sm },
+  previewMeter: {
+    height: 10,
+    borderRadius: radius.full,
+    backgroundColor: colors.bgInset,
+    overflow: 'hidden',
+    marginBottom: spacing.sm,
+  },
+  previewFill: {
+    height: '100%',
+    backgroundColor: colors.gold,
+  },
+  previewMeta: {
+    color: colors.textMuted,
+    fontSize: fontSize.sm,
+    marginBottom: spacing.md,
+  },
   headerActions: { flexDirection: 'row', gap: spacing.xs },
   headerBtn: {
     borderWidth: 1,

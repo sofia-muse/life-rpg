@@ -44,6 +44,7 @@ public class SyncService
         var hero = await _db.Heroes
             .Include(h => h.Quests)
             .Include(h => h.UnlockedSkills)
+            .Include(h => h.JournalEntries)
             .FirstOrDefaultAsync(h => h.UserId == userId, ct);
         if (hero is null)
         {
@@ -102,6 +103,7 @@ public class SyncService
                 ("quest", "upsert") => UpsertQuest(hero, op),
                 ("quest", "delete") => DeleteQuest(hero, op),
                 ("hero", "upsert") => UpsertHero(hero, op),
+                ("journal", "upsert") => UpsertJournal(hero, op),
                 _ => new SyncConflict(op.OpId, $"Unsupported operation {op.Entity}/{op.Action}"),
             };
         }
@@ -265,6 +267,63 @@ public class SyncService
         {
             hero.UpdatedAt = updatedAt;
         }
+        return null;
+    }
+
+    private SyncConflict? UpsertJournal(Hero hero, SyncOperation op)
+    {
+        var dto = op.Payload.Deserialize<JournalEntryDto>(Json);
+        if (dto is null)
+        {
+            return new SyncConflict(op.OpId, "Empty journal payload");
+        }
+
+        DateTimeOffset? payloadUpdatedAt = null;
+        if (op.Payload.TryGetProperty("updatedAt", out var updatedAtProp)
+            && updatedAtProp.ValueKind == JsonValueKind.String
+            && updatedAtProp.TryGetDateTimeOffset(out var parsedUpdatedAt))
+        {
+            payloadUpdatedAt = parsedUpdatedAt;
+        }
+
+        var existing = hero.JournalEntries.FirstOrDefault(j => j.Id == dto.Id)
+            ?? hero.JournalEntries.FirstOrDefault(j => j.Date == dto.Date);
+
+        if (existing is null)
+        {
+            _db.JournalEntries.Add(new JournalEntry
+            {
+                Id = dto.Id == Guid.Empty ? Guid.NewGuid() : dto.Id,
+                HeroId = hero.Id,
+                Date = dto.Date,
+                Narrative = dto.Narrative ?? string.Empty,
+                QuestsCompleted = dto.QuestsCompleted,
+                SkillsUnlocked = dto.SkillsUnlocked,
+                XpGained = dto.XpGained ?? new Domain.ValueObjects.StatBlock(0),
+                LevelsGained = dto.LevelsGained ?? new List<string>(),
+                Milestones = dto.Milestones ?? new List<string>(),
+                CreatedAt = payloadUpdatedAt ?? _clock.UtcNow,
+                UpdatedAt = payloadUpdatedAt ?? _clock.UtcNow,
+            });
+            return null;
+        }
+
+        if (payloadUpdatedAt is { } updatedAt && updatedAt <= existing.UpdatedAt)
+        {
+            return new SyncConflict(op.OpId, "Stale journal payload");
+        }
+
+        existing.Date = dto.Date;
+        existing.Narrative = dto.Narrative ?? string.Empty;
+        existing.QuestsCompleted = dto.QuestsCompleted;
+        existing.SkillsUnlocked = dto.SkillsUnlocked;
+        if (dto.XpGained is not null)
+        {
+            existing.XpGained = dto.XpGained;
+        }
+        existing.LevelsGained = dto.LevelsGained ?? existing.LevelsGained;
+        existing.Milestones = dto.Milestones ?? existing.Milestones;
+        existing.UpdatedAt = payloadUpdatedAt ?? _clock.UtcNow;
         return null;
     }
 

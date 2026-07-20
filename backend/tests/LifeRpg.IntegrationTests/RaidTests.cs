@@ -91,6 +91,8 @@ public class RaidTests : IClassFixture<LifeRpgApiFactory>
         done.Raid.IsCompleted.Should().BeTrue();
         done.Raid.CurrentAmount.Should().BeGreaterThanOrEqualTo(100);
         done.Raid.YourContribution.Should().Be(80);
+        done.XpAwarded.Should().Be(75, "min(40,25) contribute XP + 50 clear bonus");
+        done.RewardTitleGranted.Should().Be("Iron Cohort");
         done.Raid.Members.Single(m => m.HeroName == "Lyra").PersonalTotal.Should().Be(30);
 
         var list = await leader.GetFromJsonAsync<List<RaidDto>>("/api/v1/raids", Json);

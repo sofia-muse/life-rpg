@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { Skill, StatName, ClassTier } from '../types';
+import { AchievementDefinition } from '../config/achievements';
 
 interface UIState {
   showLevelUpModal: boolean;
@@ -16,6 +17,10 @@ interface UIState {
   characterEvent: 'idle' | 'questComplete' | 'levelUp' | 'tierUp' | 'rest' | 'bossPhase' | 'evolution' | 'contractComplete';
   showEvolutionModal: boolean;
   evolutionData: { rankName: string; nextTitle?: string } | null;
+  showAchievementModal: boolean;
+  achievementData: AchievementDefinition | null;
+  showStreakMilestoneModal: boolean;
+  streakMilestoneData: { days: number; title: string; multiplier: number } | null;
 
   setLevelUp: (stat: StatName, newLevel: number) => void;
   setSkillUnlock: (skill: Skill) => void;
@@ -31,6 +36,10 @@ interface UIState {
   setCharacterEvent: (event: UIState['characterEvent']) => void;
   setEvolution: (rankName: string, nextTitle?: string) => void;
   dismissEvolution: () => void;
+  setAchievementUnlock: (achievement: AchievementDefinition) => void;
+  dismissAchievement: () => void;
+  setStreakMilestone: (days: number, title: string, multiplier: number) => void;
+  dismissStreakMilestone: () => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -48,6 +57,10 @@ export const useUIStore = create<UIState>((set) => ({
   characterEvent: 'idle' as const,
   showEvolutionModal: false,
   evolutionData: null,
+  showAchievementModal: false,
+  achievementData: null,
+  showStreakMilestoneModal: false,
+  streakMilestoneData: null,
 
   setLevelUp: (stat, newLevel) => set({ showLevelUpModal: true, levelUpData: { stat, newLevel } }),
 
@@ -79,4 +92,18 @@ export const useUIStore = create<UIState>((set) => ({
     set({ showEvolutionModal: true, evolutionData: { rankName, nextTitle } }),
 
   dismissEvolution: () => set({ showEvolutionModal: false, evolutionData: null }),
+
+  setAchievementUnlock: (achievement) =>
+    set({ showAchievementModal: true, achievementData: achievement }),
+
+  dismissAchievement: () => set({ showAchievementModal: false, achievementData: null }),
+
+  setStreakMilestone: (days, title, multiplier) =>
+    set({
+      showStreakMilestoneModal: true,
+      streakMilestoneData: { days, title, multiplier },
+    }),
+
+  dismissStreakMilestone: () =>
+    set({ showStreakMilestoneModal: false, streakMilestoneData: null }),
 }));

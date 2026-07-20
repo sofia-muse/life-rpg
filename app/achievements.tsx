@@ -30,7 +30,8 @@ export default function AchievementsScreen() {
   const router = useRouter();
   const hero = useHeroStore((s) => s.hero);
   const { quests } = useQuestStore();
-  const unlockedSkillIds = useSkillStore((s) => s.getUnlockedSkillIds());
+  const unlockedSkills = useSkillStore((s) => s.unlockedSkills);
+  const unlockedSkillIds = unlockedSkills.map((s) => s.skillId);
   const forged = useForgedSkillStore((s) => s.forged);
   const raidPersonal = useRaidStore((s) => s.personal);
   const settings = useSettingsStore();
@@ -57,7 +58,10 @@ export default function AchievementsScreen() {
     [ctx],
   );
   const earnedIds = new Set(earned.map((a) => a.id));
-  const unlockedTitleIds = ctx ? getUnlockedTitleIds(ctx) : ['adventurer'];
+  const unlockedTitleIds = (() => {
+    const fromAchievements = ctx ? getUnlockedTitleIds(ctx) : ['adventurer'];
+    return [...new Set([...fromAchievements, ...settings.unlockedTitleIds])];
+  })();
 
   if (!hero || !ctx) return null;
 
@@ -95,6 +99,24 @@ export default function AchievementsScreen() {
                   {title.label}
                 </Text>
                 <Text style={styles.titleChipCondition}>{title.condition}</Text>
+                {equipped && <Text style={styles.equippedBadge}>Equipped</Text>}
+              </TouchableOpacity>
+            );
+          })}
+          {Object.entries(settings.customTitleLabels).map(([id, label]) => {
+            const equipped = settings.equippedTitleId === id;
+            return (
+              <TouchableOpacity
+                key={id}
+                style={[
+                  styles.titleChip,
+                  styles.titleChipUnlocked,
+                  equipped && styles.titleChipEquipped,
+                ]}
+                onPress={() => settings.setEquippedTitle(id)}
+              >
+                <Text style={styles.titleChipLabel}>{label}</Text>
+                <Text style={styles.titleChipCondition}>Campaign / raid relic</Text>
                 {equipped && <Text style={styles.equippedBadge}>Equipped</Text>}
               </TouchableOpacity>
             );

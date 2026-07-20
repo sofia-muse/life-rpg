@@ -5,11 +5,12 @@ import { heroApi } from '../api/heroApi';
 import { questApi } from '../api/questApi';
 import { getSkillById } from '../config/skills';
 import { env } from '../config/env';
-import { generateQuestNarrative } from '../engine/journalEngine';
-import { getQuestSkillBonus } from '../engine/skillEngine';
+import { generateQuestNarrative, buildTomorrowVow } from '../engine/journalEngine';
+import { getQuestSkillBonus, getBossStepXpBonus, getWeeklyCapacityBonus } from '../engine/skillEngine';
 import { getStreakMultiplier } from '../engine/streakEngine';
 import { calculateXPReward } from '../engine/xpEngine';
 import { getWeeklyPathQuestBonus } from '../config/weeklyPaths';
+import { getPrimaryContract } from '../config/classContracts';
 import { useAuthStore } from './authStore';
 import { useForgedSkillStore } from './forgedSkillStore';
 import { useHeroStore } from './heroStore';
@@ -20,7 +21,7 @@ import { useSettingsStore } from './settingsStore';
 import { useSkillStore } from './skillStore';
 import { Quest, Skill, StatLevelUpResult, StatName } from '../types';
 
-interface QuestCompletionFlowResult {
+export interface QuestCompletionFlowResult {
   quest: Quest;
   completed: boolean;
   xpAwarded: number;
@@ -63,6 +64,26 @@ function applyJournalEntry(
     levelsGained: levelResult ? [levelResult.stat] : [],
     skillsUnlocked: newSkills.map((skill) => skill.id),
   });
+
+  // Refresh tomorrow's vow after each completion
+  const hero = useHeroStore.getState().hero;
+  if (!hero) return;
+  const contract = getPrimaryContract(
+    hero,
+    useSettingsStore.getState(),
+    useQuestStore.getState().quests,
+    getWeeklyCapacityBonus(useSkillStore.getState().getUnlockedSkillIds()),
+  );
+  const vow = buildTomorrowVow(
+    hero.dominantStat,
+    contract.recommended.map((t) => t.title),
+  );
+  if (vow) {
+    useJournalStore.getState().updateTodayEntry({
+      tomorrowVow: vow.vowText,
+      tomorrowVowTemplateTitle: vow.templateTitle,
+    });
+  }
 }
 
 function getSkillsById(skillIds: string[]): Skill[] {
@@ -230,7 +251,13 @@ function completeLocalQuest(questId: string): QuestCompletionFlowResult | null {
     stat: updatedQuest.stat,
     type: updatedQuest.type,
   });
-  const xpReward = calculateXPReward(updatedQuest.difficulty, streakMult, skillBonus + weeklyPathBonus);
+  const bossBonus =
+    updatedQuest.type === 'boss' ? getBossStepXpBonus(unlockedSkillIds) : 0;
+  const xpReward = calculateXPReward(
+    updatedQuest.difficulty,
+    streakMult,
+    skillBonus + weeklyPathBonus + bossBonus,
+  );
   const progression = heroState.applyQuestReward(updatedQuest.stat, xpReward.totalXP, unlockedSkillIds);
   if (!progression) {
     console.error('[GameplayStore] Failed to apply the local quest reward.', {

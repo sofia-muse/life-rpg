@@ -3,7 +3,8 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { syncManager } from '../api/syncManager';
 import { WeeklyPath } from '../types';
-import { getCurrentWeekKey } from '../config/weeklyPaths';
+import { getCurrentWeekKey, getWeeklyPathDefinition } from '../config/weeklyPaths';
+import { scheduleQuestReminders, cancelQuestReminders } from '../utils/notifications';
 
 interface SettingsState {
   notificationsEnabled: boolean;
@@ -12,6 +13,12 @@ interface SettingsState {
   aiSkillsEnabled: boolean;
   fantasyNames: boolean;
   equippedTitleId: string;
+  /** Unlocked equippable title ids (includes `custom:Label` campaign relics). */
+  unlockedTitleIds: string[];
+  /** Custom title labels keyed by custom id. */
+  customTitleLabels: Record<string, string>;
+  /** Achievement ids already celebrated. */
+  seenAchievementIds: string[];
   weeklyContractsCompleted: number;
   weeklyPath: WeeklyPath | null;
   weeklyPathWeekKey: string | null;
@@ -26,6 +33,9 @@ interface SettingsState {
     aiSkillsEnabled: boolean;
     fantasyNames?: boolean;
     equippedTitleId?: string;
+    unlockedTitleIds?: string[];
+    customTitleLabels?: Record<string, string>;
+    seenAchievementIds?: string[];
     weeklyContractsCompleted?: number;
     weeklyPath: WeeklyPath | null;
     weeklyPathWeekKey: string | null;
@@ -40,6 +50,8 @@ interface SettingsState {
   toggleAiSkills: () => void;
   toggleFantasyNames: () => void;
   setEquippedTitle: (titleId: string) => void;
+  unlockTitle: (titleId: string, customLabel?: string) => void;
+  markAchievementsSeen: (ids: string[]) => void;
   incrementWeeklyContractsCompleted: () => void;
   chooseWeeklyPath: (path: WeeklyPath) => void;
   claimWeeklyReward: (reward: { title: string; badge: string }) => void;
@@ -54,6 +66,9 @@ function syncSettings(state: Pick<
   | 'aiSkillsEnabled'
   | 'fantasyNames'
   | 'equippedTitleId'
+  | 'unlockedTitleIds'
+  | 'customTitleLabels'
+  | 'seenAchievementIds'
   | 'weeklyContractsCompleted'
   | 'weeklyPath'
   | 'weeklyPathWeekKey'
@@ -70,6 +85,9 @@ function syncSettings(state: Pick<
       aiSkillsEnabled: state.aiSkillsEnabled,
       fantasyNames: state.fantasyNames,
       equippedTitleId: state.equippedTitleId,
+      unlockedTitleIds: state.unlockedTitleIds,
+      customTitleLabels: state.customTitleLabels,
+      seenAchievementIds: state.seenAchievementIds,
       weeklyContractsCompleted: state.weeklyContractsCompleted,
       weeklyPath: state.weeklyPath,
       weeklyPathWeekKey: state.weeklyPathWeekKey,
@@ -82,15 +100,26 @@ function syncSettings(state: Pick<
   });
 }
 
+function refreshNotifications(enabled: boolean, reminderTime: string) {
+  if (enabled) {
+    void scheduleQuestReminders(reminderTime);
+  } else {
+    void cancelQuestReminders();
+  }
+}
+
 export const useSettingsStore = create<SettingsState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       notificationsEnabled: true,
       hapticEnabled: true,
       reminderTime: '09:00',
       aiSkillsEnabled: false,
       fantasyNames: false,
       equippedTitleId: 'adventurer',
+      unlockedTitleIds: ['adventurer'],
+      customTitleLabels: {},
+      seenAchievementIds: [],
       weeklyContractsCompleted: 0,
       weeklyPath: null,
       weeklyPathWeekKey: null,
@@ -98,12 +127,19 @@ export const useSettingsStore = create<SettingsState>()(
       weeklyRewardWeekKey: null,
       weeklyRewardTitle: null,
       weeklyRewardBadge: null,
-      replaceSettings: (settings) => set(settings),
+      replaceSettings: (settings) =>
+        set({
+          ...settings,
+          unlockedTitleIds: settings.unlockedTitleIds ?? get().unlockedTitleIds,
+          customTitleLabels: settings.customTitleLabels ?? get().customTitleLabels,
+          seenAchievementIds: settings.seenAchievementIds ?? get().seenAchievementIds,
+        }),
 
       toggleNotifications: () =>
         set((state) => {
           const next = { ...state, notificationsEnabled: !state.notificationsEnabled };
           syncSettings(next);
+          refreshNotifications(next.notificationsEnabled, next.reminderTime);
           return { notificationsEnabled: next.notificationsEnabled };
         }),
 
@@ -116,7 +152,9 @@ export const useSettingsStore = create<SettingsState>()(
 
       setReminderTime: (time) =>
         set((state) => {
-          syncSettings({ ...state, reminderTime: time });
+          const next = { ...state, reminderTime: time };
+          syncSettings(next);
+          refreshNotifications(next.notificationsEnabled, time);
           return { reminderTime: time };
         }),
 
@@ -138,6 +176,28 @@ export const useSettingsStore = create<SettingsState>()(
         set((state) => {
           syncSettings({ ...state, equippedTitleId: titleId });
           return { equippedTitleId: titleId };
+        }),
+
+      unlockTitle: (titleId, customLabel) =>
+        set((state) => {
+          const unlockedTitleIds = state.unlockedTitleIds.includes(titleId)
+            ? state.unlockedTitleIds
+            : [...state.unlockedTitleIds, titleId];
+          const customTitleLabels =
+            customLabel && titleId.startsWith('custom:')
+              ? { ...state.customTitleLabels, [titleId]: customLabel }
+              : state.customTitleLabels;
+          const next = { ...state, unlockedTitleIds, customTitleLabels };
+          syncSettings(next);
+          return { unlockedTitleIds, customTitleLabels };
+        }),
+
+      markAchievementsSeen: (ids) =>
+        set((state) => {
+          const seenAchievementIds = [...new Set([...state.seenAchievementIds, ...ids])];
+          const next = { ...state, seenAchievementIds };
+          syncSettings(next);
+          return { seenAchievementIds };
         }),
 
       incrementWeeklyContractsCompleted: () =>
@@ -183,58 +243,89 @@ export const useSettingsStore = create<SettingsState>()(
       claimWeeklyReward: (reward) =>
         set((state) => {
           const weekKey = state.weeklyPathWeekKey ?? getCurrentWeekKey();
+          const path = state.weeklyPath;
+          const pathDef = path ? getWeeklyPathDefinition(path) : null;
+
+          // Map path reward titles to equippable ids
+          const titleIdMap: Record<string, string> = {
+            'Vanguard of Power': 'vanguard_power',
+            'Sage of Focus': 'sage_of_focus',
+            'Warden of Support': 'warden_support',
+          };
+          const titleId = titleIdMap[reward.title] ?? `custom:${reward.title}`;
+          const unlockedTitleIds = state.unlockedTitleIds.includes(titleId)
+            ? state.unlockedTitleIds
+            : [...state.unlockedTitleIds, titleId];
+          const customTitleLabels =
+            titleId.startsWith('custom:')
+              ? { ...state.customTitleLabels, [titleId]: reward.title }
+              : state.customTitleLabels;
+
           const next = {
             ...state,
             weeklyRewardWeekKey: weekKey,
             weeklyRewardTitle: reward.title,
             weeklyRewardBadge: reward.badge,
+            unlockedTitleIds,
+            customTitleLabels,
+            equippedTitleId: titleId,
+            weeklyContractsCompleted: state.weeklyContractsCompleted + (pathDef ? 0 : 0),
           };
           console.info('[SettingsStore] Weekly reward claimed.', {
             weekKey,
             title: reward.title,
             badge: reward.badge,
+            titleId,
           });
           syncSettings(next);
           return {
             weeklyRewardWeekKey: next.weeklyRewardWeekKey,
             weeklyRewardTitle: next.weeklyRewardTitle,
             weeklyRewardBadge: next.weeklyRewardBadge,
+            unlockedTitleIds: next.unlockedTitleIds,
+            customTitleLabels: next.customTitleLabels,
+            equippedTitleId: next.equippedTitleId,
           };
         }),
 
-      clearStaleWeeklyPath: () =>
-        set((state) => {
-          if (!state.weeklyPathWeekKey || state.weeklyPathWeekKey === getCurrentWeekKey()) {
-            return {};
-          }
+      clearStaleWeeklyPath: () => {
+        const state = get();
+        if (!state.weeklyPathWeekKey || state.weeklyPathWeekKey === getCurrentWeekKey()) {
+          return;
+        }
 
-          const next = {
-            ...state,
-            weeklyPath: null,
-            weeklyPathWeekKey: null,
-            weeklyPathStartedAt: null,
-            weeklyRewardWeekKey: null,
-            weeklyRewardTitle: null,
-            weeklyRewardBadge: null,
-          };
-          console.info('[SettingsStore] Cleared stale weekly path state.', {
-            staleWeekKey: state.weeklyPathWeekKey,
-            previousPath: state.weeklyPath,
-          });
-          syncSettings(next);
-          return {
-            weeklyPath: null,
-            weeklyPathWeekKey: null,
-            weeklyPathStartedAt: null,
-            weeklyRewardWeekKey: null,
-            weeklyRewardTitle: null,
-            weeklyRewardBadge: null,
-          };
-        }),
+        const next = {
+          ...state,
+          weeklyPath: null,
+          weeklyPathWeekKey: null,
+          weeklyPathStartedAt: null,
+          weeklyRewardWeekKey: null,
+          weeklyRewardTitle: null,
+          weeklyRewardBadge: null,
+        };
+        console.info('[SettingsStore] Cleared stale weekly path state.', {
+          staleWeekKey: state.weeklyPathWeekKey,
+          previousPath: state.weeklyPath,
+        });
+        syncSettings(next);
+        set({
+          weeklyPath: null,
+          weeklyPathWeekKey: null,
+          weeklyPathStartedAt: null,
+          weeklyRewardWeekKey: null,
+          weeklyRewardTitle: null,
+          weeklyRewardBadge: null,
+        });
+      },
     }),
     {
       name: 'life-rpg-settings',
       storage: createJSONStorage(() => AsyncStorage),
+      onRehydrateStorage: () => (state) => {
+        if (state?.notificationsEnabled) {
+          void scheduleQuestReminders(state.reminderTime);
+        }
+      },
     },
   ),
 );
