@@ -13,6 +13,8 @@ import {
 } from '../../config/weeklyPaths';
 import { getPrimaryContract, isContractComplete } from '../../config/classContracts';
 import { getRewardStatusCopy } from '../../config/weeklyCompetition';
+import { getWeeklyCapacityBonus } from '../../engine/skillEngine';
+import { useSkillStore } from '../../store/skillStore';
 import { Quest } from '../../types';
 
 interface Props {
@@ -38,7 +40,8 @@ export function WeeklyCampaignPanel({
   onClaimReward,
 }: Props) {
   const activePath = getActiveWeeklyPath(settings);
-  const contract = getPrimaryContract(hero, settings, quests);
+  const capacityBonus = getWeeklyCapacityBonus(useSkillStore.getState().getUnlockedSkillIds());
+  const contract = getPrimaryContract(hero, settings, quests, capacityBonus);
   const cup = activePath
     ? buildWeeklyCupSummary(
         settings,

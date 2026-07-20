@@ -34,6 +34,7 @@ export default function MapScreen() {
       isActive: true,
       totalSteps: 30,
       completedSteps: 0,
+      campaignChapterId: chapter.id,
     });
     router.push('/quests');
   };

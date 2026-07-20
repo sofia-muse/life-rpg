@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -25,12 +25,15 @@ import {
 } from '../../types';
 import { guidanceApi } from '../../api/guidanceApi';
 import { env } from '../../config/env';
+import { useSkillStore } from '../../store/skillStore';
+import { isDifficultyAllowed } from '../../engine/skillEngine';
 
 export function QuestCreateModal() {
   const { showQuestCreateModal, setQuestCreateModal } = useUIStore();
   const { addQuest } = useQuestStore();
   const aiSkillsEnabled = useSettingsStore((s) => s.aiSkillsEnabled);
   const authenticated = useAuthStore((s) => s.status === 'authenticated');
+  const unlockedSkillIds = useSkillStore((s) => s.getUnlockedSkillIds());
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -44,6 +47,12 @@ export function QuestCreateModal() {
   const [planningBoss, setPlanningBoss] = useState(false);
   const [bossPlanError, setBossPlanError] = useState<string | null>(null);
   const canUseBossPlanner = aiSkillsEnabled && !env.demoMode && authenticated;
+
+  useEffect(() => {
+    if (!isDifficultyAllowed(difficulty, stat, unlockedSkillIds)) {
+      setDifficulty('medium');
+    }
+  }, [stat, difficulty, unlockedSkillIds]);
 
   const reset = () => {
     setTitle('');
@@ -60,6 +69,7 @@ export function QuestCreateModal() {
 
   const handleCreate = () => {
     if (!title.trim()) return;
+    if (!isDifficultyAllowed(difficulty, stat, unlockedSkillIds)) return;
 
     const chapters =
       type === 'boss' && bossSteps.length > 0
@@ -242,19 +252,44 @@ export function QuestCreateModal() {
             {/* Difficulty */}
             <Text style={styles.label}>Difficulty</Text>
             <View style={styles.chips}>
-              {difficulties.map((d) => (
-                <TouchableOpacity
-                  key={d}
-                  style={[styles.chip, difficulty === d && styles.chipActive]}
-                  onPress={() => setDifficulty(d)}
-                >
-                  <Text style={[styles.chipText, difficulty === d && styles.chipTextActive]}>
-                    {d.charAt(0).toUpperCase() + d.slice(1)}
-                  </Text>
-                  <Text style={styles.chipXP}>{DIFFICULTY_XP[d]} XP</Text>
-                </TouchableOpacity>
-              ))}
+              {difficulties.map((d) => {
+                const allowed = isDifficultyAllowed(d, stat, unlockedSkillIds);
+                const isActive = difficulty === d;
+                return (
+                  <TouchableOpacity
+                    key={d}
+                    style={[
+                      styles.chip,
+                      isActive && styles.chipActive,
+                      !allowed && styles.chipLocked,
+                    ]}
+                    onPress={() => {
+                      if (!allowed) return;
+                      setDifficulty(d);
+                    }}
+                    disabled={!allowed}
+                  >
+                    <Text
+                      style={[
+                        styles.chipText,
+                        isActive && styles.chipTextActive,
+                        !allowed && styles.chipTextLocked,
+                      ]}
+                    >
+                      {d.charAt(0).toUpperCase() + d.slice(1)}
+                      {!allowed ? ' 🔒' : ''}
+                    </Text>
+                    <Text style={styles.chipXP}>{DIFFICULTY_XP[d]} XP</Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
+            {(difficulty === 'hard' || difficulty === 'legendary') &&
+              !isDifficultyAllowed(difficulty, stat, unlockedSkillIds) && (
+                <Text style={styles.lockHint}>
+                  Unlock this difficulty by raising {stat} skills (L7 for Hard, L15 for Legendary).
+                </Text>
+              )}
 
             {/* Actions */}
             <View style={styles.actions}>
@@ -266,7 +301,7 @@ export function QuestCreateModal() {
                   setQuestCreateModal(false);
                 }}
               />
-              <Button title="Create Quest" onPress={handleCreate} disabled={!title.trim()} />
+              <Button title="Create Quest" onPress={handleCreate} disabled={!title.trim() || !isDifficultyAllowed(difficulty, stat, unlockedSkillIds)} />
             </View>
           </ScrollView>
         </View>
@@ -341,6 +376,9 @@ const styles = StyleSheet.create({
     borderColor: colors.gold,
     backgroundColor: `${colors.gold}20`,
   },
+  chipLocked: {
+    opacity: 0.45,
+  },
   chipText: {
     color: colors.textSecondary,
     fontSize: fontSize.sm,
@@ -348,6 +386,14 @@ const styles = StyleSheet.create({
   },
   chipTextActive: {
     color: colors.gold,
+  },
+  chipTextLocked: {
+    color: colors.textMuted,
+  },
+  lockHint: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    marginTop: spacing.xs,
   },
   chipIcon: {
     fontSize: 14,

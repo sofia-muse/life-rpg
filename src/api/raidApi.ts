@@ -62,6 +62,8 @@ export interface CreateRaidRequest {
 export interface ContributeRaidResult {
   raid: RaidDto;
   justCompleted: boolean;
+  xpAwarded?: number;
+  rewardTitleGranted?: string | null;
 }
 
 export const raidApi = {

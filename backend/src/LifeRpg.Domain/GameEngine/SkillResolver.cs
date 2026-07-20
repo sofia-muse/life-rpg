@@ -110,6 +110,43 @@ public static partial class SkillResolver
             .OfType<SkillEffectDefinition.ActiveDailyQuestCapacity>()
             .Sum(effect => effect.AdditionalSlots);
 
+    private static readonly IReadOnlyDictionary<QuestDifficulty, int> DifficultyRank =
+        new Dictionary<QuestDifficulty, int>
+        {
+            [QuestDifficulty.Easy] = 0,
+            [QuestDifficulty.Medium] = 1,
+            [QuestDifficulty.Hard] = 2,
+            [QuestDifficulty.Legendary] = 3,
+        };
+
+    /// <summary>Whether the hero may create/select a difficulty for a given stat (skill-gated).</summary>
+    public static bool IsDifficultyAllowed(
+        QuestDifficulty difficulty,
+        StatName stat,
+        IEnumerable<string> unlockedSkillIds)
+    {
+        if (DifficultyRank[difficulty] <= DifficultyRank[QuestDifficulty.Medium])
+        {
+            return true;
+        }
+
+        var unlocks = GetEffectsForUnlockedSkills(unlockedSkillIds)
+            .OfType<SkillEffectDefinition.DifficultyUnlock>()
+            .Where(effect => effect.Stats is not { Count: > 0 } || effect.Stats.Contains(stat));
+
+        return unlocks.Any(effect => DifficultyRank[effect.Difficulty] >= DifficultyRank[difficulty]);
+    }
+
+    public static int GetBossStepXpBonus(IEnumerable<string> unlockedSkillIds) =>
+        GetEffectsForUnlockedSkills(unlockedSkillIds)
+            .OfType<SkillEffectDefinition.BossStepXp>()
+            .Sum(effect => effect.Percent);
+
+    public static int GetWeeklyCapacityBonus(IEnumerable<string> unlockedSkillIds) =>
+        GetEffectsForUnlockedSkills(unlockedSkillIds)
+            .OfType<SkillEffectDefinition.WeeklyCapacity>()
+            .Sum(effect => effect.AdditionalSlots);
+
     public static double GetSkillProgress(SkillDefinition skill, StatBlock statXp)
     {
         if (skill.RequiredStat is not { } primaryStat)

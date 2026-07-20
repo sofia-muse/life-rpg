@@ -16,7 +16,7 @@ import { mapApiHero, mapApiQuest } from './mappers';
 import { env } from '../config/env';
 import { generateId } from '../utils/id';
 
-export type SyncEntity = 'hero' | 'quest';
+export type SyncEntity = 'hero' | 'quest' | 'journal';
 export type SyncActionType = 'upsert' | 'delete';
 
 export interface SyncOperation {
@@ -149,6 +149,19 @@ class SyncManager {
 
     if (changes.quests.length > 0) {
       useQuestStore.getState().replaceQuests(changes.quests.map(mapApiQuest));
+    }
+
+    if (Array.isArray(changes.journal) && changes.journal.length > 0) {
+      const { useJournalStore } = require('../store/journalStore') as typeof import('../store/journalStore');
+      // Server journal is authoritative for matching dates — merge by id/date
+      for (const raw of changes.journal as Array<Record<string, unknown>>) {
+        const date = String(raw.date ?? '');
+        if (!date) continue;
+        useJournalStore.getState().updateTodayEntry({
+          narrative: typeof raw.narrative === 'string' ? raw.narrative : undefined,
+          milestones: Array.isArray(raw.milestones) ? (raw.milestones as string[]) : undefined,
+        });
+      }
     }
   }
 }

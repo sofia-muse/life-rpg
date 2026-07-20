@@ -5,6 +5,10 @@ import { generateId } from '../utils/id';
 import { StatName } from '../types';
 import { CreateRaidRequest, RaidDto, raidApi } from '../api/raidApi';
 import { useJournalStore } from './journalStore';
+import { useSettingsStore } from './settingsStore';
+import { useUIStore } from './uiStore';
+import { useHeroStore } from './heroStore';
+import { useSkillStore } from './skillStore';
 
 export interface RaidPersonalStats {
   raidsCleared: number;
@@ -163,7 +167,23 @@ export const useRaidStore = create<RaidState>()(
           const wasCleared = get().personal.clearedRaidIds.includes(raidId);
           if (result.justCompleted && !wasCleared) {
             chronicleRaidVictory(result.raid);
+            if (result.rewardTitleGranted) {
+              const titleId = `custom:${result.rewardTitleGranted}`;
+              useSettingsStore.getState().unlockTitle(titleId, result.rewardTitleGranted);
+              useSettingsStore.getState().setEquippedTitle(titleId);
+            }
+            useUIStore.getState().setCharacterEvent('tierUp');
+            setTimeout(() => useUIStore.getState().setCharacterEvent('idle'), 2000);
           }
+
+          if (result.xpAwarded && result.xpAwarded > 0) {
+            useHeroStore.getState().addXP(result.raid.stat, result.xpAwarded);
+            const hero = useHeroStore.getState().hero;
+            if (hero) {
+              useSkillStore.getState().checkAndUnlockSkills(hero.statXP);
+            }
+          }
+
           const raids = upsertRaid(get().raids, result.raid);
           set({
             raids,

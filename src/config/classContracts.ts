@@ -183,6 +183,7 @@ export function getWeeklyPathContract(
   hero: Hero,
   settings: WeeklyPathSettingsLike,
   quests: Quest[] = [],
+  weeklyCapacityBonus = 0,
 ): WeeklyContract | null {
   const activePath = getActiveWeeklyPath(settings);
   if (!activePath) return null;
@@ -199,7 +200,7 @@ export function getWeeklyPathContract(
     focus: definition.focus,
     vow: definition.vow,
     summary: definition.summary,
-    requiredCount: definition.requiredCount,
+    requiredCount: definition.requiredCount + Math.max(0, weeklyCapacityBonus),
     activeMatches: countPathMatches(quests, definition.stats, false),
     completedMatches: countPathMatches(quests, definition.stats, true, settings.weeklyPathWeekKey),
     recommended,
@@ -216,8 +217,9 @@ export function getPrimaryContract(
   hero: Hero,
   settings: WeeklyPathSettingsLike,
   quests: Quest[] = [],
+  weeklyCapacityBonus = 0,
 ): WeeklyContract {
-  const weekly = getWeeklyPathContract(hero, settings, quests);
+  const weekly = getWeeklyPathContract(hero, settings, quests, weeklyCapacityBonus);
   if (weekly) return weekly;
 
   const fallback = getClassContract(hero, quests);

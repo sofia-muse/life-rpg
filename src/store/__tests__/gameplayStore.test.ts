@@ -4,7 +4,9 @@ import { useJournalStore } from '../journalStore';
 import { useQuestStore } from '../questStore';
 import { useSettingsStore } from '../settingsStore';
 import { useSkillStore } from '../skillStore';
+import { useForgedSkillStore } from '../forgedSkillStore';
 import { getCurrentWeekKey } from '../../config/weeklyPaths';
+import { registerForgedSkills } from '../../config/skills';
 import { getStatBlock } from '../../engine/statEngine';
 import { Quest, StatName } from '../../types';
 
@@ -83,6 +85,8 @@ beforeEach(() => {
   useQuestStore.setState({ quests: [] });
   useSkillStore.setState({ unlockedSkills: [] });
   useJournalStore.setState({ entries: [] });
+  useForgedSkillStore.setState({ forged: [], loading: false, error: null });
+  registerForgedSkills([]);
   useSettingsStore.setState({
     notificationsEnabled: true,
     hapticEnabled: true,
