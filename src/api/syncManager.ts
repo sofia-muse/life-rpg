@@ -51,9 +51,10 @@ class SyncManager {
   private retries: Record<string, number> = {};
   private online = true;
   private hydrated = false;
-  private flushing = false;
   private listeners = new Set<(pending: number) => void>();
   private persistFlushTimer: ReturnType<typeof setTimeout> | null = null;
+  private persistFlushGeneration = 0;
+  private flushPromise: Promise<void> | null = null;
 
   /** Load the persisted queue and start watching connectivity. Safe to call once at startup. */
   async init(): Promise<void> {
@@ -102,16 +103,20 @@ class SyncManager {
 
   private schedulePersistAndFlush(): void {
     if (this.persistFlushTimer) clearTimeout(this.persistFlushTimer);
+    const generation = this.persistFlushGeneration;
     this.persistFlushTimer = setTimeout(() => {
       this.persistFlushTimer = null;
       void (async () => {
+        if (generation !== this.persistFlushGeneration) return;
         await this.persist();
+        if (generation !== this.persistFlushGeneration) return;
         if (this.online) await this.flushNow();
       })();
     }, PERSIST_FLUSH_DEBOUNCE_MS);
   }
 
   private cancelScheduledPersistFlush(): void {
+    this.persistFlushGeneration += 1;
     if (this.persistFlushTimer) {
       clearTimeout(this.persistFlushTimer);
       this.persistFlushTimer = null;
@@ -119,8 +124,18 @@ class SyncManager {
   }
 
   private async flushNow(): Promise<void> {
-    if (env.demoMode || this.flushing || !this.online || this.queue.length === 0) return;
-    this.flushing = true;
+    if (this.flushPromise) return this.flushPromise;
+    if (env.demoMode || !this.online || this.queue.length === 0) return;
+
+    this.flushPromise = this.runFlushLoop();
+    try {
+      await this.flushPromise;
+    } finally {
+      this.flushPromise = null;
+    }
+  }
+
+  private async runFlushLoop(): Promise<void> {
     try {
       while (this.online && this.queue.length > 0) {
         const operations = this.queue.slice(0, 50);
@@ -145,8 +160,6 @@ class SyncManager {
       }
       this.queue = this.queue.filter((op) => (this.retries[op.opId] ?? 0) < MAX_RETRIES);
       await this.persist();
-    } finally {
-      this.flushing = false;
     }
   }
 

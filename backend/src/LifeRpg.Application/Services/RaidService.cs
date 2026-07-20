@@ -160,7 +160,6 @@ public class RaidService
             .Include(r => r.Members).ThenInclude(m => m.Hero)
             .Include(r => r.Contributions).ThenInclude(c => c.Hero)
             .Include(r => r.LeaderHero)
-            .AsSplitQuery()
             .FirstOrDefaultAsync(r => r.InviteCode == code, ct);
 
         if (raid is null)
@@ -321,19 +320,45 @@ public class RaidService
     private async Task<List<Raid>> LoadRaidsAsync(IEnumerable<Guid> raidIds, bool track, CancellationToken ct)
     {
         var idList = raidIds.Distinct().ToList();
-        IQueryable<Raid> query = _db.Raids
-            .AsSplitQuery()
-            .Include(r => r.Members).ThenInclude(m => m.Hero)
-            .Include(r => r.Contributions).ThenInclude(c => c.Hero)
+
+        // Load members and contributions in separate queries to avoid a cartesian product
+        // (Application references EF Core without Relational, so AsSplitQuery is unavailable).
+        IQueryable<Raid> raidQuery = _db.Raids
             .Include(r => r.LeaderHero)
             .Where(r => idList.Contains(r.Id));
-
         if (!track)
         {
-            query = query.AsNoTracking();
+            raidQuery = raidQuery.AsNoTracking();
         }
 
-        return await query.ToListAsync(ct);
+        var raids = await raidQuery.ToListAsync(ct);
+        if (raids.Count == 0)
+        {
+            return raids;
+        }
+
+        IQueryable<RaidMembership> memberQuery = _db.RaidMemberships
+            .Include(m => m.Hero)
+            .Where(m => idList.Contains(m.RaidId));
+        IQueryable<RaidContribution> contributionQuery = _db.RaidContributions
+            .Include(c => c.Hero)
+            .Where(c => idList.Contains(c.RaidId));
+        if (!track)
+        {
+            memberQuery = memberQuery.AsNoTracking();
+            contributionQuery = contributionQuery.AsNoTracking();
+        }
+
+        var members = await memberQuery.ToListAsync(ct);
+        var contributions = await contributionQuery.ToListAsync(ct);
+
+        foreach (var raid in raids)
+        {
+            raid.Members = members.Where(m => m.RaidId == raid.Id).ToList();
+            raid.Contributions = contributions.Where(c => c.RaidId == raid.Id).ToList();
+        }
+
+        return raids;
     }
 
     private async Task<string> GenerateUniqueInviteCodeAsync(CancellationToken ct)

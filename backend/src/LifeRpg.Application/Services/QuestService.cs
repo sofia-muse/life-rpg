@@ -312,25 +312,26 @@ public class QuestService
     {
         var today = _clock.Today;
         var dailyQuests = await _db.Quests
-            .Where(q => q.HeroId == heroId
-                && q.Type == QuestType.Daily
-                && q.IsCompleted
-                && (q.CompletedAt == null
-                    || DateOnly.FromDateTime(q.CompletedAt.Value.UtcDateTime) != today))
+            .Where(q => q.HeroId == heroId && q.Type == QuestType.Daily && q.IsCompleted)
             .ToListAsync(ct);
 
-        if (dailyQuests.Count == 0)
-        {
-            return;
-        }
-
+        var changed = false;
         foreach (var quest in dailyQuests)
         {
+            if (quest.CompletedAt is { } completedAt && DateOnly.FromDateTime(completedAt.UtcDateTime) == today)
+            {
+                continue;
+            }
+
             quest.IsCompleted = false;
             quest.CompletedAt = null;
+            changed = true;
         }
 
-        await _db.SaveChangesAsync(ct);
+        if (changed)
+        {
+            await _db.SaveChangesAsync(ct);
+        }
     }
 
     private async Task<bool> CanActivateDailyQuestAsync(Hero hero, Guid? currentQuestId, CancellationToken ct)

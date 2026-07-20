@@ -64,6 +64,7 @@ export default function DashboardScreen() {
       clearStaleWeeklyPath: s.clearStaleWeeklyPath,
       claimWeeklyReward: s.claimWeeklyReward,
       incrementWeeklyContractsCompleted: s.incrementWeeklyContractsCompleted,
+      chooseWeeklyPath: s.chooseWeeklyPath,
     })),
   );
   const hallEntries = useHallOfFameStore((s) => s.entries);

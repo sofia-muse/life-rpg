@@ -33,9 +33,14 @@ export default function AchievementsScreen() {
   const unlockedSkills = useSkillStore((s) => s.unlockedSkills);
   const forged = useForgedSkillStore((s) => s.forged);
   const raidPersonal = useRaidStore((s) => s.personal);
-  const equippedTitleId = useSettingsStore((s) => s.equippedTitleId);
-  const weeklyContractsCompleted = useSettingsStore((s) => s.weeklyContractsCompleted);
+  const weeklyPath = useSettingsStore((s) => s.weeklyPath);
+  const weeklyPathWeekKey = useSettingsStore((s) => s.weeklyPathWeekKey);
+  const weeklyPathStartedAt = useSettingsStore((s) => s.weeklyPathStartedAt);
+  const weeklyRewardWeekKey = useSettingsStore((s) => s.weeklyRewardWeekKey);
+  const weeklyRewardBadge = useSettingsStore((s) => s.weeklyRewardBadge);
   const weeklyRewardTitle = useSettingsStore((s) => s.weeklyRewardTitle);
+  const weeklyContractsCompleted = useSettingsStore((s) => s.weeklyContractsCompleted);
+  const equippedTitleId = useSettingsStore((s) => s.equippedTitleId);
   const setEquippedTitle = useSettingsStore((s) => s.setEquippedTitle);
 
   const unlockedSkillIds = useMemo(
@@ -44,8 +49,22 @@ export default function AchievementsScreen() {
   );
 
   const settingsSlice = useMemo(
-    () => ({ weeklyRewardTitle, weeklyContractsCompleted }),
-    [weeklyRewardTitle, weeklyContractsCompleted],
+    () => ({
+      weeklyPath,
+      weeklyPathWeekKey,
+      weeklyPathStartedAt,
+      weeklyRewardWeekKey,
+      weeklyRewardTitle,
+      weeklyRewardBadge,
+    }),
+    [
+      weeklyPath,
+      weeklyPathWeekKey,
+      weeklyPathStartedAt,
+      weeklyRewardWeekKey,
+      weeklyRewardTitle,
+      weeklyRewardBadge,
+    ],
   );
 
   const ctx = useMemo(() => {
