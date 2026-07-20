@@ -294,6 +294,7 @@ function getCurrentStageIndex(path: EvolutionPath, quest: Quest): number {
   const byTitle = path.stages.findIndex((stage) => stage.title === quest.title);
   if (byTitle !== -1) return byTitle;
 
+  // Custom/renamed titles: infer the highest stage the hero has already unlocked by completions.
   let index = 0;
   for (let i = 0; i < path.stages.length; i++) {
     if (quest.daysCompleted >= path.stages[i].unlockAt) {
@@ -327,8 +328,28 @@ export function applyQuestEvolution(quest: Quest): Quest {
   const path = getEvolutionPath(quest);
   if (!path) return quest;
 
-  const currentStageIndex = getCurrentStageIndex(path, quest);
-  const nextStage = path.stages[currentStageIndex + 1];
+  const titleIndex = path.stages.findIndex((stage) => stage.title === quest.title);
+
+  // Renamed dailies: jump to the stage unlocked by daysCompleted (not "next from inferred").
+  if (titleIndex === -1) {
+    let targetIndex = 0;
+    for (let i = 0; i < path.stages.length; i++) {
+      if (quest.daysCompleted >= path.stages[i].unlockAt) {
+        targetIndex = i;
+      }
+    }
+    const target = path.stages[targetIndex];
+    return {
+      ...quest,
+      evolutionPathId: path.id,
+      title: target.title,
+      description: target.description,
+      difficulty: target.difficulty,
+      xpReward: DIFFICULTY_XP[target.difficulty],
+    };
+  }
+
+  const nextStage = path.stages[titleIndex + 1];
   if (!nextStage || quest.daysCompleted < nextStage.unlockAt) {
     return {
       ...quest,
