@@ -40,7 +40,8 @@ export default function QuestsScreen() {
   const hero = useHeroStore((state) => state.hero);
   const settings = useSettingsStore();
   const completeQuestFlow = useGameplayStore((state) => state.completeQuest);
-  const unlockedSkillIds = useSkillStore((s) => s.getUnlockedSkillIds());
+  const unlockedSkills = useSkillStore((s) => s.unlockedSkills);
+  const unlockedSkillIds = unlockedSkills.map((s) => s.skillId);
   const {
     setQuestCreateModal,
     showXPPopup,

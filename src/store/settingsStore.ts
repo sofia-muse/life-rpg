@@ -288,35 +288,35 @@ export const useSettingsStore = create<SettingsState>()(
           };
         }),
 
-      clearStaleWeeklyPath: () =>
-        set((state) => {
-          if (!state.weeklyPathWeekKey || state.weeklyPathWeekKey === getCurrentWeekKey()) {
-            return {};
-          }
+      clearStaleWeeklyPath: () => {
+        const state = get();
+        if (!state.weeklyPathWeekKey || state.weeklyPathWeekKey === getCurrentWeekKey()) {
+          return;
+        }
 
-          const next = {
-            ...state,
-            weeklyPath: null,
-            weeklyPathWeekKey: null,
-            weeklyPathStartedAt: null,
-            weeklyRewardWeekKey: null,
-            weeklyRewardTitle: null,
-            weeklyRewardBadge: null,
-          };
-          console.info('[SettingsStore] Cleared stale weekly path state.', {
-            staleWeekKey: state.weeklyPathWeekKey,
-            previousPath: state.weeklyPath,
-          });
-          syncSettings(next);
-          return {
-            weeklyPath: null,
-            weeklyPathWeekKey: null,
-            weeklyPathStartedAt: null,
-            weeklyRewardWeekKey: null,
-            weeklyRewardTitle: null,
-            weeklyRewardBadge: null,
-          };
-        }),
+        const next = {
+          ...state,
+          weeklyPath: null,
+          weeklyPathWeekKey: null,
+          weeklyPathStartedAt: null,
+          weeklyRewardWeekKey: null,
+          weeklyRewardTitle: null,
+          weeklyRewardBadge: null,
+        };
+        console.info('[SettingsStore] Cleared stale weekly path state.', {
+          staleWeekKey: state.weeklyPathWeekKey,
+          previousPath: state.weeklyPath,
+        });
+        syncSettings(next);
+        set({
+          weeklyPath: null,
+          weeklyPathWeekKey: null,
+          weeklyPathStartedAt: null,
+          weeklyRewardWeekKey: null,
+          weeklyRewardTitle: null,
+          weeklyRewardBadge: null,
+        });
+      },
     }),
     {
       name: 'life-rpg-settings',

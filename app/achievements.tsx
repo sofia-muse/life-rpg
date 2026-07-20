@@ -30,7 +30,8 @@ export default function AchievementsScreen() {
   const router = useRouter();
   const hero = useHeroStore((s) => s.hero);
   const { quests } = useQuestStore();
-  const unlockedSkillIds = useSkillStore((s) => s.getUnlockedSkillIds());
+  const unlockedSkills = useSkillStore((s) => s.unlockedSkills);
+  const unlockedSkillIds = unlockedSkills.map((s) => s.skillId);
   const forged = useForgedSkillStore((s) => s.forged);
   const raidPersonal = useRaidStore((s) => s.personal);
   const settings = useSettingsStore();

@@ -33,7 +33,10 @@ export function QuestCreateModal() {
   const { addQuest } = useQuestStore();
   const aiSkillsEnabled = useSettingsStore((s) => s.aiSkillsEnabled);
   const authenticated = useAuthStore((s) => s.status === 'authenticated');
-  const unlockedSkillIds = useSkillStore((s) => s.getUnlockedSkillIds());
+  // Subscribe to the stable store array — never call getUnlockedSkillIds() in a selector
+  // (it allocates a new array each snapshot and infinite-loops useSyncExternalStore).
+  const unlockedSkills = useSkillStore((s) => s.unlockedSkills);
+  const unlockedSkillIds = unlockedSkills.map((s) => s.skillId);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -52,7 +55,9 @@ export function QuestCreateModal() {
     if (!isDifficultyAllowed(difficulty, stat, unlockedSkillIds)) {
       setDifficulty('medium');
     }
-  }, [stat, difficulty, unlockedSkillIds]);
+    // unlockedSkills is the stable store reference; ids derived above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- ids content tracked via unlockedSkills
+  }, [stat, difficulty, unlockedSkills]);
 
   const reset = () => {
     setTitle('');
