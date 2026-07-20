@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import { STAT_COLORS } from '../types';
 
 export const colors = {
   // Backgrounds
@@ -34,13 +35,8 @@ export const colors = {
   sapphire: '#4E82FF',
   rose: '#E879B8',
 
-  // Stat colors
-  strength: '#EF4444',
-  vitality: '#22C55E',
-  intelligence: '#3B82F6',
-  charisma: '#F59E0B',
-  dexterity: '#8B5CF6',
-  willpower: '#EC4899',
+  // Stat colors (single source: src/types STAT_COLORS)
+  ...STAT_COLORS,
 
   // Surfaces / glass
   bgGlass: 'rgba(22, 33, 62, 0.55)',

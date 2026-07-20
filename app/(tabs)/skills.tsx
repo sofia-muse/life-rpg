@@ -17,11 +17,14 @@ import { colors, spacing, fontSize, radius } from '../../src/config/theme';
 import { Skill, STAT_NAMES, STAT_COLORS, STAT_ICONS } from '../../src/types';
 
 export default function SkillsScreen() {
-  const { hero } = useHeroStore();
-  const { isSkillUnlocked } = useSkillStore();
+  const hero = useHeroStore((s) => s.hero);
+  const isSkillUnlocked = useSkillStore((s) => s.isSkillUnlocked);
   const aiSkillsEnabled = useSettingsStore((s) => s.aiSkillsEnabled);
   const authenticated = useAuthStore((s) => s.status === 'authenticated');
-  const { forged, loading: forging, load: loadForged, forge } = useForgedSkillStore();
+  const forged = useForgedSkillStore((s) => s.forged);
+  const forging = useForgedSkillStore((s) => s.loading);
+  const loadForged = useForgedSkillStore((s) => s.load);
+  const forge = useForgedSkillStore((s) => s.forge);
   const setSkillUnlock = useUIStore((s) => s.setSkillUnlock);
   const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);
 

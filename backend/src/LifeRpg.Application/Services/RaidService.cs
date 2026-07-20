@@ -49,7 +49,7 @@ public class RaidService
             return Result<List<RaidDto>>.Success(new List<RaidDto>());
         }
 
-        var raids = await LoadRaidsAsync(raidIds, ct);
+        var raids = await LoadRaidsAsync(raidIds, track: false, ct);
         var dtos = raids
             .OrderByDescending(r => r.CreatedAt)
             .Select(r => ToDto(r, hero.Id))
@@ -66,7 +66,7 @@ public class RaidService
             return Result<RaidDto>.NotFound("Hero not found");
         }
 
-        var raid = await LoadRaidAsync(raidId, ct);
+        var raid = await LoadRaidAsync(raidId, track: false, ct);
         if (raid is null)
         {
             return Result<RaidDto>.NotFound("Raid not found");
@@ -136,8 +136,10 @@ public class RaidService
         _db.Raids.Add(raid);
         await _db.SaveChangesAsync(ct);
 
-        var loaded = await LoadRaidAsync(raid.Id, ct);
-        return Result<RaidDto>.Success(ToDto(loaded!, hero.Id));
+        // Avoid a full graph reload — seed navigation props we already have for the DTO.
+        raid.LeaderHero = hero;
+        raid.Members[0].Hero = hero;
+        return Result<RaidDto>.Success(ToDto(raid, hero.Id));
     }
 
     public async Task<Result<RaidDto>> JoinAsync(JoinRaidRequest req, CancellationToken ct = default)
@@ -155,7 +157,9 @@ public class RaidService
         }
 
         var raid = await _db.Raids
-            .Include(r => r.Members)
+            .Include(r => r.Members).ThenInclude(m => m.Hero)
+            .Include(r => r.Contributions).ThenInclude(c => c.Hero)
+            .Include(r => r.LeaderHero)
             .FirstOrDefaultAsync(r => r.InviteCode == code, ct);
 
         if (raid is null)
@@ -175,8 +179,7 @@ public class RaidService
 
         if (raid.Members.Any(m => m.HeroId == hero.Id))
         {
-            var existing = await LoadRaidAsync(raid.Id, ct);
-            return Result<RaidDto>.Success(ToDto(existing!, hero.Id));
+            return Result<RaidDto>.Success(ToDto(raid, hero.Id));
         }
 
         if (raid.Members.Count >= raid.MaxMembers)
@@ -184,17 +187,19 @@ public class RaidService
             return Result<RaidDto>.Conflict("This raid party is full");
         }
 
-        _db.RaidMemberships.Add(new RaidMembership
+        var membership = new RaidMembership
         {
             RaidId = raid.Id,
             HeroId = hero.Id,
             Role = RaidMemberRole.Member,
             JoinedAt = _clock.UtcNow,
-        });
+            Hero = hero,
+        };
+        _db.RaidMemberships.Add(membership);
+        raid.Members.Add(membership);
         await _db.SaveChangesAsync(ct);
 
-        var loaded = await LoadRaidAsync(raid.Id, ct);
-        return Result<RaidDto>.Success(ToDto(loaded!, hero.Id));
+        return Result<RaidDto>.Success(ToDto(raid, hero.Id));
     }
 
     public async Task<Result<ContributeRaidResult>> ContributeAsync(
@@ -223,7 +228,7 @@ public class RaidService
             return Result<ContributeRaidResult>.Validation($"Single contribution cannot exceed {MaxSingleContribution}");
         }
 
-        var raid = await LoadRaidAsync(raidId, ct);
+        var raid = await LoadRaidAsync(raidId, track: true, ct);
         if (raid is null)
         {
             return Result<ContributeRaidResult>.NotFound("Raid not found");
@@ -275,6 +280,8 @@ public class RaidService
         };
 
         _db.RaidContributions.Add(contribution);
+        contribution.Hero = hero;
+        raid.Contributions.Add(contribution);
 
         // Prefer a DB sum so Include cartesian products cannot over-count progress.
         var priorTotal = await _db.RaidContributions
@@ -291,8 +298,7 @@ public class RaidService
 
         await _db.SaveChangesAsync(ct);
 
-        var loaded = await LoadRaidAsync(raid.Id, ct);
-        return Result<ContributeRaidResult>.Success(new ContributeRaidResult(ToDto(loaded!, hero.Id), justCompleted));
+        return Result<ContributeRaidResult>.Success(new ContributeRaidResult(ToDto(raid, hero.Id), justCompleted));
     }
 
     private async Task<Hero?> HeroAsync(CancellationToken ct)
@@ -305,21 +311,54 @@ public class RaidService
         return await _db.Heroes.FirstOrDefaultAsync(h => h.UserId == userId, ct);
     }
 
-    private async Task<Raid?> LoadRaidAsync(Guid raidId, CancellationToken ct)
+    private async Task<Raid?> LoadRaidAsync(Guid raidId, bool track, CancellationToken ct)
     {
-        var raids = await LoadRaidsAsync(new[] { raidId }, ct);
+        var raids = await LoadRaidsAsync(new[] { raidId }, track, ct);
         return raids.FirstOrDefault();
     }
 
-    private async Task<List<Raid>> LoadRaidsAsync(IEnumerable<Guid> raidIds, CancellationToken ct)
+    private async Task<List<Raid>> LoadRaidsAsync(IEnumerable<Guid> raidIds, bool track, CancellationToken ct)
     {
         var idList = raidIds.Distinct().ToList();
-        return await _db.Raids
-            .Include(r => r.Members).ThenInclude(m => m.Hero)
-            .Include(r => r.Contributions).ThenInclude(c => c.Hero)
+
+        // Load members and contributions in separate queries to avoid a cartesian product
+        // (Application references EF Core without Relational, so AsSplitQuery is unavailable).
+        IQueryable<Raid> raidQuery = _db.Raids
             .Include(r => r.LeaderHero)
-            .Where(r => idList.Contains(r.Id))
-            .ToListAsync(ct);
+            .Where(r => idList.Contains(r.Id));
+        if (!track)
+        {
+            raidQuery = raidQuery.AsNoTracking();
+        }
+
+        var raids = await raidQuery.ToListAsync(ct);
+        if (raids.Count == 0)
+        {
+            return raids;
+        }
+
+        IQueryable<RaidMembership> memberQuery = _db.RaidMemberships
+            .Include(m => m.Hero)
+            .Where(m => idList.Contains(m.RaidId));
+        IQueryable<RaidContribution> contributionQuery = _db.RaidContributions
+            .Include(c => c.Hero)
+            .Where(c => idList.Contains(c.RaidId));
+        if (!track)
+        {
+            memberQuery = memberQuery.AsNoTracking();
+            contributionQuery = contributionQuery.AsNoTracking();
+        }
+
+        var members = await memberQuery.ToListAsync(ct);
+        var contributions = await contributionQuery.ToListAsync(ct);
+
+        foreach (var raid in raids)
+        {
+            raid.Members = members.Where(m => m.RaidId == raid.Id).ToList();
+            raid.Contributions = contributions.Where(c => c.RaidId == raid.Id).ToList();
+        }
+
+        return raids;
     }
 
     private async Task<string> GenerateUniqueInviteCodeAsync(CancellationToken ct)

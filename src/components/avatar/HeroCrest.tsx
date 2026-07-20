@@ -1,12 +1,13 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, TouchableOpacity } from 'react-native';
 import Svg, { Path, Defs, RadialGradient, Stop } from 'react-native-svg';
+import { useShallow } from 'zustand/react/shallow';
 import { Hero, StatName, STAT_COLORS } from '../../types';
 import { CREST_SHAPES, SIGILS, getStatPipPositions, TIER_FRAMES } from './crestPaths';
 import { StatRadar } from './StatRadar';
 import { ACCENT_COLORS, STAT_PIP_THRESHOLDS } from '../../config/appearanceConfig';
 import { colors, fontSize } from '../../config/theme';
-import { levelFromXP } from '../../config/xpTables';
+import { getStatLevels } from '../../engine/statEngine';
 import { useSettingsStore } from '../../store/settingsStore';
 import { getActiveWeeklyPath } from '../../config/weeklyPaths';
 
@@ -28,8 +29,17 @@ export function HeroCrest({
   variant = 'default',
 }: Props) {
   const appearance = hero.appearance;
-  const settings = useSettingsStore();
-  const activeWeeklyPath = getActiveWeeklyPath(settings);
+  const weeklySettings = useSettingsStore(
+    useShallow((s) => ({
+      weeklyPath: s.weeklyPath,
+      weeklyPathWeekKey: s.weeklyPathWeekKey,
+      weeklyPathStartedAt: s.weeklyPathStartedAt,
+      weeklyRewardWeekKey: s.weeklyRewardWeekKey,
+      weeklyRewardTitle: s.weeklyRewardTitle,
+      weeklyRewardBadge: s.weeklyRewardBadge,
+    })),
+  );
+  const activeWeeklyPath = getActiveWeeklyPath(weeklySettings);
   const tierFrame = TIER_FRAMES[hero.classTier] || TIER_FRAMES[1];
   const glowBoost = variant === 'heroic' ? 1.55 : variant === 'editor' ? 1.3 : variant === 'compact' ? 0.9 : 1;
   const particleCount =
@@ -98,14 +108,10 @@ export function HeroCrest({
   }, [glowBoost, hero.classTier, glowOpacity, orbitRotate, pulseScale, sigilFloat, tierFrame.glowIntensity]);
 
   // Stat levels for pip rendering
-  const statLevels: Record<StatName, number> = {
-    strength: levelFromXP(hero.statXP.strength),
-    vitality: levelFromXP(hero.statXP.vitality),
-    intelligence: levelFromXP(hero.statXP.intelligence),
-    charisma: levelFromXP(hero.statXP.charisma),
-    dexterity: levelFromXP(hero.statXP.dexterity),
-    willpower: levelFromXP(hero.statXP.willpower),
-  };
+  const statLevels: Record<StatName, number> = useMemo(
+    () => getStatLevels(hero.statXP),
+    [hero.statXP],
+  );
 
   const pipPositions = getStatPipPositions(size);
   const svgSize = size;
@@ -299,10 +305,10 @@ export function HeroCrest({
           {hero.className}
         </Text>
       )}
-      {settings.weeklyRewardBadge && settings.weeklyRewardWeekKey === settings.weeklyPathWeekKey && activeWeeklyPath && (
+      {weeklySettings.weeklyRewardBadge && weeklySettings.weeklyRewardWeekKey === weeklySettings.weeklyPathWeekKey && activeWeeklyPath && (
         <View style={[styles.weeklyRibbon, { borderColor: accentColor }]}>
           <Text style={[styles.weeklyRibbonText, { color: accentColor }]} numberOfLines={1}>
-            {settings.weeklyRewardBadge}
+            {weeklySettings.weeklyRewardBadge}
           </Text>
         </View>
       )}

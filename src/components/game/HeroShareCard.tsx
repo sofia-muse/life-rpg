@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Share } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useShallow } from 'zustand/react/shallow';
 import { Hero, STAT_NAMES, STAT_COLORS, STAT_ICONS } from '../../types';
 import { colors, spacing, fontSize, radius, typography } from '../../config/theme';
 import { getStatDisplayProgress } from '../../engine/xpEngine';
@@ -25,11 +26,20 @@ interface Props {
 export function HeroShareCard({ hero }: Props) {
   const [sharingChronicle, setSharingChronicle] = useState(false);
   const [chronicleError, setChronicleError] = useState<string | null>(null);
-  const aiSkillsEnabled = useSettingsStore((s) => s.aiSkillsEnabled);
-  const settings = useSettingsStore();
-  const { quests } = useQuestStore();
+  const settings = useSettingsStore(
+    useShallow((s) => ({
+      aiSkillsEnabled: s.aiSkillsEnabled,
+      weeklyPath: s.weeklyPath,
+      weeklyPathWeekKey: s.weeklyPathWeekKey,
+      weeklyPathStartedAt: s.weeklyPathStartedAt,
+      weeklyRewardWeekKey: s.weeklyRewardWeekKey,
+      weeklyRewardTitle: s.weeklyRewardTitle,
+      weeklyRewardBadge: s.weeklyRewardBadge,
+    })),
+  );
+  const quests = useQuestStore((s) => s.quests);
   const authenticated = useAuthStore((s) => s.status === 'authenticated');
-  const canUseGuidance = aiSkillsEnabled && !env.demoMode && authenticated;
+  const canUseGuidance = settings.aiSkillsEnabled && !env.demoMode && authenticated;
 
   const handleShareWeekly = async () => {
     const contract = getPrimaryContract(hero, settings, quests);

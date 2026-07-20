@@ -19,6 +19,7 @@ public class QuestConfiguration : IEntityTypeConfiguration<Quest>
         b.Property(q => q.Stat).HasConversion<string>().HasMaxLength(20);
         // RowVersion promoted to rowversion for SQL Server in OnModelCreating (SQLite-safe otherwise).
         b.HasIndex(q => new { q.HeroId, q.Type, q.IsActive });
+        b.HasIndex(q => new { q.HeroId, q.UpdatedAt });
     }
 }
 
@@ -56,6 +57,7 @@ public class JournalEntryConfiguration : IEntityTypeConfiguration<JournalEntry>
         b.HasKey(j => j.Id);
         b.Property(j => j.Narrative).HasMaxLength(2000);
         b.HasIndex(j => new { j.HeroId, j.Date }).IsUnique();
+        b.HasIndex(j => new { j.HeroId, j.UpdatedAt });
 
         b.Property(j => j.XpGained).HasConversion(JsonValue.Converter<StatBlock>())
             .Metadata.SetValueComparer(JsonValue.Comparer<StatBlock>());

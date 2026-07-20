@@ -29,11 +29,43 @@ const TIER_COLORS = {
 export default function AchievementsScreen() {
   const router = useRouter();
   const hero = useHeroStore((s) => s.hero);
-  const { quests } = useQuestStore();
-  const unlockedSkillIds = useSkillStore((s) => s.getUnlockedSkillIds());
+  const quests = useQuestStore((s) => s.quests);
+  const unlockedSkills = useSkillStore((s) => s.unlockedSkills);
   const forged = useForgedSkillStore((s) => s.forged);
   const raidPersonal = useRaidStore((s) => s.personal);
-  const settings = useSettingsStore();
+  const weeklyPath = useSettingsStore((s) => s.weeklyPath);
+  const weeklyPathWeekKey = useSettingsStore((s) => s.weeklyPathWeekKey);
+  const weeklyPathStartedAt = useSettingsStore((s) => s.weeklyPathStartedAt);
+  const weeklyRewardWeekKey = useSettingsStore((s) => s.weeklyRewardWeekKey);
+  const weeklyRewardBadge = useSettingsStore((s) => s.weeklyRewardBadge);
+  const weeklyRewardTitle = useSettingsStore((s) => s.weeklyRewardTitle);
+  const weeklyContractsCompleted = useSettingsStore((s) => s.weeklyContractsCompleted);
+  const equippedTitleId = useSettingsStore((s) => s.equippedTitleId);
+  const setEquippedTitle = useSettingsStore((s) => s.setEquippedTitle);
+
+  const unlockedSkillIds = useMemo(
+    () => unlockedSkills.map((s) => s.skillId),
+    [unlockedSkills],
+  );
+
+  const settingsSlice = useMemo(
+    () => ({
+      weeklyPath,
+      weeklyPathWeekKey,
+      weeklyPathStartedAt,
+      weeklyRewardWeekKey,
+      weeklyRewardTitle,
+      weeklyRewardBadge,
+    }),
+    [
+      weeklyPath,
+      weeklyPathWeekKey,
+      weeklyPathStartedAt,
+      weeklyRewardWeekKey,
+      weeklyRewardTitle,
+      weeklyRewardBadge,
+    ],
+  );
 
   const ctx = useMemo(() => {
     if (!hero) return null;
@@ -42,15 +74,15 @@ export default function AchievementsScreen() {
       quests,
       unlockedSkillIds.length,
       forged.length,
-      settings,
-      settings.weeklyContractsCompleted,
+      settingsSlice,
+      weeklyContractsCompleted,
       {
         raidsCleared: raidPersonal.raidsCleared,
         totalContribution: raidPersonal.totalContribution,
         bestContributionShare: raidPersonal.bestContributionShare,
       },
     );
-  }, [hero, quests, unlockedSkillIds.length, forged.length, settings, raidPersonal]);
+  }, [hero, quests, unlockedSkillIds.length, forged.length, settingsSlice, weeklyContractsCompleted, raidPersonal]);
 
   const earned = useMemo(
     () => (ctx ? getEarnedAchievements(ctx) : []),
@@ -79,7 +111,7 @@ export default function AchievementsScreen() {
         <View style={styles.titleGrid}>
           {EQUIPPABLE_TITLES.map((title) => {
             const unlocked = unlockedTitleIds.includes(title.id);
-            const equipped = settings.equippedTitleId === title.id;
+            const equipped = equippedTitleId === title.id;
             return (
               <TouchableOpacity
                 key={title.id}
@@ -88,7 +120,7 @@ export default function AchievementsScreen() {
                   unlocked && styles.titleChipUnlocked,
                   equipped && styles.titleChipEquipped,
                 ]}
-                onPress={() => unlocked && settings.setEquippedTitle(title.id)}
+                onPress={() => unlocked && setEquippedTitle(title.id)}
                 disabled={!unlocked}
               >
                 <Text style={[styles.titleChipLabel, !unlocked && styles.titleChipLocked]}>

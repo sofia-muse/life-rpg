@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { generateId } from '../utils/id';
+import { today } from '../utils/date';
+import { emptyStatBlock } from '../utils/stats';
 import {
   Hero,
   HeroAppearance,
@@ -66,16 +68,7 @@ interface HeroState {
   } | null;
 }
 
-const createEmptyStatXP = (): Record<StatName, number> => ({
-  strength: 0,
-  vitality: 0,
-  intelligence: 0,
-  charisma: 0,
-  dexterity: 0,
-  willpower: 0,
-});
-
-const today = () => new Date().toISOString().split('T')[0];
+const createEmptyStatXP = (): Record<StatName, number> => emptyStatBlock();
 
 const freezeCooldownDays = 7;
 

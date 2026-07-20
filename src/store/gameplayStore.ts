@@ -1,8 +1,9 @@
 import { create } from 'zustand';
+import { applyApiHeroSnapshot } from '../api/applyApiHeroSnapshot';
 import { ApiError } from '../api/client';
-import { mapApiHero, mapApiQuest } from '../api/mappers';
+import { mapApiQuest } from '../api/mappers';
 import { heroApi } from '../api/heroApi';
-import { questApi } from '../api/questApi';
+import { CompleteQuestResult, questApi } from '../api/questApi';
 import { getSkillById } from '../config/skills';
 import { env } from '../config/env';
 import { generateQuestNarrative } from '../engine/journalEngine';
@@ -10,6 +11,7 @@ import { getQuestSkillBonus } from '../engine/skillEngine';
 import { getStreakMultiplier } from '../engine/streakEngine';
 import { calculateXPReward } from '../engine/xpEngine';
 import { getWeeklyPathQuestBonus } from '../config/weeklyPaths';
+import { emptyStatBlock } from '../utils/stats';
 import { useAuthStore } from './authStore';
 import { useForgedSkillStore } from './forgedSkillStore';
 import { useHeroStore } from './heroStore';
@@ -38,15 +40,6 @@ interface GameplayState {
   resetLocalState: () => void;
 }
 
-const emptyXpGained = (): Record<StatName, number> => ({
-  strength: 0,
-  vitality: 0,
-  intelligence: 0,
-  charisma: 0,
-  dexterity: 0,
-  willpower: 0,
-});
-
 function applyJournalEntry(
   quest: Quest,
   xpAwarded: number,
@@ -57,7 +50,7 @@ function applyJournalEntry(
     narrative: generateQuestNarrative(quest),
     questsCompleted: [quest.id],
     xpGained: {
-      ...emptyXpGained(),
+      ...emptyStatBlock(),
       [quest.stat]: xpAwarded,
     },
     levelsGained: levelResult ? [levelResult.stat] : [],
@@ -89,24 +82,65 @@ function mapLevelResult(
   };
 }
 
+function markQuestCompletedLocally(quest: Quest): Quest {
+  const now = new Date().toISOString();
+  return {
+    ...quest,
+    isCompleted: true,
+    completedAt: now,
+    updatedAt: now,
+    daysCompleted: quest.daysCompleted + 1,
+    streak: quest.streak + 1,
+    bestStreak: Math.max(quest.bestStreak, quest.streak + 1),
+  };
+}
+
+function applyAuthoritativeCompletion(
+  quest: Quest,
+  completion: CompleteQuestResult,
+  priorSkillIds: Set<string>,
+): QuestCompletionFlowResult {
+  applyApiHeroSnapshot(completion.hero);
+
+  const newSkillIds = completion.hero.unlockedSkills
+    .map((skill) => skill.skillId)
+    .filter((skillId) => !priorSkillIds.has(skillId));
+  const newSkills =
+    completion.newSkills.length > 0
+      ? getSkillsById(completion.newSkills.map((s) => s.id))
+      : getSkillsById(newSkillIds);
+
+  useQuestStore.getState().upsertQuest(quest);
+  const appearanceUnlock = useHeroStore.getState().checkAppearanceUnlocks();
+  const levelResult = mapLevelResult(
+    completion.stat,
+    completion.oldLevel,
+    completion.newLevel,
+    completion.tierUp,
+    newSkills,
+  );
+  applyJournalEntry(quest, completion.xpAwarded, levelResult, newSkills);
+
+  return {
+    quest,
+    completed: true,
+    xpAwarded: completion.xpAwarded,
+    levelResult,
+    newSkills,
+    appearanceUnlock,
+    stepAdvancedOnly: false,
+  };
+}
+
 async function completeAuthoritativeQuest(quest: Quest): Promise<QuestCompletionFlowResult | null> {
   const priorSkillIds = new Set(useSkillStore.getState().getUnlockedSkillIds());
-  let completion:
-    | {
-        stat: StatName;
-        xpAwarded: number;
-        oldLevel: number;
-        newLevel: number;
-        tierUp: { newTier: number; newClass: string } | null;
-      }
-    | null = null;
 
   if (quest.type === 'boss') {
     const stepResult = await questApi.advanceBossStep(quest.id);
     const latestQuest = mapApiQuest(stepResult.quest);
+    useQuestStore.getState().upsertQuest(latestQuest);
 
     if (!stepResult.completion) {
-      useQuestStore.getState().upsertQuest(latestQuest);
       return {
         quest: latestQuest,
         completed: false,
@@ -118,53 +152,12 @@ async function completeAuthoritativeQuest(quest: Quest): Promise<QuestCompletion
       };
     }
 
-    completion = {
-      stat: stepResult.completion.stat,
-      xpAwarded: stepResult.completion.xpAwarded,
-      oldLevel: stepResult.completion.oldLevel,
-      newLevel: stepResult.completion.newLevel,
-      tierUp: stepResult.completion.tierUp,
-    };
-  } else {
-    const result = await questApi.complete(quest.id);
-    completion = {
-      stat: result.stat,
-      xpAwarded: result.xpAwarded,
-      oldLevel: result.oldLevel,
-      newLevel: result.newLevel,
-      tierUp: result.tierUp,
-    };
+    return applyAuthoritativeCompletion(latestQuest, stepResult.completion, priorSkillIds);
   }
 
-  const [apiHero, apiQuests] = await Promise.all([heroApi.getMine(), questApi.list()]);
-  const mappedHero = mapApiHero(apiHero);
-  const newSkillIds = apiHero.unlockedSkills
-    .map((skill) => skill.skillId)
-    .filter((skillId) => !priorSkillIds.has(skillId));
-  const newSkills = getSkillsById(newSkillIds);
-
-  useHeroStore.getState().setHero(mappedHero, { isOnboarded: true });
-  useSkillStore.getState().replaceUnlockedSkills(apiHero.unlockedSkills);
-  useSettingsStore.getState().replaceSettings(apiHero.settings);
-  useQuestStore.getState().replaceQuests(apiQuests.map(mapApiQuest));
-
-  const refreshedQuest = useQuestStore.getState().getQuestById(quest.id) ?? quest;
-  const appearanceUnlock = useHeroStore.getState().checkAppearanceUnlocks();
-  const levelResult = completion
-    ? mapLevelResult(completion.stat, completion.oldLevel, completion.newLevel, completion.tierUp, newSkills)
-    : null;
-  const xpAwarded = completion?.xpAwarded ?? 0;
-  applyJournalEntry(refreshedQuest, xpAwarded, levelResult, newSkills);
-
-  return {
-    quest: refreshedQuest,
-    completed: true,
-    xpAwarded,
-    levelResult,
-    newSkills,
-    appearanceUnlock,
-    stepAdvancedOnly: false,
-  };
+  const result = await questApi.complete(quest.id);
+  const completedQuest = markQuestCompletedLocally(quest);
+  return applyAuthoritativeCompletion(completedQuest, result, priorSkillIds);
 }
 
 function completeLocalQuest(questId: string): QuestCompletionFlowResult | null {
@@ -270,10 +263,7 @@ export const useGameplayStore = create<GameplayState>((set) => ({
     try {
       useSettingsStore.getState().clearStaleWeeklyPath();
       const [apiHero, apiQuests] = await Promise.all([heroApi.getMine(), questApi.list()]);
-      useHeroStore.getState().setHero(mapApiHero(apiHero), { isOnboarded: true });
-      useSkillStore.getState().replaceUnlockedSkills(apiHero.unlockedSkills);
-      useSettingsStore.getState().replaceSettings(apiHero.settings);
-      useQuestStore.getState().replaceQuests(apiQuests.map(mapApiQuest));
+      applyApiHeroSnapshot(apiHero, apiQuests);
       await useForgedSkillStore.getState().load();
       await useRaidStore.getState().load();
     } catch (error) {

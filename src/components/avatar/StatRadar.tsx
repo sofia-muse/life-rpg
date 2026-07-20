@@ -1,6 +1,6 @@
 import React from 'react';
 import Svg, { Polygon, Line, Circle, Text as SvgText } from 'react-native-svg';
-import { StatBlock, StatName, STAT_COLORS } from '../../types';
+import { StatBlock, STAT_COLORS, STAT_NAMES } from '../../types';
 
 interface Props {
   stats: StatBlock;
@@ -10,14 +10,7 @@ interface Props {
   maxLevel?: number;
 }
 
-const STAT_ORDER: StatName[] = [
-  'strength',
-  'vitality',
-  'intelligence',
-  'charisma',
-  'dexterity',
-  'willpower',
-];
+const STAT_ORDER = STAT_NAMES;
 
 function getHexPoint(cx: number, cy: number, r: number, index: number): { x: number; y: number } {
   const angle = (index * 60 - 90) * (Math.PI / 180);

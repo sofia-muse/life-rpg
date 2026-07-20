@@ -1,4 +1,5 @@
 import React from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { useUIStore } from '../../store/uiStore';
 import { LevelUpModal } from './LevelUpModal';
 import { SkillUnlockModal } from './SkillUnlockModal';
@@ -25,7 +26,25 @@ export function GlobalModals() {
     showEvolutionModal,
     evolutionData,
     dismissEvolution,
-  } = useUIStore();
+  } = useUIStore(
+    useShallow((s) => ({
+      showLevelUpModal: s.showLevelUpModal,
+      levelUpData: s.levelUpData,
+      dismissLevelUp: s.dismissLevelUp,
+      showSkillUnlockModal: s.showSkillUnlockModal,
+      skillUnlockData: s.skillUnlockData,
+      dismissSkillUnlock: s.dismissSkillUnlock,
+      showTierUpModal: s.showTierUpModal,
+      tierUpData: s.tierUpData,
+      dismissTierUp: s.dismissTierUp,
+      showAppearanceUnlock: s.showAppearanceUnlock,
+      appearanceUnlockData: s.appearanceUnlockData,
+      dismissAppearanceUnlock: s.dismissAppearanceUnlock,
+      showEvolutionModal: s.showEvolutionModal,
+      evolutionData: s.evolutionData,
+      dismissEvolution: s.dismissEvolution,
+    })),
+  );
 
   return (
     <>

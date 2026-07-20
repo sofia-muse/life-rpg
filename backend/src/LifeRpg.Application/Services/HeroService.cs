@@ -24,7 +24,15 @@ public class HeroService
 
     public async Task<Result<HeroDto>> GetMineAsync(CancellationToken ct = default)
     {
-        var hero = await LoadAsync(ct);
+        if (_user.UserId is not { } userId)
+        {
+            return Result<HeroDto>.NotFound("Hero not found");
+        }
+
+        var hero = await _db.Heroes
+            .AsNoTracking()
+            .Include(h => h.UnlockedSkills)
+            .FirstOrDefaultAsync(h => h.UserId == userId, ct);
         return hero is null ? Result<HeroDto>.NotFound("Hero not found") : Result<HeroDto>.Success(hero.ToDto());
     }
 
@@ -104,7 +112,14 @@ public class HeroService
 
     public async Task<Result<List<StatProgressDto>>> GetStatsAsync(CancellationToken ct = default)
     {
-        var hero = await LoadAsync(ct);
+        if (_user.UserId is not { } userId)
+        {
+            return Result<List<StatProgressDto>>.NotFound("Hero not found");
+        }
+
+        var hero = await _db.Heroes
+            .AsNoTracking()
+            .FirstOrDefaultAsync(h => h.UserId == userId, ct);
         if (hero is null)
         {
             return Result<List<StatProgressDto>>.NotFound("Hero not found");
@@ -131,7 +146,7 @@ public class HeroService
         }
 
         var path = hero.Settings.WeeklyPath?.Trim().ToLowerInvariant();
-        if (string.IsNullOrWhiteSpace(path) || hero.Settings.WeeklyPathWeekKey != WeekKey(_clock.Today))
+        if (string.IsNullOrWhiteSpace(path) || hero.Settings.WeeklyPathWeekKey != WeeklyPathHelper.WeekKey(_clock.Today))
         {
             return Result<WeeklyCupDto>.Conflict("No weekly path is active");
         }
@@ -149,7 +164,7 @@ public class HeroService
             q.IsCompleted
             && statSet.Contains(q.Stat)
             && q.CompletedAt is { } completedAt
-            && WeekKey(DateOnly.FromDateTime(completedAt.UtcDateTime)) == hero.Settings.WeeklyPathWeekKey);
+            && WeeklyPathHelper.WeekKey(DateOnly.FromDateTime(completedAt.UtcDateTime)) == hero.Settings.WeeklyPathWeekKey);
 
         var bossProgress = Math.Min(20, (int)Math.Round(hero.Quests
             .Where(q => q.Type == QuestType.Boss && statSet.Contains(q.Stat) && q.TotalSteps is > 0)
@@ -189,11 +204,5 @@ public class HeroService
         hero.DominantStat = StatCalculator.GetDominantStat(hero.StatXp);
         hero.ClassTier = ClassDefinitions.GetTierForLevel(hero.HeroLevel);
         hero.ClassName = ClassDefinitions.GetClassName(hero.DominantStat, hero.ClassTier);
-    }
-
-    private static string WeekKey(DateOnly date)
-    {
-        var diff = ((int)date.DayOfWeek + 6) % 7;
-        return date.AddDays(-diff).ToString("yyyy-MM-dd");
     }
 }

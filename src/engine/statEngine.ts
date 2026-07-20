@@ -50,16 +50,9 @@ export function checkTierUp(
   return null;
 }
 
-// Get stat block from XP
+// Get stat block from XP (same as getStatLevels — kept as a named alias for call sites)
 export function getStatBlock(statXP: Record<StatName, number>): StatBlock {
-  return {
-    strength: levelFromXP(statXP.strength),
-    vitality: levelFromXP(statXP.vitality),
-    intelligence: levelFromXP(statXP.intelligence),
-    charisma: levelFromXP(statXP.charisma),
-    dexterity: levelFromXP(statXP.dexterity),
-    willpower: levelFromXP(statXP.willpower),
-  };
+  return getStatLevels(statXP);
 }
 
 // Get the total stat level sum

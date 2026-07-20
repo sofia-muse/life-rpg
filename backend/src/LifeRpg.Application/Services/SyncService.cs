@@ -17,7 +17,6 @@ namespace LifeRpg.Application.Services;
 /// </summary>
 public class SyncService
 {
-    private const int BaseActiveDailyLimit = 3;
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
     {
         Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
@@ -42,7 +41,6 @@ public class SyncService
         }
 
         var hero = await _db.Heroes
-            .Include(h => h.Quests)
             .Include(h => h.UnlockedSkills)
             .FirstOrDefaultAsync(h => h.UserId == userId, ct);
         if (hero is null)
@@ -50,14 +48,19 @@ public class SyncService
             return Result<SyncBatchResult>.NotFound("Hero not found");
         }
 
+        await AttachQuestsForBatchAsync(hero, req.Operations, ct);
+
         var applied = new List<string>();
         var skipped = new List<string>();
         var conflicts = new List<SyncConflict>();
 
-        var alreadyApplied = await _db.SyncRequestLogs
-            .Where(l => l.UserId == userId)
-            .Select(l => l.OpId)
-            .ToListAsync(ct);
+        var opIds = req.Operations.Select(o => o.OpId).ToList();
+        var alreadyApplied = opIds.Count == 0
+            ? new List<string>()
+            : await _db.SyncRequestLogs
+                .Where(l => l.UserId == userId && opIds.Contains(l.OpId))
+                .Select(l => l.OpId)
+                .ToListAsync(ct);
         var appliedSet = alreadyApplied.ToHashSet();
 
         foreach (var op in req.Operations)
@@ -124,7 +127,7 @@ public class SyncService
         {
             // DbSet.Add (not the navigation collection) forces Added state — EF would otherwise
             // infer Modified from the client-provided non-default Guid key.
-            _db.Quests.Add(new Quest
+            var created = new Quest
             {
                 Id = dto.Id == Guid.Empty ? Guid.NewGuid() : dto.Id,
                 HeroId = hero.Id,
@@ -141,7 +144,9 @@ public class SyncService
                 CompletedAt = dto.CompletedAt,
                 CreatedAt = dto.CreatedAt == default ? _clock.UtcNow : dto.CreatedAt,
                 UpdatedAt = dto.UpdatedAt == default ? _clock.UtcNow : dto.UpdatedAt,
-            });
+            };
+            _db.Quests.Add(created);
+            hero.Quests.Add(created);
             return null;
         }
 
@@ -287,14 +292,61 @@ public class SyncService
             journal.Select(j => j.ToDto()).ToList());
     }
 
+    private async Task AttachQuestsForBatchAsync(Hero hero, IReadOnlyList<SyncOperation> operations, CancellationToken ct)
+    {
+        var touchedIds = new HashSet<Guid>();
+        foreach (var op in operations)
+        {
+            if (op.Entity != "quest")
+            {
+                continue;
+            }
+
+            if (op.Action == "delete"
+                && op.Payload.TryGetProperty("id", out var idProp)
+                && idProp.TryGetGuid(out var deleteId))
+            {
+                touchedIds.Add(deleteId);
+                continue;
+            }
+
+            if (op.Action == "upsert")
+            {
+                try
+                {
+                    var dto = op.Payload.Deserialize<QuestDto>(Json);
+                    if (dto is not null && dto.Id != Guid.Empty)
+                    {
+                        touchedIds.Add(dto.Id);
+                    }
+                }
+                catch (JsonException)
+                {
+                    // Malformed payloads are reported as conflicts during ApplyOperation.
+                }
+            }
+        }
+
+        var quests = await _db.Quests
+            .Where(q => q.HeroId == hero.Id
+                && (touchedIds.Contains(q.Id)
+                    || (q.Type == QuestType.Daily && q.IsActive)))
+            .ToListAsync(ct);
+
+        foreach (var quest in quests)
+        {
+            hero.Quests.Add(quest);
+        }
+    }
+
     private bool CanActivateDailyQuest(Hero hero, Guid? currentQuestId)
     {
         var currentActiveDailyCount = hero.Quests.Count(
             q => q.Type == QuestType.Daily
                 && q.IsActive
                 && (!currentQuestId.HasValue || q.Id != currentQuestId.Value));
-        var maxActiveDailyCount =
-            BaseActiveDailyLimit + SkillResolver.GetActiveDailyQuestCapacityBonus(hero.UnlockedSkills.Select(s => s.SkillId));
-        return currentActiveDailyCount < maxActiveDailyCount;
+        return DailyQuestCapacity.CanActivate(
+            currentActiveDailyCount,
+            hero.UnlockedSkills.Select(s => s.SkillId));
     }
 }

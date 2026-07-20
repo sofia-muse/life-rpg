@@ -103,6 +103,7 @@ public class SkillForgeService
         }
 
         var hero = await _db.Heroes
+            .AsNoTracking()
             .Include(h => h.GeneratedSkills)
             .FirstOrDefaultAsync(h => h.UserId == userId, ct);
         if (hero is null)
