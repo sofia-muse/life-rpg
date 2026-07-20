@@ -1,11 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity } from 'react-native';
 import { ScreenWrapper } from '../../src/components/layout/ScreenWrapper';
-import { ScreenHeader } from '../../src/components/layout/ScreenHeader';
 import { SkillNode } from '../../src/components/game/SkillNode';
 import { Card } from '../../src/components/layout/Card';
 import { Button } from '../../src/components/layout/Button';
-import { Badge } from '../../src/components/layout/Badge';
 import { useHeroStore } from '../../src/store/heroStore';
 import { useSkillStore } from '../../src/store/skillStore';
 import { useSettingsStore } from '../../src/store/settingsStore';
@@ -13,17 +11,14 @@ import { useAuthStore } from '../../src/store/authStore';
 import { useForgedSkillStore } from '../../src/store/forgedSkillStore';
 import { useUIStore } from '../../src/store/uiStore';
 import { getSkillsByCategory } from '../../src/config/skills';
-import { getActiveBuildSummary, getSkillProgress } from '../../src/engine/skillEngine';
+import { getSkillProgress } from '../../src/engine/skillEngine';
 import { env } from '../../src/config/env';
 import { colors, spacing, fontSize, radius } from '../../src/config/theme';
 import { Skill, STAT_NAMES, STAT_COLORS, STAT_ICONS } from '../../src/types';
-import { getActiveWeeklyPath, getWeeklyPathDefinition } from '../../src/config/weeklyPaths';
 
 export default function SkillsScreen() {
   const { hero } = useHeroStore();
-  const isSkillUnlocked = useSkillStore((s) => s.isSkillUnlocked);
-  const getUnlockedSkillIds = useSkillStore((s) => s.getUnlockedSkillIds);
-  const settings = useSettingsStore();
+  const { isSkillUnlocked } = useSkillStore();
   const aiSkillsEnabled = useSettingsStore((s) => s.aiSkillsEnabled);
   const authenticated = useAuthStore((s) => s.status === 'authenticated');
   const { forged, loading: forging, load: loadForged, forge } = useForgedSkillStore();
@@ -44,14 +39,6 @@ export default function SkillsScreen() {
 
   if (!hero) return null;
 
-  const unlockedSkillIds = getUnlockedSkillIds();
-  const buildSummary = getActiveBuildSummary(unlockedSkillIds);
-  const activePath = getActiveWeeklyPath(settings);
-  const activePathDefinition = activePath ? getWeeklyPathDefinition(activePath) : null;
-  const topStats = [...STAT_NAMES]
-    .sort((left, right) => hero.statXP[right] - hero.statXP[left])
-    .slice(0, 2);
-
   const categories: { key: string; label: string; color: string; icon: string }[] = [
     ...STAT_NAMES.map((stat) => ({
       key: stat,
@@ -64,63 +51,8 @@ export default function SkillsScreen() {
 
   return (
     <ScreenWrapper>
-      <ScreenHeader
-        eyebrow="Build Hall"
-        title="Skill Trees"
-        subtitle="Your routines now shape a build. Track what is active, what is next, and which disciplines define this hero."
-      />
-
-      <View style={styles.summaryGrid}>
-        <Card style={styles.summaryCard}>
-          <Text style={styles.summaryEyebrow}>Build Signature</Text>
-          <Text style={styles.summaryTitle}>{hero.className}</Text>
-          <View style={styles.badgeRow}>
-            <Badge label={`Tier ${hero.classTier}`} color={STAT_COLORS[hero.dominantStat]} />
-            <Badge label={hero.dominantStat.toUpperCase()} color={STAT_COLORS[hero.dominantStat]} />
-            {activePathDefinition ? <Badge label={activePathDefinition.label} color={colors.amethyst} /> : null}
-          </View>
-          <Text style={styles.summaryText}>
-            Leading disciplines: {topStats.map((stat) => stat.charAt(0).toUpperCase() + stat.slice(1)).join(' + ')}.
-          </Text>
-        </Card>
-
-        <Card style={styles.summaryCard}>
-          <Text style={styles.summaryEyebrow}>Active Perks</Text>
-          <Text style={styles.summaryTitle}>{buildSummary.unlockedSkills.length} skills online</Text>
-          <View style={styles.perkRow}>
-            <View style={styles.perkChip}>
-              <Text style={styles.perkValue}>+{buildSummary.totalQuestBonusPercent}%</Text>
-              <Text style={styles.perkLabel}>Potential XP bonus</Text>
-            </View>
-            <View style={styles.perkChip}>
-              <Text style={styles.perkValue}>{buildSummary.activeDailyQuestCapacityBonus}</Text>
-              <Text style={styles.perkLabel}>Extra daily slots</Text>
-            </View>
-          </View>
-          <Text style={styles.summaryText}>
-            {buildSummary.notablePerks.length > 0
-              ? buildSummary.notablePerks.slice(0, 2).join(' · ')
-              : 'No passive perks unlocked yet. Raise a stat to begin shaping the build.'}
-          </Text>
-        </Card>
-
-        <Card style={styles.summaryCard}>
-          <Text style={styles.summaryEyebrow}>Campaign Support</Text>
-          <Text style={styles.summaryTitle}>
-            {buildSummary.streakFreezeAllowance > 0 || buildSummary.streakRetentionPercent > 0
-              ? 'Momentum protected'
-              : 'Momentum building'}
-          </Text>
-          <Text style={styles.summaryText}>
-            Rest ritual: {buildSummary.restDayXpReward} vitality XP. Streak retention:{' '}
-            {buildSummary.streakRetentionPercent}%.
-          </Text>
-          <Text style={styles.summaryText}>
-            Weekly freeze allowance: {buildSummary.streakFreezeAllowance}. All-quest bonus:{' '}
-            {buildSummary.allQuestBonusPercent}%.
-          </Text>
-        </Card>
-      </View>
+      <Text style={styles.title}>Skill Trees</Text>
+      <Text style={styles.subtitle}>Unlock skills by leveling your stats</Text>
 
       {/* AI-Forged skills (opt-in, online-only) */}
       {aiSkillsEnabled && (
@@ -163,21 +95,12 @@ export default function SkillsScreen() {
       {categories.map((cat) => {
         const skills = getSkillsByCategory(cat.key);
         if (skills.length === 0) return null;
-        const unlockedCount = skills.filter((skill) => isSkillUnlocked(skill.id)).length;
 
         return (
           <Card key={cat.key} style={styles.treeCard}>
             <View style={styles.treeHeader}>
-              <View>
-                <View style={styles.treeTitleRow}>
-                  <Text style={styles.treeIcon}>{cat.icon}</Text>
-                  <Text style={[styles.treeName, { color: cat.color }]}>{cat.label}</Text>
-                </View>
-                <Text style={styles.treeHint}>
-                  {unlockedCount}/{skills.length} unlocked
-                  {cat.key !== 'cross' ? ` · ${cat.label} levels shape this lane` : ' · hybrid synergies'}
-                </Text>
-              </View>
+              <Text style={styles.treeIcon}>{cat.icon}</Text>
+              <Text style={[styles.treeName, { color: cat.color }]}>{cat.label}</Text>
             </View>
             <View style={styles.nodesRow}>
               {skills.map((skill) => (
@@ -245,61 +168,16 @@ export default function SkillsScreen() {
 }
 
 const styles = StyleSheet.create({
-  summaryGrid: {
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  summaryCard: {
-    marginBottom: 0,
-  },
-  summaryEyebrow: {
-    color: colors.textAccent,
-    fontSize: fontSize.xs,
-    marginBottom: spacing.xs,
-    textTransform: 'uppercase',
-    fontWeight: '700',
-  },
-  summaryTitle: {
+  title: {
     color: colors.textPrimary,
-    fontSize: fontSize.lg,
-    fontWeight: '800',
-    marginBottom: spacing.sm,
+    fontSize: fontSize.title,
+    fontWeight: '900',
+    marginTop: spacing.md,
   },
-  badgeRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.xs,
-    marginBottom: spacing.sm,
-  },
-  summaryText: {
+  subtitle: {
     color: colors.textSecondary,
     fontSize: fontSize.sm,
-    lineHeight: 20,
-  },
-  perkRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  perkChip: {
-    flex: 1,
-    minWidth: 120,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    backgroundColor: colors.bgInset,
-    padding: spacing.sm,
-  },
-  perkValue: {
-    color: colors.goldBright,
-    fontSize: fontSize.md,
-    fontWeight: '800',
-  },
-  perkLabel: {
-    color: colors.textMuted,
-    fontSize: fontSize.xs,
-    marginTop: 2,
+    marginBottom: spacing.lg,
   },
   treeCard: {
     marginBottom: spacing.md,
@@ -315,12 +193,7 @@ const styles = StyleSheet.create({
   treeHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     marginBottom: spacing.sm,
-  },
-  treeTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
   },
   treeIcon: {
     fontSize: 20,
@@ -330,15 +203,10 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg,
     fontWeight: '700',
   },
-  treeHint: {
-    color: colors.textMuted,
-    fontSize: fontSize.xs,
-    marginTop: 2,
-  },
   nodesRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'flex-start',
+    justifyContent: 'center',
   },
   // Modal
   modalOverlay: {

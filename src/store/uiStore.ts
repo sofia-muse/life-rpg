@@ -13,7 +13,9 @@ interface UIState {
   showQuestCreateModal: boolean;
   showAppearanceUnlock: boolean;
   appearanceUnlockData: { type: 'shape' | 'sigil'; name: string } | null;
-  characterEvent: 'idle' | 'questComplete' | 'levelUp' | 'tierUp' | 'rest';
+  characterEvent: 'idle' | 'questComplete' | 'levelUp' | 'tierUp' | 'rest' | 'bossPhase' | 'evolution' | 'contractComplete';
+  showEvolutionModal: boolean;
+  evolutionData: { rankName: string; nextTitle?: string } | null;
 
   setLevelUp: (stat: StatName, newLevel: number) => void;
   setSkillUnlock: (skill: Skill) => void;
@@ -26,7 +28,9 @@ interface UIState {
   setQuestCreateModal: (show: boolean) => void;
   setAppearanceUnlock: (type: 'shape' | 'sigil', name: string) => void;
   dismissAppearanceUnlock: () => void;
-  setCharacterEvent: (event: 'idle' | 'questComplete' | 'levelUp' | 'tierUp' | 'rest') => void;
+  setCharacterEvent: (event: UIState['characterEvent']) => void;
+  setEvolution: (rankName: string, nextTitle?: string) => void;
+  dismissEvolution: () => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -42,6 +46,8 @@ export const useUIStore = create<UIState>((set) => ({
   showAppearanceUnlock: false,
   appearanceUnlockData: null,
   characterEvent: 'idle' as const,
+  showEvolutionModal: false,
+  evolutionData: null,
 
   setLevelUp: (stat, newLevel) => set({ showLevelUpModal: true, levelUpData: { stat, newLevel } }),
 
@@ -68,4 +74,9 @@ export const useUIStore = create<UIState>((set) => ({
   dismissAppearanceUnlock: () => set({ showAppearanceUnlock: false, appearanceUnlockData: null }),
 
   setCharacterEvent: (event) => set({ characterEvent: event }),
+
+  setEvolution: (rankName, nextTitle) =>
+    set({ showEvolutionModal: true, evolutionData: { rankName, nextTitle } }),
+
+  dismissEvolution: () => set({ showEvolutionModal: false, evolutionData: null }),
 }));

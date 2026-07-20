@@ -78,6 +78,53 @@ public class QuestCompletionConfiguration : IEntityTypeConfiguration<QuestComple
     }
 }
 
+public class RaidConfiguration : IEntityTypeConfiguration<Raid>
+{
+    public void Configure(EntityTypeBuilder<Raid> b)
+    {
+        b.ToTable("Raids");
+        b.HasKey(r => r.Id);
+        b.Property(r => r.Title).HasMaxLength(120).IsRequired();
+        b.Property(r => r.Description).HasMaxLength(500);
+        b.Property(r => r.SagaTitle).HasMaxLength(120);
+        b.Property(r => r.RewardTitle).HasMaxLength(80);
+        b.Property(r => r.UnitLabel).HasMaxLength(40).IsRequired();
+        b.Property(r => r.InviteCode).HasMaxLength(16).IsRequired();
+        b.Property(r => r.Stat).HasConversion<string>().HasMaxLength(20);
+        b.HasIndex(r => r.InviteCode).IsUnique();
+        b.HasIndex(r => r.LeaderHeroId);
+        b.HasOne(r => r.LeaderHero).WithMany().HasForeignKey(r => r.LeaderHeroId).OnDelete(DeleteBehavior.Restrict);
+        b.HasMany(r => r.Members).WithOne(m => m.Raid).HasForeignKey(m => m.RaidId).OnDelete(DeleteBehavior.Cascade);
+        b.HasMany(r => r.Contributions).WithOne(c => c.Raid).HasForeignKey(c => c.RaidId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+public class RaidMembershipConfiguration : IEntityTypeConfiguration<RaidMembership>
+{
+    public void Configure(EntityTypeBuilder<RaidMembership> b)
+    {
+        b.ToTable("RaidMemberships");
+        b.HasKey(m => m.Id);
+        b.Property(m => m.Role).HasConversion<string>().HasMaxLength(12);
+        b.HasIndex(m => new { m.RaidId, m.HeroId }).IsUnique();
+        b.HasOne(m => m.Hero).WithMany().HasForeignKey(m => m.HeroId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+public class RaidContributionConfiguration : IEntityTypeConfiguration<RaidContribution>
+{
+    public void Configure(EntityTypeBuilder<RaidContribution> b)
+    {
+        b.ToTable("RaidContributions");
+        b.HasKey(c => c.Id);
+        b.Property(c => c.Note).HasMaxLength(200);
+        b.Property(c => c.ClientId).HasMaxLength(64).IsRequired();
+        b.HasIndex(c => new { c.RaidId, c.ClientId }).IsUnique();
+        b.HasIndex(c => new { c.RaidId, c.HeroId, c.ContributionDate });
+        b.HasOne(c => c.Hero).WithMany().HasForeignKey(c => c.HeroId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
 public class SyncRequestLogConfiguration : IEntityTypeConfiguration<SyncRequestLog>
 {
     public void Configure(EntityTypeBuilder<SyncRequestLog> b)

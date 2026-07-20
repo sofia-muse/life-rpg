@@ -31,3 +31,9 @@ public enum Gender
     Male,
     Female,
 }
+
+public enum RaidMemberRole
+{
+    Leader,
+    Member,
+}

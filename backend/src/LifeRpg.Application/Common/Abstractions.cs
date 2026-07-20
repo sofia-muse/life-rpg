@@ -13,6 +13,9 @@ public interface IAppDbContext
     DbSet<GeneratedSkill> GeneratedSkills { get; }
     DbSet<JournalEntry> JournalEntries { get; }
     DbSet<QuestCompletion> QuestCompletions { get; }
+    DbSet<Raid> Raids { get; }
+    DbSet<RaidMembership> RaidMemberships { get; }
+    DbSet<RaidContribution> RaidContributions { get; }
     DbSet<SyncRequestLog> SyncRequestLogs { get; }
     DbSet<RefreshToken> RefreshTokens { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);

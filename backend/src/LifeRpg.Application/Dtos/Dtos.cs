@@ -130,3 +130,64 @@ public record SettingsDto(
     string? WeeklyRewardWeekKey,
     string? WeeklyRewardTitle,
     string? WeeklyRewardBadge);
+
+// ─── Party Raids (cooperative bosses) ───
+public record CreateRaidRequest(
+    string Title,
+    string Description,
+    string? SagaTitle,
+    string? RewardTitle,
+    string UnitLabel,
+    int TargetAmount,
+    StatName Stat,
+    int? MaxMembers,
+    DateOnly? Deadline);
+
+public record JoinRaidRequest(string InviteCode);
+
+public record ContributeRaidRequest(
+    int Amount,
+    string ClientId,
+    string? Note);
+
+public record RaidMemberDto(
+    Guid HeroId,
+    string HeroName,
+    string ClassName,
+    RaidMemberRole Role,
+    int PersonalTotal,
+    DateTimeOffset JoinedAt);
+
+public record RaidContributionDto(
+    Guid Id,
+    Guid HeroId,
+    string HeroName,
+    int Amount,
+    string? Note,
+    DateOnly ContributionDate,
+    DateTimeOffset CreatedAt);
+
+public record RaidDto(
+    Guid Id,
+    string Title,
+    string Description,
+    string SagaTitle,
+    string RewardTitle,
+    string UnitLabel,
+    int TargetAmount,
+    int CurrentAmount,
+    StatName Stat,
+    string InviteCode,
+    int MaxMembers,
+    int MemberCount,
+    DateOnly? Deadline,
+    bool IsCompleted,
+    DateTimeOffset? CompletedAt,
+    DateTimeOffset CreatedAt,
+    Guid LeaderHeroId,
+    string LeaderHeroName,
+    int YourContribution,
+    List<RaidMemberDto> Members,
+    List<RaidContributionDto> RecentContributions);
+
+public record ContributeRaidResult(RaidDto Raid, bool JustCompleted);

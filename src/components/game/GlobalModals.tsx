@@ -6,6 +6,8 @@ import { TierUpModal } from './TierUpModal';
 import { QuestCreateModal } from './QuestCreateModal';
 import { AppearanceUnlockModal } from './AppearanceUnlockModal';
 
+import { EvolutionModal } from './EvolutionModal';
+
 export function GlobalModals() {
   const {
     showLevelUpModal,
@@ -20,6 +22,9 @@ export function GlobalModals() {
     showAppearanceUnlock,
     appearanceUnlockData,
     dismissAppearanceUnlock,
+    showEvolutionModal,
+    evolutionData,
+    dismissEvolution,
   } = useUIStore();
 
   return (
@@ -56,6 +61,15 @@ export function GlobalModals() {
           type={appearanceUnlockData.type}
           name={appearanceUnlockData.name}
           onDismiss={dismissAppearanceUnlock}
+        />
+      )}
+
+      {evolutionData && (
+        <EvolutionModal
+          visible={showEvolutionModal}
+          rankName={evolutionData.rankName}
+          nextTitle={evolutionData.nextTitle}
+          onDismiss={dismissEvolution}
         />
       )}
     </>

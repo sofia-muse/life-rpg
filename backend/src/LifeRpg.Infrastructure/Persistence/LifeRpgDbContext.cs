@@ -19,6 +19,9 @@ public class LifeRpgDbContext : IdentityDbContext<ApplicationUser, IdentityRole<
     public DbSet<GeneratedSkill> GeneratedSkills => Set<GeneratedSkill>();
     public DbSet<JournalEntry> JournalEntries => Set<JournalEntry>();
     public DbSet<QuestCompletion> QuestCompletions => Set<QuestCompletion>();
+    public DbSet<Raid> Raids => Set<Raid>();
+    public DbSet<RaidMembership> RaidMemberships => Set<RaidMembership>();
+    public DbSet<RaidContribution> RaidContributions => Set<RaidContribution>();
     public DbSet<SyncRequestLog> SyncRequestLogs => Set<SyncRequestLog>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
@@ -63,7 +66,11 @@ public class LifeRpgDbContext : IdentityDbContext<ApplicationUser, IdentityRole<
                 {
                     entry.Entity.CreatedAt = now;
                 }
-                entry.Entity.UpdatedAt = now;
+                // Preserve client-provided UpdatedAt for sync LWW; only stamp when unset.
+                if (entry.Entity.UpdatedAt == default)
+                {
+                    entry.Entity.UpdatedAt = now;
+                }
             }
             else if (entry.State == EntityState.Modified)
             {

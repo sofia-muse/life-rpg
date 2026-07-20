@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Switch, TouchableOpacity, Alert, TextInput } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, Href } from 'expo-router';
 import { ScreenWrapper } from '../src/components/layout/ScreenWrapper';
 import { ScreenHeader } from '../src/components/layout/ScreenHeader';
 import { Card } from '../src/components/layout/Card';
@@ -16,10 +16,12 @@ export default function SettingsScreen() {
     hapticEnabled,
     reminderTime,
     aiSkillsEnabled,
+    fantasyNames,
     toggleNotifications,
     toggleHaptic,
     setReminderTime,
     toggleAiSkills,
+    toggleFantasyNames,
   } = useSettingsStore();
   const hero = useHeroStore((s) => s.hero);
 
@@ -156,14 +158,36 @@ export default function SettingsScreen() {
             thumbColor={aiSkillsEnabled ? colors.gold : colors.textMuted}
           />
         </View>
+        <View style={styles.divider} />
+        <View style={styles.settingRow}>
+          <View style={styles.settingCopy}>
+            <Text style={styles.label}>Fantasy Quest Names</Text>
+            <Text style={styles.sublabel}>
+              Show RPG-flavored titles alongside your real quest names.
+            </Text>
+          </View>
+          <Switch
+            value={fantasyNames}
+            onValueChange={toggleFantasyNames}
+            trackColor={{ false: colors.bgInput, true: `${colors.gold}60` }}
+            thumbColor={fantasyNames ? colors.gold : colors.textMuted}
+          />
+        </View>
       </Card>
 
       <Card>
         <Text style={styles.sectionTitle}>Quick Links</Text>
         <View style={styles.quickActionRow}>
-          <Button title="Quest Board" onPress={() => router.push('/quests')} style={styles.quickActionButton} />
+          <Button title="Adventures" onPress={() => router.push('/quests')} style={styles.quickActionButton} />
           <Button
-            title="Hero Chronicle"
+            title="World Map"
+            onPress={() => router.push('/map' as Href)}
+            variant="secondary"
+            style={styles.quickActionButton}
+          />
+          <Button title="Trophy Hall" onPress={() => router.push('/achievements' as Href)} style={styles.quickActionButton} />
+          <Button
+            title="Chronicle"
             onPress={() => router.push('/journal')}
             variant="secondary"
             style={styles.quickActionButton}

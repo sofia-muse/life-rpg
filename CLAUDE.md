@@ -18,7 +18,7 @@ You create a hero, complete real-life quests mapped to 6 RPG stats, earn XP, lev
 ## Core architectural ideas (read these first)
 
 1. **Offline-first.** The Zustand stores (persisted to AsyncStorage) are the source of truth for the UI. The app is fully playable with no backend. `src/api/syncManager.ts` is a persisted queue that flushes mutations to the backend's idempotent `/sync` batch endpoint when online.
-2. **Demo mode.** `EXPO_PUBLIC_DEMO_MODE` (default **true**) makes the app run fully local — no backend, no login. The hosted web demo ships in demo mode. Auth + AI forging are **online-only** (demo mode off + signed in).
+2. **Demo mode.** `EXPO_PUBLIC_DEMO_MODE` (default **true**) makes the app run fully local — no backend, no login. The hosted web demo ships in demo mode. Auth + AI forging + **party raids** are **online-only** (demo mode off + signed in).
 3. **Server-authoritative game logic.** The game engine exists **twice** — TypeScript (`src/engine/`) for instant optimistic UI, and an identical C# port (`backend/.../Domain/GameEngine` + `GameConfig`) that the server uses as the source of truth (anti-cheat). They're kept in lockstep and **proven equal by golden-value tests** on both sides. If you change game math, change it in **both** and update both test suites.
 
 ## Repo layout
@@ -65,6 +65,7 @@ Dependency rule: `Api → Application → Domain`; `Infrastructure → Applicati
 - **Skills:** 24 static (18 single-stat unlock at L3/7/15 + 6 cross-stat) in `config/skills.ts` / `SkillDefinitions.cs`. XP bonuses are parsed from the `effect` string via regex `\+(\d+)%`.
 - **Classes:** 30 (6 dominant stats × 5 tiers); tiers at hero level 1/5/15/30/50.
 - **AI-forged skills:** extra, on-demand, per-hero (cap 8). The LLM returns only flavor + target stat + percent; the **server clamps the percent to 1–10 and builds the canonical effect string** so it's tamper-proof. Stored in `GeneratedSkill` (backend) / `forgedSkillStore` (client). Always active; bonuses fold into quest completion.
+- **Party raids (online-only):** invite-code parties share a huge real-world goal (e.g. 500 push-ups). Members log contributions; the server pools progress. Shared raid-clear + personal contribution achievements. API: `/api/v1/raids`; client: `raidApi` + `raidStore` + Raids tab. Demo mode shows a register/sign-in CTA.
 
 ## Commands
 

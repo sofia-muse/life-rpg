@@ -10,6 +10,9 @@ interface SettingsState {
   hapticEnabled: boolean;
   reminderTime: string;
   aiSkillsEnabled: boolean;
+  fantasyNames: boolean;
+  equippedTitleId: string;
+  weeklyContractsCompleted: number;
   weeklyPath: WeeklyPath | null;
   weeklyPathWeekKey: string | null;
   weeklyPathStartedAt: string | null;
@@ -21,6 +24,9 @@ interface SettingsState {
     hapticEnabled: boolean;
     reminderTime: string;
     aiSkillsEnabled: boolean;
+    fantasyNames?: boolean;
+    equippedTitleId?: string;
+    weeklyContractsCompleted?: number;
     weeklyPath: WeeklyPath | null;
     weeklyPathWeekKey: string | null;
     weeklyPathStartedAt: string | null;
@@ -32,6 +38,9 @@ interface SettingsState {
   toggleHaptic: () => void;
   setReminderTime: (time: string) => void;
   toggleAiSkills: () => void;
+  toggleFantasyNames: () => void;
+  setEquippedTitle: (titleId: string) => void;
+  incrementWeeklyContractsCompleted: () => void;
   chooseWeeklyPath: (path: WeeklyPath) => void;
   claimWeeklyReward: (reward: { title: string; badge: string }) => void;
   clearStaleWeeklyPath: () => void;
@@ -43,6 +52,9 @@ function syncSettings(state: Pick<
   | 'hapticEnabled'
   | 'reminderTime'
   | 'aiSkillsEnabled'
+  | 'fantasyNames'
+  | 'equippedTitleId'
+  | 'weeklyContractsCompleted'
   | 'weeklyPath'
   | 'weeklyPathWeekKey'
   | 'weeklyPathStartedAt'
@@ -56,6 +68,9 @@ function syncSettings(state: Pick<
       hapticEnabled: state.hapticEnabled,
       reminderTime: state.reminderTime,
       aiSkillsEnabled: state.aiSkillsEnabled,
+      fantasyNames: state.fantasyNames,
+      equippedTitleId: state.equippedTitleId,
+      weeklyContractsCompleted: state.weeklyContractsCompleted,
       weeklyPath: state.weeklyPath,
       weeklyPathWeekKey: state.weeklyPathWeekKey,
       weeklyPathStartedAt: state.weeklyPathStartedAt,
@@ -74,6 +89,9 @@ export const useSettingsStore = create<SettingsState>()(
       hapticEnabled: true,
       reminderTime: '09:00',
       aiSkillsEnabled: false,
+      fantasyNames: false,
+      equippedTitleId: 'adventurer',
+      weeklyContractsCompleted: 0,
       weeklyPath: null,
       weeklyPathWeekKey: null,
       weeklyPathStartedAt: null,
@@ -107,6 +125,29 @@ export const useSettingsStore = create<SettingsState>()(
           const next = { ...state, aiSkillsEnabled: !state.aiSkillsEnabled };
           syncSettings(next);
           return { aiSkillsEnabled: next.aiSkillsEnabled };
+        }),
+
+      toggleFantasyNames: () =>
+        set((state) => {
+          const next = { ...state, fantasyNames: !state.fantasyNames };
+          syncSettings(next);
+          return { fantasyNames: next.fantasyNames };
+        }),
+
+      setEquippedTitle: (titleId) =>
+        set((state) => {
+          syncSettings({ ...state, equippedTitleId: titleId });
+          return { equippedTitleId: titleId };
+        }),
+
+      incrementWeeklyContractsCompleted: () =>
+        set((state) => {
+          const next = {
+            ...state,
+            weeklyContractsCompleted: state.weeklyContractsCompleted + 1,
+          };
+          syncSettings(next);
+          return { weeklyContractsCompleted: next.weeklyContractsCompleted };
         }),
 
       chooseWeeklyPath: (path) =>

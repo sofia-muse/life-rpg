@@ -28,7 +28,8 @@ describe('syncManager', () => {
       default: { addEventListener: jest.fn() },
     }));
 
-    const { syncManager } = await import('../syncManager');
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { syncManager } = require('../syncManager') as typeof import('../syncManager');
 
     await syncManager.init();
     (syncManager as any).online = false;

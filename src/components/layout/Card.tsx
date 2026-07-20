@@ -3,28 +3,32 @@ import { View, StyleSheet, ViewStyle, StyleProp } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, radius, spacing } from '../../config/theme';
 
+type CardTone = 'default' | 'accent';
+
 interface Props {
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
   padded?: boolean;
-  tone?: 'default' | 'accent';
+  /** Visual emphasis — accent uses stronger gold border treatment. */
+  tone?: CardTone;
 }
 
 export function Card({ children, style, padded = true, tone = 'default' }: Props) {
-  const gradientColors =
-    tone === 'accent' ? [colors.bgPanel, colors.bgCardRaised, colors.bgCard] : [colors.bgCardRaised, colors.bgCard];
-
   return (
-    <View style={[styles.card, style]}>
+    <View style={[styles.card, tone === 'accent' && styles.cardAccent, style]}>
       <LinearGradient
-        colors={gradientColors}
+        colors={
+          tone === 'accent'
+            ? [colors.bgPanel, colors.bgCard]
+            : [colors.bgCardRaised, colors.bgCard]
+        }
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFillObject}
       />
-      <View pointerEvents="none" style={[styles.innerBorder, tone === 'accent' && styles.innerBorderAccent]} />
-      <View pointerEvents="none" style={[styles.topAccent, tone === 'accent' && styles.topAccentStrong]} />
-      <View pointerEvents="none" style={[styles.glowOrb, tone === 'accent' && styles.glowOrbAccent]} />
+      <View pointerEvents="none" style={styles.innerBorder} />
+      <View pointerEvents="none" style={styles.topAccent} />
+      <View pointerEvents="none" style={styles.glowOrb} />
       <View style={[styles.content, padded && styles.padded]}>{children}</View>
     </View>
   );
@@ -43,6 +47,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     elevation: 3,
   },
+  cardAccent: {
+    borderColor: colors.borderGlow,
+    shadowOpacity: 0.14,
+  },
   content: {
     position: 'relative',
     zIndex: 1,
@@ -60,9 +68,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.goldSoft,
   },
-  innerBorderAccent: {
-    borderColor: colors.borderGlow,
-  },
   topAccent: {
     position: 'absolute',
     top: 0,
@@ -70,9 +75,6 @@ const styles = StyleSheet.create({
     right: spacing.lg,
     height: 2,
     backgroundColor: colors.goldGlow,
-  },
-  topAccentStrong: {
-    backgroundColor: colors.goldLight,
   },
   glowOrb: {
     position: 'absolute',
@@ -82,8 +84,5 @@ const styles = StyleSheet.create({
     height: 88,
     borderRadius: 44,
     backgroundColor: colors.goldSoft,
-  },
-  glowOrbAccent: {
-    backgroundColor: colors.amethystGlow,
   },
 });

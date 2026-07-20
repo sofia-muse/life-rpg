@@ -38,7 +38,13 @@ export function NiceAvatarCharacter({
     if (event === 'questComplete' && sparkleRef.current) {
       sparkleRef.current.reset();
       sparkleRef.current.play();
-    } else if ((event === 'levelUp' || event === 'tierUp') && levelUpRef.current) {
+    } else if (
+      (event === 'levelUp' ||
+        event === 'tierUp' ||
+        event === 'evolution' ||
+        event === 'contractComplete') &&
+      levelUpRef.current
+    ) {
       levelUpRef.current.reset();
       levelUpRef.current.play();
     }

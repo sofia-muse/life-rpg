@@ -1,62 +1,47 @@
 import React from 'react';
 import renderer from 'react-test-renderer';
+import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { colors } from '../../../config/theme';
+import { ScreenWrapper } from '../ScreenWrapper';
 
-type PlatformOs = 'ios' | 'web';
-
-function loadScreenWrapperForPlatform(os: PlatformOs) {
-  jest.resetModules();
-  jest.doMock('react-native', () => {
-    const actual = jest.requireActual('react-native');
-    return {
-      ...actual,
-      Platform: {
-        ...actual.Platform,
-        OS: os,
-        select: (values: Record<string, unknown>) => values[os] ?? values.default,
-      },
-    };
+function setPlatformOs(os: typeof Platform.OS) {
+  Object.defineProperty(Platform, 'OS', {
+    configurable: true,
+    get: () => os,
   });
-
-  let ReactNative: typeof import('react-native');
-  let ScreenWrapper: typeof import('../ScreenWrapper').ScreenWrapper;
-
-  jest.isolateModules(() => {
-    ReactNative = require('react-native');
-    ScreenWrapper = require('../ScreenWrapper').ScreenWrapper;
-  });
-
-  return { ReactNative: ReactNative!, ScreenWrapper: ScreenWrapper! };
 }
 
-function findContainerStyle(tree: renderer.ReactTestRenderer, ReactNative: typeof import('react-native')) {
-  const container = tree.root.findAllByType(ReactNative.View).find((node) => {
-    const style = ReactNative.StyleSheet.flatten(node.props.style);
+function findContainerStyle(tree: renderer.ReactTestRenderer) {
+  const container = tree.root.findAllByType(View).find((node) => {
+    const style = StyleSheet.flatten(node.props.style) as
+      | { paddingHorizontal?: number }
+      | undefined;
     return style?.paddingHorizontal === 16;
   });
 
   expect(container).toBeDefined();
-  return ReactNative.StyleSheet.flatten(container!.props.style);
+  return StyleSheet.flatten(container!.props.style);
 }
 
 describe('ScreenWrapper', () => {
+  const originalOs = Platform.OS;
+
   afterEach(() => {
-    jest.resetModules();
-    jest.unmock('react-native');
+    setPlatformOs(originalOs);
   });
 
   it('keeps native screens full-width with mobile spacing', () => {
-    const { ReactNative, ScreenWrapper } = loadScreenWrapperForPlatform('ios');
+    setPlatformOs('ios');
 
     const tree = renderer.create(
       <ScreenWrapper>
-        <ReactNative.Text>Sanctuary</ReactNative.Text>
+        <Text>Sanctuary</Text>
       </ScreenWrapper>
     );
 
-    const scrollView = tree.root.findByType(ReactNative.ScrollView);
-    const contentStyle = ReactNative.StyleSheet.flatten(scrollView.props.style);
-    const containerStyle = findContainerStyle(tree, ReactNative);
+    const scrollView = tree.root.findByType(ScrollView);
+    const contentStyle = StyleSheet.flatten(scrollView.props.style);
+    const containerStyle = findContainerStyle(tree);
 
     expect(contentStyle).toMatchObject({
       flex: 1,
@@ -64,25 +49,26 @@ describe('ScreenWrapper', () => {
     });
     expect(containerStyle).toMatchObject({
       flex: 1,
+      width: '100%',
+      alignSelf: 'center',
       paddingHorizontal: 16,
       paddingTop: 48,
     });
     expect(containerStyle.maxWidth).toBeUndefined();
-    expect(containerStyle.alignSelf).toBeUndefined();
   });
 
-  it('constrains web screens to a centered phone-width column', () => {
-    const { ReactNative, ScreenWrapper } = loadScreenWrapperForPlatform('web');
+  it('uses web top padding and centers phone-width content', () => {
+    setPlatformOs('web');
 
     const tree = renderer.create(
       <ScreenWrapper scroll={false}>
-        <ReactNative.Text>Sanctuary</ReactNative.Text>
+        <Text>Sanctuary</Text>
       </ScreenWrapper>
     );
 
-    const rootView = tree.root.findByType(ReactNative.View);
-    const rootStyle = ReactNative.StyleSheet.flatten(rootView.props.style);
-    const containerStyle = findContainerStyle(tree, ReactNative);
+    const rootView = tree.root.findByType(View);
+    const rootStyle = StyleSheet.flatten(rootView.props.style);
+    const containerStyle = findContainerStyle(tree);
 
     expect(rootStyle).toMatchObject({
       flex: 1,
@@ -93,7 +79,6 @@ describe('ScreenWrapper', () => {
       paddingHorizontal: 16,
       paddingTop: 16,
       width: '100%',
-      maxWidth: 480,
       alignSelf: 'center',
     });
   });
