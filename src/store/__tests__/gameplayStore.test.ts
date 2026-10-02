@@ -259,15 +259,21 @@ describe('gameplayStore local quest flow', () => {
     const denied = await useGameplayStore.getState().completeQuest('budget-c');
     expect(denied?.bonusBudgetSpent).toBe(true);
 
-    presentQuestCompletionFeedback(
-      useQuestStore.getState().getQuestById('budget-c'),
-      denied!,
-    );
-    expect(useUIStore.getState().xpPopupData).toEqual({
-      stat: 'strength',
-      amount: 0,
-      message: "Day's bonus XP is spent",
-    });
+    jest.useFakeTimers();
+    try {
+      presentQuestCompletionFeedback(
+        useQuestStore.getState().getQuestById('budget-c'),
+        denied!,
+      );
+      expect(useUIStore.getState().xpPopupData).toEqual({
+        stat: 'strength',
+        amount: 0,
+        message: "Day's bonus XP is spent",
+      });
+    } finally {
+      jest.clearAllTimers();
+      jest.useRealTimers();
+    }
   });
 
   it('applies the weekly path bonus to aligned local quests', async () => {
