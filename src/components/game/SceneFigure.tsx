@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { fontSize } from '../../config/theme';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useUIStore } from '../../store/uiStore';
@@ -91,21 +91,6 @@ export function SceneFigure({
   onPress,
   bubbleAnchor = 'end',
 }: FigureProps) {
-  const sway = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    const animation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(sway, { toValue: 1, duration: 1500 + name.length * 80, useNativeDriver: true }),
-        Animated.timing(sway, { toValue: 0, duration: 1500 + name.length * 80, useNativeDriver: true }),
-      ]),
-    );
-    animation.start();
-    return () => animation.stop();
-  }, [name.length, sway]);
-
-  const translateY = sway.interpolate({ inputRange: [0, 1], outputRange: [0, -5] });
-
   return (
     <TouchableOpacity
       style={styles.patron}
@@ -119,7 +104,7 @@ export function SceneFigure({
           <Text style={styles.bubbleText}>{line}</Text>
         </View>
       ) : null}
-      <Animated.View style={{ transform: [{ translateY }] }}>
+      <View>
         <View style={[styles.cloak, compact && styles.cloakCompact, { backgroundColor: cloak }]}>
           <View style={[styles.head, compact && styles.headCompact]} />
           <Text style={styles.patronIcon}>{icon}</Text>
@@ -127,7 +112,7 @@ export function SceneFigure({
         <Text style={styles.patronName} numberOfLines={1}>
           {name}
         </Text>
-      </Animated.View>
+      </View>
     </TouchableOpacity>
   );
 }
