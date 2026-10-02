@@ -113,7 +113,7 @@ export interface StreakAdvanceInput {
   lastStreakFreezeDate?: string;
   /** No history yet. A quest completion starts at 1. A hero with no date keeps the current count. */
   missingDateStartsAtOne?: boolean;
-  /** A broken quest done today starts at 1. The hero's return day can stay at 0. */
+  /** A broken chain done today starts at 1, for a quest and for the hero's return. */
   brokenDayCounts?: boolean;
   /** The hero already spent the freeze on this gap, so the quest is covered too. */
   freezeAlreadyUsed?: boolean;

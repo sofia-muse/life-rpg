@@ -49,6 +49,7 @@ export interface ApiHero {
     recentRestDates?: string[];
     bonusPayoutDate?: string | null;
     bonusPayoutsUsed?: number;
+    openBossPayoutIds?: string[] | null;
   };
 }
 

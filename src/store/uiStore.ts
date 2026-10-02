@@ -10,7 +10,7 @@ interface UIState {
   showTierUpModal: boolean;
   tierUpData: { newTier: ClassTier; newClass: string } | null;
   showXPPopup: boolean;
-  xpPopupData: { stat: StatName; amount: number } | null;
+  xpPopupData: { stat: StatName; amount: number; message?: string } | null;
   showQuestCreateModal: boolean;
   showAppearanceUnlock: boolean;
   appearanceUnlockData: { type: 'shape' | 'sigil'; name: string } | null;
@@ -25,7 +25,7 @@ interface UIState {
   setLevelUp: (stat: StatName, newLevel: number) => void;
   setSkillUnlock: (skill: Skill) => void;
   setTierUp: (newTier: ClassTier, newClass: string) => void;
-  showXP: (stat: StatName, amount: number) => void;
+  showXP: (stat: StatName, amount: number, message?: string) => void;
   dismissLevelUp: () => void;
   dismissSkillUnlock: () => void;
   dismissTierUp: () => void;
@@ -69,7 +69,8 @@ export const useUIStore = create<UIState>((set) => ({
   setTierUp: (newTier, newClass) =>
     set({ showTierUpModal: true, tierUpData: { newTier, newClass } }),
 
-  showXP: (stat, amount) => set({ showXPPopup: true, xpPopupData: { stat, amount } }),
+  showXP: (stat, amount, message) =>
+    set({ showXPPopup: true, xpPopupData: { stat, amount, message } }),
 
   dismissLevelUp: () => set({ showLevelUpModal: false, levelUpData: null }),
 

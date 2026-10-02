@@ -49,6 +49,7 @@ export function mapApiHero(hero: ApiHero): Hero {
     recentRestDates: hero.settings.recentRestDates ?? [],
     bonusPayoutDate: hero.settings.bonusPayoutDate ?? undefined,
     bonusPayoutsUsed: hero.settings.bonusPayoutsUsed ?? 0,
+    openBossPayoutIds: hero.settings.openBossPayoutIds ?? [],
   };
 }
 

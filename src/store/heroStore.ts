@@ -86,6 +86,15 @@ function isAuthoritative(): boolean {
   return !env.demoMode && useAuthStore.getState().status === 'authenticated';
 }
 
+function mergeCompletionLog(previous: Hero | null, next: Hero | null): Hero | null {
+  if (!next) return null;
+  if (next.completionLog) return next;
+  if (previous?.id === next.id && previous.completionLog) {
+    return { ...next, completionLog: previous.completionLog };
+  }
+  return next;
+}
+
 function getDailyRewardForHero(hero: Hero): { xp: number; stat: StatName; bonusType: string } | null {
   const todayStr = today();
   if (hero.lastRewardDate === todayStr) return null;
@@ -167,10 +176,10 @@ export const useHeroStore = create<HeroState>()(
       _hasHydrated: false,
       setHasHydrated: (v: boolean) => set({ _hasHydrated: v }),
       setHero: (hero, options) =>
-        set({
-          hero,
+        set((state) => ({
+          hero: mergeCompletionLog(state.hero, hero),
           isOnboarded: options?.isOnboarded ?? !!hero,
-        }),
+        })),
       clearHero: () => set({ hero: null, isOnboarded: false }),
 
       createHero: (name, avatarSeed, focusStats, charAppearance) => {
@@ -274,6 +283,7 @@ export const useHeroStore = create<HeroState>()(
           today: todayStr,
           unlockedSkillIds,
           lastStreakFreezeDate: hero.lastStreakFreezeDate,
+          brokenDayCounts: true,
         });
         const newStreak = advance.streak;
         const usedStreakFreeze = advance.usedFreeze;

@@ -73,6 +73,39 @@ public class StreakCalculatorTests
     }
 
     [Fact]
+    public void Boss_saga_spends_one_payout_for_every_step()
+    {
+        var settings = new LifeRpg.Domain.ValueObjects.HeroSettings();
+        var today = new DateOnly(2026, 6, 4);
+        var boss = Guid.NewGuid();
+        BonusPayouts.TryTake(settings, today, boss, isBoss: true).Should().BeTrue();
+        BonusPayouts.TryTake(settings, today, boss, isBoss: true).Should().BeTrue();
+        settings.BonusPayoutsUsed.Should().Be(1);
+        settings.OpenBossPayoutIds.Should().ContainSingle().Which.Should().Be(boss.ToString());
+
+        BonusPayouts.TryTake(settings, today, Guid.NewGuid(), isBoss: false).Should().BeTrue();
+        BonusPayouts.TryTake(settings, today, Guid.NewGuid(), isBoss: false).Should().BeFalse();
+        settings.BonusPayoutsUsed.Should().Be(2);
+    }
+
+    [Fact]
+    public void Advance_hero_return_day_counts_as_one()
+    {
+        var today = new DateOnly(2026, 6, 4);
+        var broken = StreakCalculator.Advance(6, today.AddDays(-3), today, null, 0, 0, brokenDayCounts: true);
+        broken.Streak.Should().Be(1);
+        broken.UsedFreeze.Should().BeFalse();
+
+        var frozen = StreakCalculator.Advance(6, today.AddDays(-3), today, null, 1, 0, brokenDayCounts: true);
+        frozen.Streak.Should().Be(6);
+        frozen.UsedFreeze.Should().BeTrue();
+
+        var retained = StreakCalculator.Advance(1, today.AddDays(-3), today, today, 1, 0.5, brokenDayCounts: true);
+        retained.Streak.Should().Be(1);
+        retained.UsedFreeze.Should().BeFalse();
+    }
+
+    [Fact]
     public void NextMilestone_after_last_is_null()
     {
         StreakCalculator.GetNextMilestone(400).Should().BeNull();

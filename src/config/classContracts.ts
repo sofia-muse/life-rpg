@@ -1,4 +1,5 @@
-import { Hero, Quest, StatName, WeeklyPath } from '../types';
+import { calendarDateInZone, calendarWeekKey, deviceTimeZone } from '../engine/calendar';
+import { Hero, Quest, QuestCompletionLogEntry, StatName, WeeklyPath } from '../types';
 import {
   QuestTemplate,
   getBossTemplates,
@@ -123,21 +124,51 @@ function countContractMatches(quests: Quest[], titles: Set<string>, completedOnl
   }).length;
 }
 
-function countPathMatches(
+function countActivePathMatches(quests: Quest[], stats: StatName[]) {
+  const statSet = new Set(stats);
+  return quests.filter((quest) => statSet.has(quest.stat) && quest.isActive && !quest.isCompleted).length;
+}
+
+function weekKeyForCalendarDate(date: string): string | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+  return calendarWeekKey('UTC', new Date(`${date}T12:00:00.000Z`));
+}
+
+function calendarDateOfCompletion(completedAt: string | undefined, timeZone?: string): string | null {
+  if (!completedAt) return null;
+  const instant = new Date(completedAt);
+  if (Number.isNaN(instant.getTime())) return null;
+  return calendarDateInZone(instant, timeZone || deviceTimeZone());
+}
+
+/**
+ * Completions this week, including dailies reopened by the morning reset.
+ * The log is the record. A quest that is still completed and not yet logged counts too.
+ */
+function countWeeklyCompletions(
   quests: Quest[],
   stats: StatName[],
-  completedOnly: boolean,
-  weeklyPathWeekKey?: string | null,
+  weeklyPathWeekKey: string | null | undefined,
+  completionLog: QuestCompletionLogEntry[] | undefined,
+  timeZone?: string,
 ) {
   const statSet = new Set(stats);
-  return quests.filter((quest) => {
-    if (!statSet.has(quest.stat)) return false;
-    if (completedOnly) {
-      if (!quest.isCompleted) return false;
-      return weeklyPathWeekKey ? getWeekKeyForIsoDate(quest.completedAt) === weeklyPathWeekKey : true;
-    }
-    return quest.isActive && !quest.isCompleted;
-  }).length;
+  const keys = new Set<string>();
+
+  for (const entry of completionLog ?? []) {
+    if (!statSet.has(entry.stat)) continue;
+    if (weeklyPathWeekKey && weekKeyForCalendarDate(entry.date) !== weeklyPathWeekKey) continue;
+    keys.add(`${entry.questId}|${entry.date}`);
+  }
+
+  for (const quest of quests) {
+    if (!statSet.has(quest.stat) || !quest.isCompleted) continue;
+    if (weeklyPathWeekKey && getWeekKeyForIsoDate(quest.completedAt) !== weeklyPathWeekKey) continue;
+    const date = calendarDateOfCompletion(quest.completedAt, timeZone);
+    keys.add(date ? `${quest.id}|${date}` : quest.id);
+  }
+
+  return keys.size;
 }
 
 function buildRecommendedForStats(
@@ -201,8 +232,14 @@ export function getWeeklyPathContract(
     vow: definition.vow,
     summary: definition.summary,
     requiredCount: definition.requiredCount + Math.max(0, weeklyCapacityBonus),
-    activeMatches: countPathMatches(quests, definition.stats, false),
-    completedMatches: countPathMatches(quests, definition.stats, true, settings.weeklyPathWeekKey),
+    activeMatches: countActivePathMatches(quests, definition.stats),
+    completedMatches: countWeeklyCompletions(
+      quests,
+      definition.stats,
+      settings.weeklyPathWeekKey,
+      hero.completionLog,
+      hero.timeZone,
+    ),
     recommended,
     stats: [...definition.stats],
     reward: {

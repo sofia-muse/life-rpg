@@ -15,6 +15,7 @@ export interface CompleteQuestResult {
   tierUp: { newTier: number; newClass: string } | null;
   newSkills: { id: string; name: string; icon: string; effect: string }[];
   hero: ApiHero;
+  bonusBudgetSpent: boolean;
 }
 
 export interface AdvanceBossQuestResult {

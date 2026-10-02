@@ -1,5 +1,6 @@
 import { calendarToday, calendarWeekKey, daysBetween } from '../calendar';
 import { resolveRestDay } from '../restDay';
+import { appendCompletionLog } from '../completionLog';
 import { advanceTrackedStreak } from '../streakEngine';
 import { bossStepXpShare, takeSideBossPayout } from '../xpEngine';
 
@@ -72,6 +73,51 @@ describe('rest day', () => {
   });
 });
 
+describe('hero return day', () => {
+  it('counts the return as streak 1, keeps a freeze, and floors retention at 1', () => {
+    const broken = advanceTrackedStreak({
+      currentStreak: 6,
+      lastDate: '2026-06-01',
+      today: '2026-06-04',
+      unlockedSkillIds: [],
+      brokenDayCounts: true,
+    });
+    expect(broken.streak).toBe(1);
+    expect(broken.usedFreeze).toBe(false);
+
+    const frozen = advanceTrackedStreak({
+      currentStreak: 6,
+      lastDate: '2026-06-01',
+      today: '2026-06-04',
+      unlockedSkillIds: ['wil-2'],
+      brokenDayCounts: true,
+    });
+    expect(frozen.streak).toBe(6);
+    expect(frozen.usedFreeze).toBe(true);
+
+    const retained = advanceTrackedStreak({
+      currentStreak: 1,
+      lastDate: '2026-06-01',
+      today: '2026-06-04',
+      unlockedSkillIds: ['vit-2'],
+      lastStreakFreezeDate: '2026-06-04',
+      brokenDayCounts: true,
+    });
+    expect(retained.streak).toBe(1);
+    expect(retained.usedFreeze).toBe(false);
+  });
+});
+
+describe('completion log', () => {
+  it('keeps one row per quest per day and drops anything older than three weeks', () => {
+    const once = appendCompletionLog(undefined, { questId: 'daily-1', date: '2026-06-04', stat: 'strength' });
+    const twice = appendCompletionLog(once, { questId: 'daily-1', date: '2026-06-04', stat: 'strength' });
+    const kept = appendCompletionLog(twice, { questId: 'daily-1', date: '2026-06-26', stat: 'strength' });
+    expect(twice).toHaveLength(1);
+    expect(kept.map((entry) => entry.date)).toEqual(['2026-06-26']);
+  });
+});
+
 describe('quest streak', () => {
   it('continues on the next day and starts over after a gap', () => {
     const continued = advanceTrackedStreak({
@@ -113,15 +159,29 @@ describe('quest streak', () => {
 
 describe('side and boss payout budget', () => {
   it('grants two payouts per calendar day', () => {
-    const first = takeSideBossPayout(undefined, 0, '2026-06-04');
-    const second = takeSideBossPayout(first.payoutDate, first.payoutsUsed, '2026-06-04');
-    const third = takeSideBossPayout(second.payoutDate, second.payoutsUsed, '2026-06-04');
-    const nextDay = takeSideBossPayout(third.payoutDate, third.payoutsUsed, '2026-06-05');
+    const first = takeSideBossPayout(undefined, 0, '2026-06-04', 'side-a', false);
+    const second = takeSideBossPayout(first.payoutDate, first.payoutsUsed, '2026-06-04', 'side-b', false, first.openBossIds);
+    const third = takeSideBossPayout(second.payoutDate, second.payoutsUsed, '2026-06-04', 'side-c', false, second.openBossIds);
+    const nextDay = takeSideBossPayout(third.payoutDate, third.payoutsUsed, '2026-06-05', 'side-d', false, third.openBossIds);
     expect(first.granted).toBe(true);
     expect(second.granted).toBe(true);
     expect(third.granted).toBe(false);
     expect(nextDay.granted).toBe(true);
     expect(nextDay.payoutsUsed).toBe(1);
+  });
+
+  it('spends one payout for a whole boss arc', () => {
+    const first = takeSideBossPayout(undefined, 0, '2026-06-04', 'boss-1', true);
+    const second = takeSideBossPayout(first.payoutDate, first.payoutsUsed, '2026-06-04', 'boss-1', true, first.openBossIds);
+    const side = takeSideBossPayout(second.payoutDate, second.payoutsUsed, '2026-06-04', 'side-a', false, second.openBossIds);
+    const extra = takeSideBossPayout(side.payoutDate, side.payoutsUsed, '2026-06-04', 'side-b', false, side.openBossIds);
+    expect(first.granted).toBe(true);
+    expect(first.payoutsUsed).toBe(1);
+    expect(second.granted).toBe(true);
+    expect(second.payoutsUsed).toBe(1);
+    expect(side.granted).toBe(true);
+    expect(side.payoutsUsed).toBe(2);
+    expect(extra.granted).toBe(false);
   });
 });
 

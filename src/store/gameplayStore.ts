@@ -8,6 +8,7 @@ import { env } from '../config/env';
 import { generateQuestNarrative, buildTomorrowVow } from '../engine/journalEngine';
 import { getQuestSkillBonus, getBossStepXpBonus, getWeeklyCapacityBonus } from '../engine/skillEngine';
 import { getHeroStreakMultiplier, getStreakMultiplier } from '../engine/streakEngine';
+import { appendCompletionLog } from '../engine/completionLog';
 import { bossStepXpShare, calculateXPReward, takeSideBossPayout } from '../engine/xpEngine';
 import { calendarToday, deviceTimeZone } from '../engine/calendar';
 import { getWeeklyPathQuestBonus } from '../config/weeklyPaths';
@@ -30,6 +31,8 @@ export interface QuestCompletionFlowResult {
   newSkills: Skill[];
   appearanceUnlock: { shapes: string[]; sigils: string[] } | null;
   stepAdvancedOnly: boolean;
+  /** The side/boss budget refused this payout. The quest is still done. */
+  bonusBudgetSpent: boolean;
 }
 
 interface GameplayState {
@@ -91,6 +94,23 @@ function getSkillsById(skillIds: string[]): Skill[] {
   return skillIds.map((skillId) => getSkillById(skillId)).filter((skill): skill is Skill => !!skill);
 }
 
+function rememberCompletion(quest: Quest): void {
+  if (!quest.isCompleted) return;
+  const hero = useHeroStore.getState().hero;
+  if (!hero) return;
+  const date = calendarToday(hero.timeZone || deviceTimeZone());
+  useHeroStore.setState({
+    hero: {
+      ...hero,
+      completionLog: appendCompletionLog(hero.completionLog, {
+        questId: quest.id,
+        date,
+        stat: quest.stat,
+      }),
+    },
+  });
+}
+
 function mapLevelResult(
   stat: StatName,
   oldLevel: number,
@@ -120,6 +140,7 @@ async function completeAuthoritativeQuest(quest: Quest): Promise<QuestCompletion
         oldLevel: number;
         newLevel: number;
         tierUp: { newTier: number; newClass: string } | null;
+        bonusBudgetSpent: boolean;
       }
     | null = null;
 
@@ -137,6 +158,7 @@ async function completeAuthoritativeQuest(quest: Quest): Promise<QuestCompletion
         newSkills: [],
         appearanceUnlock: null,
         stepAdvancedOnly: true,
+        bonusBudgetSpent: false,
       };
     }
 
@@ -146,6 +168,7 @@ async function completeAuthoritativeQuest(quest: Quest): Promise<QuestCompletion
       oldLevel: stepResult.completion.oldLevel,
       newLevel: stepResult.completion.newLevel,
       tierUp: stepResult.completion.tierUp,
+      bonusBudgetSpent: stepResult.completion.bonusBudgetSpent,
     };
 
     if (!latestQuest.isCompleted) {
@@ -170,6 +193,7 @@ async function completeAuthoritativeQuest(quest: Quest): Promise<QuestCompletion
         newSkills: steppedSkills,
         appearanceUnlock: useHeroStore.getState().checkAppearanceUnlocks(),
         stepAdvancedOnly: true,
+        bonusBudgetSpent: completion.bonusBudgetSpent,
       };
     }
   } else {
@@ -180,6 +204,7 @@ async function completeAuthoritativeQuest(quest: Quest): Promise<QuestCompletion
       oldLevel: result.oldLevel,
       newLevel: result.newLevel,
       tierUp: result.tierUp,
+      bonusBudgetSpent: result.bonusBudgetSpent,
     };
   }
 
@@ -202,6 +227,7 @@ async function completeAuthoritativeQuest(quest: Quest): Promise<QuestCompletion
     : null;
   const xpAwarded = completion?.xpAwarded ?? 0;
   applyJournalEntry(refreshedQuest, xpAwarded, levelResult, newSkills);
+  rememberCompletion(refreshedQuest);
 
   return {
     quest: refreshedQuest,
@@ -211,6 +237,7 @@ async function completeAuthoritativeQuest(quest: Quest): Promise<QuestCompletion
     newSkills,
     appearanceUnlock,
     stepAdvancedOnly: false,
+    bonusBudgetSpent: completion?.bonusBudgetSpent ?? false,
   };
 }
 
@@ -287,12 +314,16 @@ function completeLocalQuest(questId: string): QuestCompletionFlowResult | null {
     updatedQuest.type === 'boss'
       ? bossStepXpShare(xpReward.totalXP, stepCount, stepIndex)
       : xpReward.totalXP;
+  let bonusBudgetSpent = false;
   if (updatedQuest.type !== 'daily') {
     const payingHero = useHeroStore.getState().hero;
     const payout = takeSideBossPayout(
       payingHero?.bonusPayoutDate,
       payingHero?.bonusPayoutsUsed ?? 0,
       calendarToday(payingHero?.timeZone || deviceTimeZone()),
+      updatedQuest.id,
+      updatedQuest.type === 'boss',
+      payingHero?.openBossPayoutIds,
     );
     if (payingHero) {
       useHeroStore.setState({
@@ -300,10 +331,14 @@ function completeLocalQuest(questId: string): QuestCompletionFlowResult | null {
           ...payingHero,
           bonusPayoutDate: payout.payoutDate,
           bonusPayoutsUsed: payout.payoutsUsed,
+          openBossPayoutIds: payout.openBossIds,
         },
       });
     }
-    if (!payout.granted) awardedXp = 0;
+    if (!payout.granted) {
+      awardedXp = 0;
+      bonusBudgetSpent = true;
+    }
   }
   const progression = heroState.applyQuestReward(updatedQuest.stat, awardedXp, unlockedSkillIds);
   if (!progression) {
@@ -319,6 +354,7 @@ function completeLocalQuest(questId: string): QuestCompletionFlowResult | null {
   const newSkills = skillState.checkAndUnlockSkills(progression.hero.statXP);
   const appearanceUnlock = heroState.checkAppearanceUnlocks();
   applyJournalEntry(updatedQuest, awardedXp, progression.levelResult, newSkills);
+  rememberCompletion(updatedQuest);
 
   const fullyCompleted = updatedQuest.isCompleted;
   return {
@@ -329,6 +365,7 @@ function completeLocalQuest(questId: string): QuestCompletionFlowResult | null {
     newSkills,
     appearanceUnlock,
     stepAdvancedOnly: updatedQuest.type === 'boss' && !fullyCompleted,
+    bonusBudgetSpent,
   };
 }
 

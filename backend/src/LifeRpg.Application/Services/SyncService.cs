@@ -189,29 +189,11 @@ public class SyncService
             return new SyncConflict(op.OpId, "Stale hero payload");
         }
 
-        // Quest completion remains server-authoritative, but client-managed daily/recovery systems
-        // still sync their derived hero fields back through this storage path.
+        // XP, the hero streak, and the freeze clock are computed on the server.
+        // A later upsert must not replace them. Appearance, settings, and quest rows still sync.
         if (op.Payload.TryGetProperty("name", out var name) && name.ValueKind == JsonValueKind.String)
         {
             hero.Name = name.GetString()!.Trim();
-        }
-        if (op.Payload.TryGetProperty("statXP", out var statXp)
-            || op.Payload.TryGetProperty("statXp", out statXp))
-        {
-            var parsed = statXp.Deserialize<Domain.ValueObjects.StatBlock>(Json);
-            if (parsed is not null)
-            {
-                hero.StatXp = parsed;
-                HeroService.RecomputeProgression(hero);
-            }
-        }
-        if (op.Payload.TryGetProperty("currentStreak", out var currentStreak) && currentStreak.TryGetInt32(out var parsedCurrentStreak))
-        {
-            hero.CurrentStreak = parsedCurrentStreak;
-        }
-        if (op.Payload.TryGetProperty("longestStreak", out var longestStreak) && longestStreak.TryGetInt32(out var parsedLongestStreak))
-        {
-            hero.LongestStreak = parsedLongestStreak;
         }
         if (op.Payload.TryGetProperty("restDaysUsed", out var restDaysUsed) && restDaysUsed.TryGetInt32(out var parsedRestDaysUsed))
         {
@@ -221,23 +203,11 @@ public class SyncService
         {
             hero.TotalLoginDays = parsedTotalLoginDays;
         }
-        if (op.Payload.TryGetProperty("lastActiveDate", out var lastActiveDate)
-            && lastActiveDate.ValueKind == JsonValueKind.String
-            && DateOnly.TryParse(lastActiveDate.GetString(), out var parsedLastActiveDate))
-        {
-            hero.LastActiveDate = parsedLastActiveDate;
-        }
         if (op.Payload.TryGetProperty("lastRewardDate", out var lastRewardDate)
             && lastRewardDate.ValueKind == JsonValueKind.String
             && DateOnly.TryParse(lastRewardDate.GetString(), out var parsedLastRewardDate))
         {
             hero.LastRewardDate = parsedLastRewardDate;
-        }
-        if (op.Payload.TryGetProperty("lastStreakFreezeDate", out var lastStreakFreezeDate)
-            && lastStreakFreezeDate.ValueKind == JsonValueKind.String
-            && DateOnly.TryParse(lastStreakFreezeDate.GetString(), out var parsedLastStreakFreezeDate))
-        {
-            hero.LastStreakFreezeDate = parsedLastStreakFreezeDate;
         }
         if (op.Payload.TryGetProperty("appearance", out var appearance))
         {
@@ -277,6 +247,11 @@ public class SyncService
                 {
                     parsed.BonusPayoutDate = previous.BonusPayoutDate;
                     parsed.BonusPayoutsUsed = previous.BonusPayoutsUsed;
+                    parsed.OpenBossPayoutIds = previous.OpenBossPayoutIds;
+                }
+                else if (!settings.TryGetProperty("openBossPayoutIds", out _) && !settings.TryGetProperty("OpenBossPayoutIds", out _))
+                {
+                    parsed.OpenBossPayoutIds = previous.OpenBossPayoutIds;
                 }
                 hero.Settings = parsed;
             }

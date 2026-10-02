@@ -40,19 +40,36 @@ function bonusFromMultiplier(baseXP: number, multiplier: number): number {
   return Math.floor(baseXP * multiplier + 1e-9) - baseXP;
 }
 
-/** Full XP payouts for side quests and boss steps in one hero-day. Dailies are outside this budget. */
+/** Full XP payouts for side quests and boss arcs in one hero-day. Dailies are outside this budget. */
 export const DAILY_SIDE_BOSS_PAYOUTS = 2;
 
+/**
+ * A side quest spends one slot. A boss saga spends one slot for the whole arc:
+ * the first step today opens it, and later steps of that quest stay inside it.
+ */
 export function takeSideBossPayout(
   payoutDate: string | undefined,
   payoutsUsed: number,
   today: string,
-): { granted: boolean; payoutDate: string; payoutsUsed: number } {
-  const used = payoutDate === today ? payoutsUsed : 0;
-  if (used >= DAILY_SIDE_BOSS_PAYOUTS) {
-    return { granted: false, payoutDate: today, payoutsUsed: used };
+  questId: string,
+  isBoss: boolean,
+  openBossIds: string[] = [],
+): { granted: boolean; payoutDate: string; payoutsUsed: number; openBossIds: string[] } {
+  const sameDay = payoutDate === today;
+  const used = sameDay ? payoutsUsed : 0;
+  const open = sameDay ? [...openBossIds] : [];
+  if (isBoss && open.includes(questId)) {
+    return { granted: true, payoutDate: today, payoutsUsed: used, openBossIds: open };
   }
-  return { granted: true, payoutDate: today, payoutsUsed: used + 1 };
+  if (used >= DAILY_SIDE_BOSS_PAYOUTS) {
+    return { granted: false, payoutDate: today, payoutsUsed: used, openBossIds: open };
+  }
+  return {
+    granted: true,
+    payoutDate: today,
+    payoutsUsed: used + 1,
+    openBossIds: isBoss ? [...open, questId] : open,
+  };
 }
 
 /** Slice of a full quest reward for one boss step. The last step keeps the remainder. */

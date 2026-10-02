@@ -105,7 +105,8 @@ public record CompleteQuestResult(
     bool DidLevelUp,
     TierUpDto? TierUp,
     List<SkillDto> NewSkills,
-    HeroDto Hero);
+    HeroDto Hero,
+    bool BonusBudgetSpent = false);
 
 public record AdvanceBossQuestResult(QuestDto Quest, CompleteQuestResult? Completion);
 

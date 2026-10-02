@@ -140,6 +140,19 @@ export interface Hero {
   /** Hero-calendar date of the last side/boss XP payout, and how many were paid that day. */
   bonusPayoutDate?: string;
   bonusPayoutsUsed?: number;
+  /** Boss quests that already opened one of today's side/boss payouts. */
+  openBossPayoutIds?: string[];
+  /**
+   * Full completions in the recent calendar, including dailies the morning reset has reopened.
+   * The weekly cup counts this. `daysCompleted` on the quest stays the lifetime total.
+   */
+  completionLog?: QuestCompletionLogEntry[];
+}
+
+export interface QuestCompletionLogEntry {
+  questId: string;
+  date: string;
+  stat: StatName;
 }
 
 export interface Quest {
@@ -302,12 +315,12 @@ export interface UIStore {
   showTierUpModal: boolean;
   tierUpData: { newTier: ClassTier; newClass: string } | null;
   showXPPopup: boolean;
-  xpPopupData: { stat: StatName; amount: number } | null;
+  xpPopupData: { stat: StatName; amount: number; message?: string } | null;
   showQuestCreateModal: boolean;
   setLevelUp: (stat: StatName, newLevel: number) => void;
   setSkillUnlock: (skill: Skill) => void;
   setTierUp: (newTier: ClassTier, newClass: string) => void;
-  showXP: (stat: StatName, amount: number) => void;
+  showXP: (stat: StatName, amount: number, message?: string) => void;
   dismissLevelUp: () => void;
   dismissSkillUnlock: () => void;
   dismissTierUp: () => void;

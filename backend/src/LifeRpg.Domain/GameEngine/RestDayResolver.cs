@@ -76,7 +76,8 @@ public static class RestDayResolver
             today,
             hero.LastStreakFreezeDate,
             SkillResolver.GetWeeklyStreakFreezeAllowance(unlockedSkillIds),
-            SkillResolver.GetStreakRetentionRatio(unlockedSkillIds));
+            SkillResolver.GetStreakRetentionRatio(unlockedSkillIds),
+            brokenDayCounts: true);
         return new Continued(advance.Streak, today, advance.LastFreezeDate);
     }
 }
