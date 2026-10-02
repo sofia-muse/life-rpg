@@ -54,39 +54,41 @@ export default function SkillsScreen() {
       <Text style={styles.title}>Skill Trees</Text>
       <Text style={styles.subtitle}>Unlock skills by leveling your stats</Text>
 
-      {/* AI-Forged skills (opt-in, online-only) */}
-      {aiSkillsEnabled && (
+      {/* Forged skills: demo seeds always visible; live AI forge is online-only */}
+      {(forged.length > 0 || aiSkillsEnabled || canForge) && (
         <Card style={styles.treeCard}>
           <View style={styles.treeHeader}>
             <Text style={styles.treeIcon}>✨</Text>
             <Text style={[styles.treeName, { color: colors.gold }]}>Forged</Text>
           </View>
+          {forged.length > 0 && (
+            <View style={styles.nodesRow}>
+              {forged.map((skill) => (
+                <SkillNode
+                  key={skill.id}
+                  skill={skill}
+                  isUnlocked
+                  progress={1}
+                  onPress={setSelectedSkill}
+                />
+              ))}
+            </View>
+          )}
           {canForge ? (
-            <>
-              {forged.length > 0 && (
-                <View style={styles.nodesRow}>
-                  {forged.map((skill) => (
-                    <SkillNode
-                      key={skill.id}
-                      skill={skill}
-                      isUnlocked
-                      progress={1}
-                      onPress={setSelectedSkill}
-                    />
-                  ))}
-                </View>
-              )}
-              <Button
-                title={forging ? 'Forging…' : '✨ Forge a Skill'}
-                onPress={handleForge}
-                loading={forging}
-                variant="secondary"
-                style={styles.forgeButton}
-              />
-            </>
+            <Button
+              title={forging ? 'Forging…' : '✨ Forge a Skill'}
+              onPress={handleForge}
+              loading={forging}
+              variant="secondary"
+              style={styles.forgeButton}
+            />
+          ) : env.demoMode ? (
+            <Text style={styles.hint}>
+              Demo preview skills — live AI forging needs a deployed API with demo mode off.
+            </Text>
           ) : (
             <Text style={styles.hint}>
-              Sign in (with demo mode off) to forge unique AI-generated skills for your hero.
+              Sign in (and enable AI skills in Settings) to forge unique skills for your hero.
             </Text>
           )}
         </Card>

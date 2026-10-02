@@ -7,6 +7,7 @@ import { Card } from '../src/components/layout/Card';
 import { Button } from '../src/components/layout/Button';
 import { useSettingsStore } from '../src/store/settingsStore';
 import { useHeroStore } from '../src/store/heroStore';
+import { useGameplayStore } from '../src/store/gameplayStore';
 import { colors, spacing, fontSize, radius, typography } from '../src/config/theme';
 
 export default function SettingsScreen() {
@@ -35,7 +36,7 @@ export default function SettingsScreen() {
         text: 'Reset Hero',
         style: 'destructive',
         onPress: () => {
-          useHeroStore.setState({ hero: null, isOnboarded: false });
+          useGameplayStore.getState().resetLocalState();
           router.replace('/onboarding');
         },
       },

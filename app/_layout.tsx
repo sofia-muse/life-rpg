@@ -6,6 +6,7 @@ import { View, ActivityIndicator } from 'react-native';
 import { useHeroStore } from '../src/store/heroStore';
 import { useAuthStore } from '../src/store/authStore';
 import { useForgedSkillStore } from '../src/store/forgedSkillStore';
+import { useGameplayStore } from '../src/store/gameplayStore';
 import { GlobalModals } from '../src/components/game/GlobalModals';
 import { syncManager } from '../src/api/syncManager';
 import { env } from '../src/config/env';
@@ -49,6 +50,12 @@ export default function RootLayout() {
       void SplashScreen.hideAsync();
     }
   }, [hasHydrated, authStatus]);
+
+  // Reset dailies / advance streak once hero + auth are ready. updateStreak is idempotent same-day.
+  useEffect(() => {
+    if (!hasHydrated || authStatus === 'loading' || !isOnboarded) return;
+    useGameplayStore.getState().runDailyLifecycle();
+  }, [hasHydrated, authStatus, isOnboarded]);
 
   if (!hasHydrated || authStatus === 'loading') {
     return (
