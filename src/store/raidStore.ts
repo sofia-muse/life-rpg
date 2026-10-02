@@ -173,7 +173,6 @@ export const useRaidStore = create<RaidState>()(
               useSettingsStore.getState().setEquippedTitle(titleId);
             }
             useUIStore.getState().setCharacterEvent('tierUp');
-            setTimeout(() => useUIStore.getState().setCharacterEvent('idle'), 2000);
           }
 
           if (result.xpAwarded && result.xpAwarded > 0) {

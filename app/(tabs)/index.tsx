@@ -56,6 +56,7 @@ export default function DashboardScreen() {
   const xpPopupData = useUIStore((s) => s.xpPopupData);
   const dismissXP = useUIStore((s) => s.dismissXP);
   const characterEvent = useUIStore((s) => s.characterEvent);
+  const characterEventNonce = useUIStore((s) => s.characterEventNonce);
   const settings = useSettingsStore();
   const { quests } = useQuestStore();
   const hallEntries = useHallOfFameStore((s) => s.entries);
@@ -96,7 +97,6 @@ export default function DashboardScreen() {
       );
     }
     useUIStore.getState().setCharacterEvent('contractComplete');
-    setTimeout(() => useUIStore.getState().setCharacterEvent('idle'), 2000);
   };
 
   const [dailyReward, setDailyReward] = useState<{
@@ -222,6 +222,7 @@ export default function DashboardScreen() {
                       classTier={hero.classTier}
                       size={86}
                       event={characterEvent}
+                      eventNonce={characterEventNonce}
                     />
                   </TouchableOpacity>
                 </PulseGlow>
@@ -500,8 +501,8 @@ const styles = StyleSheet.create({
     ...typography.heading,
   },
   headerAvatarGlow: {
-    width: 112,
-    height: 112,
+    width: 136,
+    height: 136,
   },
   headerInfo: { flex: 1, minWidth: 0 },
   headerInfoStacked: {
