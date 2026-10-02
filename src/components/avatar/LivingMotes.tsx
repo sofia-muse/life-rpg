@@ -16,17 +16,26 @@ export function LivingMotes({ size, color, count, duration, active = true }: Pro
 
   useEffect(() => {
     if (!active) return undefined;
-    spin.setValue(0);
-    const orbit = Animated.loop(
+    let stopped = false;
+
+    const cycle = () => {
+      if (stopped) return;
+      spin.setValue(0);
       Animated.timing(spin, {
         toValue: 1,
         duration,
         easing: Easing.linear,
         useNativeDriver: true,
-      }),
-    );
-    orbit.start();
-    return () => orbit.stop();
+      }).start(({ finished }) => {
+        if (finished && !stopped) cycle();
+      });
+    };
+
+    cycle();
+    return () => {
+      stopped = true;
+      spin.stopAnimation();
+    };
   }, [active, duration, spin]);
 
   if (!active || count <= 0) return null;
@@ -48,11 +57,11 @@ export function LivingMotes({ size, color, count, duration, active = true }: Pro
                 styles.mote,
                 {
                   backgroundColor: color,
-                  width: index % 2 === 0 ? 6 : 4,
-                  height: index % 2 === 0 ? 6 : 4,
-                  borderRadius: 4,
-                  marginLeft: index % 2 === 0 ? -3 : -2,
-                  marginTop: index % 2 === 0 ? -3 : -2,
+                  width: index % 2 === 0 ? 8 : 5,
+                  height: index % 2 === 0 ? 8 : 5,
+                  borderRadius: 5,
+                  marginLeft: index % 2 === 0 ? -4 : -2.5,
+                  marginTop: index % 2 === 0 ? -4 : -2.5,
                   opacity: index % 2 === 0 ? 0.9 : 0.65,
                   transform: [{ translateY: -radius }],
                 },

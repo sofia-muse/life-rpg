@@ -41,23 +41,29 @@ const AuraHalo = React.forwardRef<
   useEffect(() => {
     if (!autoPlay) return undefined;
     const duration = 4200 / tempo;
-    const spinning = Animated.loop(
+    let stopped = false;
+    const spinOnce = () => {
+      if (stopped) return;
+      spin.setValue(0);
       Animated.timing(spin, {
         toValue: 1,
         duration,
         easing: Easing.linear,
         useNativeDriver: true,
-      }),
-    );
+      }).start(({ finished }) => {
+        if (finished && !stopped) spinOnce();
+      });
+    };
+    spinOnce();
     const base = Animated.sequence([
       Animated.timing(pulse, { toValue: 0.7, duration: 1400 / tempo, useNativeDriver: true }),
       Animated.timing(pulse, { toValue: 0.2, duration: 1600 / tempo, useNativeDriver: true }),
     ]);
     const breathing = loop ? Animated.loop(base) : base;
-    spinning.start();
     breathing.start();
     return () => {
-      spinning.stop();
+      stopped = true;
+      spin.stopAnimation();
       breathing.stop();
     };
   }, [autoPlay, loop, pulse, spin, tempo]);

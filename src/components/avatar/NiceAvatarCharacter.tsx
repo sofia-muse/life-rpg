@@ -38,7 +38,7 @@ export function NiceAvatarCharacter({
   const onBlink = useCallback(() => {
     setBlinking(true);
     if (blinkTimer.current) clearTimeout(blinkTimer.current);
-    blinkTimer.current = setTimeout(() => setBlinking(false), 150);
+    blinkTimer.current = setTimeout(() => setBlinking(false), 520);
   }, []);
 
   const anims = useCharacterAnimations({
@@ -177,6 +177,7 @@ export function NiceAvatarCharacter({
         />
 
         <Animated.View
+          testID="avatar-body"
           style={{
             zIndex: 3,
             transform: [
