@@ -367,5 +367,8 @@ export const useGameplayStore = create<GameplayState>((set) => ({
     useJournalStore.getState().clearEntries();
     useForgedSkillStore.getState().clear();
     useRaidStore.getState().clear();
+    if (env.demoMode) {
+      useForgedSkillStore.getState().seedDemo();
+    }
   },
 }));

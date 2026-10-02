@@ -123,33 +123,44 @@ export default function RaidsScreen() {
           <Text style={styles.gateTitle}>Preview: Iron Cohort Raid</Text>
           <Text style={styles.gateBody}>
             Sample party goal — 500 push-ups pooled across guildmates. Progress, invite codes, and
-            clear rewards unlock when you register (demo mode off).
+            clear rewards unlock when a backend API is live.
           </Text>
           <View style={styles.previewMeter}>
             <View style={[styles.previewFill, { width: '42%' }]} />
           </View>
           <Text style={styles.previewMeta}>210 / 500 push-ups · 3 members · Relic: Iron Cohort</Text>
-          <Text style={styles.gateBody}>
-            {env.demoMode
-              ? 'Demo mode is solo-only. Create an account (with demo mode off) to host or join invite-code parties. Shared progress lives on the server so every contribution stays honest.'
-              : 'Sign in to create invite-code parties, log your real contributions, and earn shared raid victories plus personal credit.'}
-          </Text>
-          <View style={styles.gateActions}>
-            <Button
-              title="Create account"
-              onPress={() => router.push({ pathname: '/register', params: { returnTo: 'raids' } })}
-            />
-            <Button
-              title="Sign in"
-              onPress={() => router.push({ pathname: '/login', params: { returnTo: 'raids' } })}
-              variant="secondary"
-            />
-          </View>
           {env.demoMode ? (
-            <Text style={styles.gateHint}>
-              Solo quests, campaigns, and the avatar atelier stay available in demo. Set EXPO_PUBLIC_DEMO_MODE=false, then register to unlock co-op.
-            </Text>
-          ) : null}
+            <>
+              <Text style={styles.gateBody}>
+                Party raids need a deployed API. This hosted demo runs fully offline, so co-op
+                progress cannot sync here.
+              </Text>
+              <Text style={styles.gateHint}>
+                Solo quests, campaigns, and the avatar atelier stay available. See docs/AZURE_DEPLOY.md
+                for wiring EXPO_PUBLIC_DEMO_MODE=false to a live API.
+              </Text>
+            </>
+          ) : (
+            <>
+              <Text style={styles.gateBody}>
+                Sign in to create invite-code parties, log your real contributions, and earn shared
+                raid victories plus personal credit.
+              </Text>
+              <View style={styles.gateActions}>
+                <Button
+                  title="Create account"
+                  onPress={() =>
+                    router.push({ pathname: '/register', params: { returnTo: 'raids' } })
+                  }
+                />
+                <Button
+                  title="Sign in"
+                  onPress={() => router.push({ pathname: '/login', params: { returnTo: 'raids' } })}
+                  variant="secondary"
+                />
+              </View>
+            </>
+          )}
         </Card>
       </ScreenWrapper>
     );

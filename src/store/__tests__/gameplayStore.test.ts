@@ -251,4 +251,40 @@ describe('gameplayStore local quest flow', () => {
     expect(quest?.isCompleted).toBe(false);
     expect(quest?.completedAt).toBeUndefined();
   });
+
+  it('resetLocalState clears quests, journal, skills and re-seeds demo forged skills', () => {
+    useQuestStore.setState({
+      quests: [buildQuest({ id: 'keep-me' })],
+    });
+    useJournalStore.setState({
+      entries: [
+        {
+          id: 'j1',
+          date: '2026-01-01',
+          narrative: 'old',
+          questsCompleted: [],
+          xpGained: emptyXp(),
+          levelsGained: [],
+          skillsUnlocked: [],
+          milestones: [],
+        },
+      ],
+    });
+    useSkillStore.setState({
+      unlockedSkills: [{ skillId: 'str_3', unlockedAt: '2026-01-01T00:00:00.000Z' }],
+    });
+    useForgedSkillStore.setState({ forged: [], loading: false, error: null });
+
+    useGameplayStore.getState().resetLocalState();
+
+    expect(useHeroStore.getState().hero).toBeNull();
+    expect(useHeroStore.getState().isOnboarded).toBe(false);
+    expect(useQuestStore.getState().quests).toHaveLength(0);
+    expect(useJournalStore.getState().entries).toHaveLength(0);
+    expect(useSkillStore.getState().unlockedSkills).toHaveLength(0);
+    // demoMode defaults true in tests → canned forged skills return after wipe
+    expect(useForgedSkillStore.getState().forged.some((s) => s.id.startsWith('demo-forge-'))).toBe(
+      true,
+    );
+  });
 });
