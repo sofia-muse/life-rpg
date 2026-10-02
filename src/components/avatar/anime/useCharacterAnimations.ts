@@ -6,9 +6,9 @@ export const MOOD_MOTION: Record<
   Mood,
   { breathMs: number; lift: number; scale: number; swayDeg: number; glance: number; orbitMs: number }
 > = {
-  happy: { breathMs: 900, lift: 18, scale: 1.12, swayDeg: 14, glance: 8, orbitMs: 3200 },
-  neutral: { breathMs: 1200, lift: 16, scale: 1.1, swayDeg: 12, glance: 6, orbitMs: 4200 },
-  sad: { breathMs: 1900, lift: 8, scale: 1.04, swayDeg: 5, glance: 3, orbitMs: 7600 },
+  happy: { breathMs: 780, lift: 36, scale: 1.2, swayDeg: 10, glance: 10, orbitMs: 2600 },
+  neutral: { breathMs: 980, lift: 30, scale: 1.16, swayDeg: 8, glance: 6, orbitMs: 3400 },
+  sad: { breathMs: 1600, lift: 14, scale: 1.06, swayDeg: 4, glance: 2, orbitMs: 6200 },
 };
 
 interface Options {
@@ -139,22 +139,22 @@ export function useCharacterAnimations({
       if (cancelled) return;
       Animated.sequence([
         Animated.timing(blinkSquash, {
-          toValue: 0.78,
+          toValue: 0.68,
           duration: 90,
           useNativeDriver: true,
         }),
-        Animated.delay(340),
+        Animated.delay(520),
         Animated.timing(blinkSquash, {
           toValue: 1,
-          duration: 160,
+          duration: 180,
           useNativeDriver: true,
         }),
       ]).start();
       onBlinkRef.current?.();
-      blinkTimer = setTimeout(blink, 1600 + Math.random() * 1200);
+      blinkTimer = setTimeout(blink, 1200 + Math.random() * 700);
     };
 
-    blinkTimer = setTimeout(blink, 400 + Math.random() * 500);
+    blinkTimer = setTimeout(blink, 280 + Math.random() * 400);
     return () => {
       cancelled = true;
       if (blinkTimer) clearTimeout(blinkTimer);
@@ -199,8 +199,8 @@ export function useCharacterAnimations({
     outputRange: ['-8deg', '8deg'],
   });
   const auraScale = breathScale.interpolate({
-    inputRange: [1, 1.14],
-    outputRange: [0.92, 1.18],
+    inputRange: [1, 1.22],
+    outputRange: [0.9, 1.22],
     extrapolate: 'clamp',
   });
   const flashScale = flashOpacity.interpolate({

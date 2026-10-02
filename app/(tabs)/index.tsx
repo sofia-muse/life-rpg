@@ -501,8 +501,8 @@ const styles = StyleSheet.create({
     ...typography.heading,
   },
   headerAvatarGlow: {
-    width: 136,
-    height: 136,
+    width: 210,
+    height: 210,
   },
   headerInfo: { flex: 1, minWidth: 0 },
   headerInfoStacked: {

@@ -2,16 +2,16 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
 
 interface Props {
-  size: number;
   color: string;
   count: number;
   duration: number;
+  orbit: number;
   active?: boolean;
 }
 
-const ANGLES = [0, 52, 128, 196, 250, 310];
+const ANGLES = [0, 72, 144, 216, 288];
 
-export function LivingMotes({ size, color, count, duration, active = true }: Props) {
+export function LivingMotes({ color, count, duration, orbit, active = true }: Props) {
   const spin = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -44,31 +44,45 @@ export function LivingMotes({ size, color, count, duration, active = true }: Pro
     inputRange: [0, 1],
     outputRange: ['0deg', '360deg'],
   });
-  const radius = size / 2 + 10;
   const motes = ANGLES.slice(0, count);
 
   return (
     <Animated.View pointerEvents="none" style={[styles.orbit, { transform: [{ rotate }] }]}>
       <View style={styles.anchor}>
-        {motes.map((angle, index) => (
-          <View key={angle} style={[styles.arm, { transform: [{ rotate: `${angle}deg` }] }]}>
-            <View
-              style={[
-                styles.mote,
-                {
-                  backgroundColor: color,
-                  width: index % 2 === 0 ? 8 : 5,
-                  height: index % 2 === 0 ? 8 : 5,
-                  borderRadius: 5,
-                  marginLeft: index % 2 === 0 ? -4 : -2.5,
-                  marginTop: index % 2 === 0 ? -4 : -2.5,
-                  opacity: index % 2 === 0 ? 0.9 : 0.65,
-                  transform: [{ translateY: -radius }],
-                },
-              ]}
-            />
-          </View>
-        ))}
+        <View
+          style={[
+            styles.ring,
+            {
+              width: orbit * 2,
+              height: orbit * 2,
+              marginLeft: -orbit,
+              marginTop: -orbit,
+              borderRadius: orbit,
+              borderColor: color,
+            },
+          ]}
+        />
+        {motes.map((angle, index) => {
+          const dot = index % 2 === 0 ? 12 : 8;
+          return (
+            <View key={angle} style={[styles.arm, { transform: [{ rotate: `${angle}deg` }] }]}>
+              <View
+                style={[
+                  styles.mote,
+                  {
+                    backgroundColor: color,
+                    width: dot,
+                    height: dot,
+                    borderRadius: dot / 2,
+                    marginLeft: -dot / 2,
+                    marginTop: -dot / 2,
+                    transform: [{ translateY: -orbit }],
+                  },
+                ]}
+              />
+            </View>
+          );
+        })}
       </View>
     </Animated.View>
   );
@@ -79,11 +93,16 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 2,
+    zIndex: 5,
   },
   anchor: {
     width: 0,
     height: 0,
+  },
+  ring: {
+    position: 'absolute',
+    borderWidth: 2,
+    borderStyle: 'dashed',
   },
   arm: {
     position: 'absolute',

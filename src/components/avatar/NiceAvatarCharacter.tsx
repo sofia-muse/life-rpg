@@ -38,7 +38,7 @@ export function NiceAvatarCharacter({
   const onBlink = useCallback(() => {
     setBlinking(true);
     if (blinkTimer.current) clearTimeout(blinkTimer.current);
-    blinkTimer.current = setTimeout(() => setBlinking(false), 520);
+    blinkTimer.current = setTimeout(() => setBlinking(false), 700);
   }, []);
 
   const anims = useCharacterAnimations({
@@ -91,13 +91,14 @@ export function NiceAvatarCharacter({
   }, [event, eventNonce, reduceMotion]);
 
   const config = buildNiceAvatarConfig(appearance, dominantStat, classTier, mood, blinking);
-  const moteCount = mood === 'sad' ? Math.max(2, classTier) : Math.min(6, classTier + 2);
+  const moteCount = mood === 'sad' ? 4 : 5;
+  const stage = size + 96;
 
   return (
     <Animated.View
       style={[
         styles.container,
-        { width: size + 28, height: size + 28 },
+        { width: stage, height: stage },
         { transform: [{ translateY: anims.bounceY }, { translateX: anims.shakeX }] },
       ]}
     >
@@ -105,7 +106,7 @@ export function NiceAvatarCharacter({
         color={accentColor}
         intensity={classTier >= 4 ? 'strong' : classTier >= 2 ? 'medium' : 'soft'}
         active={!reduceMotion}
-        style={[styles.glowFrame, { width: size + 28, height: size + 28 }]}
+        style={[styles.glowFrame, { width: stage, height: stage }]}
       >
         <Animated.View
           pointerEvents="none"
@@ -123,10 +124,10 @@ export function NiceAvatarCharacter({
         />
 
         <LivingMotes
-          size={size}
           color={accentColor}
           count={moteCount}
           duration={anims.orbitMs}
+          orbit={size / 2 + 30}
           active={!reduceMotion}
         />
 

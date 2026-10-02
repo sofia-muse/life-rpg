@@ -326,8 +326,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xl,
   },
   previewGlow: {
-    width: 250,
-    height: 250,
+    width: 340,
+    height: 340,
   },
   focusTabs: {
     flexDirection: 'row',

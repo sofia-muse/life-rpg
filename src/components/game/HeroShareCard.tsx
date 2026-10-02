@@ -248,8 +248,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   avatarGlow: {
-    width: 104,
-    height: 104,
+    width: 180,
+    height: 180,
     marginRight: spacing.md,
   },
   cardInfo: { flex: 1 },
