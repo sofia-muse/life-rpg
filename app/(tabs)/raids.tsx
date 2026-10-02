@@ -21,6 +21,7 @@ import { StatName, STAT_COLORS, STAT_ICONS, STAT_NAMES } from '../../src/types';
 import { RaidDto } from '../../src/api/raidApi';
 import { guidanceApi } from '../../src/api/guidanceApi';
 import { TweenBar } from '../../src/components/game/TweenBar';
+import { BossEncounter } from '../../src/components/game/BossEncounter';
 import { PartyAvatar } from '../../src/components/game/PartyAvatar';
 import { formatLastSeen } from '../../src/utils/raidPresence';
 import { playGameFeedback } from '../../src/utils/gameFeedback';
@@ -137,10 +138,11 @@ export default function RaidsScreen() {
   if (!canUseRaids) {
     return (
       <ScreenWrapper contentWidth="regular">
-        <ScreenHeader
-          eyebrow="Guild Endgame"
-          title="Party Raids"
-          subtitle="Pool a huge real-world goal with friends — invite codes only."
+        <BossEncounter
+          bossName="Iron Cohort"
+          progress={0.42}
+          meterLabel="210 / 500 push-ups"
+          color={STAT_COLORS.strength}
         />
         <Card style={styles.gateCard}>
           <Text style={styles.gateTitle}>Preview: Iron Cohort Raid</Text>
@@ -148,9 +150,6 @@ export default function RaidsScreen() {
             Sample party goal — 500 push-ups pooled across guildmates. Progress, invite codes, and
             clear rewards unlock when a backend API is live.
           </Text>
-          <View style={styles.previewMeter}>
-            <TweenBar progress={0.42} color={colors.gold} height={10} />
-          </View>
           <Text style={styles.previewMeta}>210 / 500 push-ups · 3 members · Relic: Iron Cohort</Text>
           {env.demoMode ? (
             <>
@@ -189,8 +188,30 @@ export default function RaidsScreen() {
     );
   }
 
+  const selectedProgress = selected
+    ? Math.min(1, selected.currentAmount / Math.max(1, selected.targetAmount))
+    : 0;
+  const selectedColor = selected ? STAT_COLORS[selected.stat] : colors.gold;
+
   return (
     <ScreenWrapper contentWidth="regular">
+      {selected ? (
+        <BossEncounter
+          bossName={selected.title}
+          progress={selectedProgress}
+          meterLabel={`${selected.currentAmount} / ${selected.targetAmount} ${selected.unitLabel}`}
+          color={selectedColor}
+          defeated={selected.isCompleted}
+        />
+      ) : (
+        <BossEncounter
+          bossName="The hall is empty"
+          progress={0}
+          meterLabel="Post a goal to summon a foe"
+          color="#6E7278"
+          dormant
+        />
+      )}
       <ScreenHeader
         eyebrow="Guild Endgame"
         title="Party Raids"

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity } from 'react-native';
 import { ScreenWrapper } from '../../src/components/layout/ScreenWrapper';
 import { SkillNode } from '../../src/components/game/SkillNode';
+import { SmithyBanner } from '../../src/components/game/SmithyBanner';
 import { Card } from '../../src/components/layout/Card';
 import { Button } from '../../src/components/layout/Button';
 import { useHeroStore } from '../../src/store/heroStore';
@@ -66,8 +67,7 @@ export default function SkillsScreen() {
 
   return (
     <ScreenWrapper>
-      <Text style={styles.title}>Skill Trees</Text>
-      <Text style={styles.subtitle}>Unlock skills by leveling your stats</Text>
+      <SmithyBanner />
 
       {/* Forged skills: demo seeds always visible; live AI forge is online-only */}
       {(forged.length > 0 || aiSkillsEnabled || canForge) && (
@@ -195,17 +195,6 @@ export default function SkillsScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: {
-    color: colors.textPrimary,
-    fontSize: fontSize.title,
-    fontWeight: '900',
-    marginTop: spacing.md,
-  },
-  subtitle: {
-    color: colors.textSecondary,
-    fontSize: fontSize.sm,
-    marginBottom: spacing.lg,
-  },
   treeCard: {
     marginBottom: spacing.md,
   },

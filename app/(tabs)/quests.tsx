@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ScreenWrapper } from '../../src/components/layout/ScreenWrapper';
 import { QuestCard } from '../../src/components/game/QuestCard';
+import { QuestBoard } from '../../src/components/game/QuestBoard';
 import { ContractHeader } from '../../src/components/game/ContractHeader';
 import { GuildmasterSuggestions } from '../../src/components/game/GuildmasterSuggestions';
 import { BossPlannerModal } from '../../src/components/game/BossPlannerModal';
@@ -107,9 +108,23 @@ export default function QuestsScreen() {
   );
 
   const filteredQuests = tabQuests[activeTab].filter((quest) => !region || quest.stat === region);
+  const boardNotices = useMemo(() => {
+    const active = quests.filter((quest) => quest.isActive && !quest.isCompleted);
+    const today = active.filter((quest) => quest.type === 'daily');
+    const rest = active.filter((quest) => quest.type !== 'daily');
+    return [...today, ...rest]
+      .filter((quest) => !region || quest.stat === region)
+      .map((quest) => ({
+        id: quest.id,
+        title: quest.title,
+        difficulty: quest.difficulty,
+        stat: quest.stat,
+      }));
+  }, [quests, region]);
 
   return (
     <ScreenWrapper showScrollIndicator>
+      <QuestBoard notices={boardNotices} />
       <BossPlannerModal
         visible={showBossPlanner}
         onClose={() => setShowBossPlanner(false)}
@@ -129,8 +144,6 @@ export default function QuestsScreen() {
         }
       />
 
-      <Text style={styles.title}>Adventures</Text>
-      <Text style={styles.subtitle}>Contracts, side ventures, and boss arcs</Text>
       {region && regionLabel ? (
         <TouchableOpacity style={styles.regionBanner} onPress={() => router.setParams({ region: '' })}>
           <Text style={styles.regionBannerText}>
@@ -261,20 +274,7 @@ export default function QuestsScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: {
-    color: colors.textPrimary,
-    fontSize: fontSize.title,
-    fontWeight: '900',
-    marginTop: spacing.md,
-  },
-  subtitle: {
-    color: colors.textSecondary,
-    fontSize: fontSize.sm,
-    fontStyle: 'italic',
-    marginBottom: spacing.md,
-  },
   regionBanner: {
-    marginTop: -spacing.sm,
     marginBottom: spacing.md,
     padding: spacing.sm,
     borderRadius: radius.md,
