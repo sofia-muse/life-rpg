@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Modal, Animated, TouchableOpacity } from 'react-native';
-import { AchievementDefinition } from '../../config/achievements';
+import AppLottie from '../animated/AppLottie';
+import { AchievementDefinition, AchievementTier } from '../../config/achievements';
 import { colors, spacing, fontSize, radius } from '../../config/theme';
 
 interface Props {
@@ -8,6 +9,13 @@ interface Props {
   achievement: AchievementDefinition | null;
   onDismiss: () => void;
 }
+
+const TIER_BORDER: Record<AchievementTier, string> = {
+  bronze: '#CD7F32',
+  silver: '#C0C0C0',
+  gold: colors.gold,
+  mythic: '#B388FF',
+};
 
 export function AchievementUnlockModal({ visible, achievement, onDismiss }: Props) {
   const scale = useRef(new Animated.Value(0.3)).current;
@@ -22,17 +30,27 @@ export function AchievementUnlockModal({ visible, achievement, onDismiss }: Prop
 
   if (!achievement) return null;
 
+  const borderColor = TIER_BORDER[achievement.tier] ?? colors.gold;
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onDismiss}>
       <View style={styles.overlay}>
-        <Animated.View style={[styles.content, { transform: [{ scale }] }]}>
-          <Text style={styles.sparkle}>🏆</Text>
+        <Animated.View style={[styles.content, { borderColor, transform: [{ scale }] }]}>
+          <AppLottie
+            source={require('../../../assets/animations/sparkle.json')}
+            autoPlay
+            loop={false}
+            speed={0.8}
+            style={styles.lottie}
+          />
           <Text style={styles.title}>ACHIEVEMENT!</Text>
           <Text style={styles.icon}>{achievement.icon}</Text>
           <Text style={styles.name}>{achievement.title}</Text>
           <Text style={styles.description}>{achievement.description}</Text>
-          <Text style={styles.tier}>{achievement.tier.toUpperCase()}</Text>
-          <TouchableOpacity style={styles.button} onPress={onDismiss}>
+          <Text style={[styles.tier, { color: borderColor }]}>
+            {achievement.tier.toUpperCase()}
+          </Text>
+          <TouchableOpacity style={[styles.button, { backgroundColor: borderColor }]} onPress={onDismiss}>
             <Text style={styles.buttonText}>Claim Glory</Text>
           </TouchableOpacity>
         </Animated.View>
@@ -52,18 +70,25 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bgCard,
     borderRadius: radius.xl,
     borderWidth: 2,
-    borderColor: colors.gold,
     padding: spacing.xl,
     width: '80%',
     alignItems: 'center',
+    overflow: 'hidden',
   },
-  sparkle: { fontSize: 48, marginBottom: spacing.sm },
+  lottie: {
+    position: 'absolute',
+    width: 220,
+    height: 220,
+    top: -20,
+    opacity: 0.85,
+  },
   title: {
     color: colors.gold,
     fontSize: fontSize.xl,
     fontWeight: '900',
     letterSpacing: 2,
     marginBottom: spacing.lg,
+    marginTop: spacing.md,
   },
   icon: { fontSize: 56, marginBottom: spacing.sm },
   name: {
@@ -81,14 +106,12 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   tier: {
-    color: colors.textAccent,
     fontSize: fontSize.xs,
     fontWeight: '700',
     letterSpacing: 1,
     marginBottom: spacing.lg,
   },
   button: {
-    backgroundColor: colors.gold,
     borderRadius: radius.md,
     paddingVertical: spacing.sm + 4,
     paddingHorizontal: spacing.xl,

@@ -33,6 +33,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     bundler: 'metro',
     output: 'single',
     favicon: './assets/images/favicon.png',
+    themeColor: '#0F0F1A',
   },
   plugins: ['expo-router'],
   experiments: {

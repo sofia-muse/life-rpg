@@ -19,6 +19,8 @@ interface UIState {
   evolutionData: { rankName: string; nextTitle?: string } | null;
   showAchievementModal: boolean;
   achievementData: AchievementDefinition | null;
+  /** Remaining achievements to show after the current modal is dismissed. */
+  achievementQueue: AchievementDefinition[];
   showStreakMilestoneModal: boolean;
   streakMilestoneData: { days: number; title: string; multiplier: number } | null;
 
@@ -37,6 +39,8 @@ interface UIState {
   setEvolution: (rankName: string, nextTitle?: string) => void;
   dismissEvolution: () => void;
   setAchievementUnlock: (achievement: AchievementDefinition) => void;
+  /** Enqueue one or more achievements; shows the first immediately if idle. */
+  enqueueAchievements: (achievements: AchievementDefinition[]) => void;
   dismissAchievement: () => void;
   setStreakMilestone: (days: number, title: string, multiplier: number) => void;
   dismissStreakMilestone: () => void;
@@ -59,6 +63,7 @@ export const useUIStore = create<UIState>((set) => ({
   evolutionData: null,
   showAchievementModal: false,
   achievementData: null,
+  achievementQueue: [],
   showStreakMilestoneModal: false,
   streakMilestoneData: null,
 
@@ -94,9 +99,34 @@ export const useUIStore = create<UIState>((set) => ({
   dismissEvolution: () => set({ showEvolutionModal: false, evolutionData: null }),
 
   setAchievementUnlock: (achievement) =>
-    set({ showAchievementModal: true, achievementData: achievement }),
+    set({ showAchievementModal: true, achievementData: achievement, achievementQueue: [] }),
 
-  dismissAchievement: () => set({ showAchievementModal: false, achievementData: null }),
+  enqueueAchievements: (achievements) =>
+    set((state) => {
+      if (achievements.length === 0) return state;
+      if (state.showAchievementModal && state.achievementData) {
+        return { achievementQueue: [...state.achievementQueue, ...achievements] };
+      }
+      const [first, ...rest] = achievements;
+      return {
+        showAchievementModal: true,
+        achievementData: first ?? null,
+        achievementQueue: rest,
+      };
+    }),
+
+  dismissAchievement: () =>
+    set((state) => {
+      const [next, ...rest] = state.achievementQueue;
+      if (next) {
+        return {
+          showAchievementModal: true,
+          achievementData: next,
+          achievementQueue: rest,
+        };
+      }
+      return { showAchievementModal: false, achievementData: null, achievementQueue: [] };
+    }),
 
   setStreakMilestone: (days, title, multiplier) =>
     set({

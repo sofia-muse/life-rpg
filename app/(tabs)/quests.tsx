@@ -2,6 +2,8 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ScreenWrapper } from '../../src/components/layout/ScreenWrapper';
+import { ScreenHeader } from '../../src/components/layout/ScreenHeader';
+import { EmptyState } from '../../src/components/layout/EmptyState';
 import { QuestCard } from '../../src/components/game/QuestCard';
 import { ContractHeader } from '../../src/components/game/ContractHeader';
 import { GuildmasterSuggestions } from '../../src/components/game/GuildmasterSuggestions';
@@ -13,6 +15,7 @@ import { useGameplayStore } from '../../src/store/gameplayStore';
 import { useUIStore } from '../../src/store/uiStore';
 import { useSettingsStore } from '../../src/store/settingsStore';
 import { Card } from '../../src/components/layout/Card';
+import { Button } from '../../src/components/layout/Button';
 import { colors, spacing, fontSize, radius } from '../../src/config/theme';
 import { STAT_COLORS, STAT_ICONS, DIFFICULTY_XP } from '../../src/types';
 import { getAllTemplates, QuestTemplate } from '../../src/config/questTemplates';
@@ -134,8 +137,19 @@ export default function QuestsScreen() {
         }
       />
 
-      <Text style={styles.title}>Adventures</Text>
-      <Text style={styles.subtitle}>Contracts, side ventures, and boss arcs</Text>
+      <ScreenHeader
+        eyebrow="Quest Board"
+        title="Adventures"
+        subtitle="Contracts, side ventures, and boss arcs"
+        action={
+          <Button
+            title="+ Quest"
+            onPress={() => setQuestCreateModal(true)}
+            variant="secondary"
+            style={styles.headerAction}
+          />
+        }
+      />
 
       <TouchableOpacity onPress={() => router.push('/raids')} accessibilityRole="button">
         <Card style={styles.raidCallout}>
@@ -224,15 +238,17 @@ export default function QuestsScreen() {
 
       <View style={styles.list}>
         {filteredQuests.length === 0 ? (
-          <View style={styles.empty}>
-            <Text style={styles.emptyIcon}>📜</Text>
-            <Text style={styles.emptyText}>No {activeTab} quests yet.</Text>
-            <Text style={styles.emptyHint}>
-              {showSuggestions
-                ? 'Pick one from above or tap + to create your own!'
-                : 'Browse suggestions above or tap + to create one!'}
-            </Text>
-          </View>
+          <EmptyState
+            icon="📜"
+            title={`No ${activeTab} quests yet`}
+            message={
+              showSuggestions
+                ? 'Pick a Guildmaster tip above or forge your own contract.'
+                : 'Open suggested quests or create one with + Quest.'
+            }
+            actionLabel="Create quest"
+            onAction={() => setQuestCreateModal(true)}
+          />
         ) : (
           filteredQuests.map((item) => (
             <QuestCard
@@ -259,17 +275,8 @@ export default function QuestsScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: {
-    color: colors.textPrimary,
-    fontSize: fontSize.title,
-    fontWeight: '900',
-    marginTop: spacing.md,
-  },
-  subtitle: {
-    color: colors.textSecondary,
-    fontSize: fontSize.sm,
-    fontStyle: 'italic',
-    marginBottom: spacing.md,
+  headerAction: {
+    minWidth: 96,
   },
   raidCallout: {
     marginBottom: spacing.md,
@@ -344,23 +351,6 @@ const styles = StyleSheet.create({
   list: {
     paddingBottom: 100,
     minWidth: 0,
-  },
-  empty: {
-    alignItems: 'center',
-    paddingTop: spacing.xxl,
-  },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: spacing.md,
-  },
-  emptyText: {
-    color: colors.textSecondary,
-    fontSize: fontSize.lg,
-  },
-  emptyHint: {
-    color: colors.textMuted,
-    fontSize: fontSize.sm,
-    marginTop: spacing.xs,
   },
   suggestionsToggle: {
     paddingVertical: spacing.xs,

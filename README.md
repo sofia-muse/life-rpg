@@ -10,14 +10,20 @@ A full-stack project: a **React Native / Expo** mobile + web client backed by an
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
 ![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet&logoColor=white)
 ![Expo](https://img.shields.io/badge/Expo-52-000020?logo=expo&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-182%20passing-22C55E)
+![Tests](https://img.shields.io/badge/tests-185%20passing-22C55E)
 ![License](https://img.shields.io/badge/license-MIT-C4A962)
 
-![Life RPG demo — onboarding (web)](docs/demo.png)
+![Life RPG demo cascade](docs/demo-cascade.gif)
+
+<p>
+  <img src="docs/screenshots/gallery-onboarding.png" alt="Onboarding — First Dawn" width="32%" />
+  <img src="docs/screenshots/gallery-naming.png" alt="Name your hero" width="32%" />
+  <img src="docs/og.png" alt="Open Graph preview art" width="32%" />
+</p>
 
 ### ▶️ **[Try the live demo](https://life-rpg-opal-nine.vercel.app/)**  ·  📱 Android APK: [`eas build -p android --profile preview`](docs/AZURE_DEPLOY.md#client-builds-eas) _(needs live API)_
 
-_The hosted demo runs fully local (no sign-in) so it's instant to try. AI-forged skills + cloud sync run against the .NET API when deployed._
+_The hosted demo runs fully local (no sign-in) so it's instant to try. AI-forged skills + cloud sync run against the .NET API when deployed. Sharing the demo link shows a LinkedIn/GitHub Open Graph card (`og:image` via `app/+html.tsx`)._
 
 </div>
 
@@ -30,7 +36,7 @@ _The hosted demo runs fully local (no sign-in) so it's instant to try. AI-forged
 - 🔥 **Streaks & daily rewards** with 8 milestone multipliers (up to 3×).
 - 🛡️ **Server-authoritative game logic** — XP, levels, class and skill unlocks are recomputed on the server (anti-cheat); the client computes the same values optimistically for instant, animated feedback.
 - 📴 **Offline-first** — local state is the source of truth; a persisted queue flushes to an **idempotent batch-sync** endpoint when back online.
-- ✅ **182 automated tests** (72 backend, 110 frontend) with the game engine ported identically to C# and TypeScript, proven equal by golden-value tests.
+- ✅ **185 automated tests** (72 backend, 113 frontend) with the game engine ported identically to C# and TypeScript, proven equal by golden-value tests.
 
 ## Architecture
 
@@ -108,7 +114,7 @@ Runs against a local SQLite database out of the box; configured for SQL Server /
 npm run typecheck && npm run lint && npm run test:coverage   # frontend
 cd backend && dotnet test                                    # backend
 ```
-- **Frontend:** 110 tests (Jest + jest-expo), engine coverage gated at 80%.
+- **Frontend:** 113 tests (Jest + jest-expo), engine coverage gated at 80%.
 - **Backend:** 72 tests — domain golden-value tests + WebApplicationFactory integration tests (auth, full quest flow, anti-cheat, sync idempotency).
 
 ### Android preview build (EAS)

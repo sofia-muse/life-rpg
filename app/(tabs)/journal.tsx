@@ -1,8 +1,10 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { FlatList, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { Card } from '../../src/components/layout/Card';
 import { EmptyState } from '../../src/components/layout/EmptyState';
 import { ScreenWrapper } from '../../src/components/layout/ScreenWrapper';
+import { ScreenHeader } from '../../src/components/layout/ScreenHeader';
+import { Button } from '../../src/components/layout/Button';
 import { colors, fontSize, radius, spacing, typography } from '../../src/config/theme';
 import { useJournalStore } from '../../src/store/journalStore';
 import { useHeroStore } from '../../src/store/heroStore';
@@ -40,14 +42,19 @@ export default function JournalScreen() {
   const authenticated = useAuthStore((s) => s.status === 'authenticated');
   const canUseChronicle = settings.aiSkillsEnabled && !env.demoMode && authenticated;
   const [chronicle, setChronicle] = useState<ChronicleDto | null>(null);
+  const [vowAdded, setVowAdded] = useState(false);
 
   const todayEntry = entries.find((e) => e.date === new Date().toISOString().split('T')[0]);
+  const vowTemplateTitle = todayEntry?.tomorrowVowTemplateTitle ?? null;
+  const vowAlreadyActive = Boolean(
+    vowTemplateTitle &&
+      quests.some((q) => q.isActive && !q.isCompleted && q.title === vowTemplateTitle),
+  );
 
   const acceptVow = () => {
-    if (!todayEntry?.tomorrowVowTemplateTitle || !hero) return;
+    if (!vowTemplateTitle || !hero || vowAlreadyActive) return;
     const templates = getDailyTemplates(hero.dominantStat);
-    const template =
-      templates.find((t) => t.title === todayEntry.tomorrowVowTemplateTitle) ?? templates[0];
+    const template = templates.find((t) => t.title === vowTemplateTitle) ?? templates[0];
     if (!template) return;
     addQuest({
       title: template.title,
@@ -60,6 +67,7 @@ export default function JournalScreen() {
       evolutionPathId: resolveEvolutionPathId(template.title),
       templateTitle: template.title,
     });
+    setVowAdded(true);
   };
 
   useEffect(() => {
@@ -101,8 +109,11 @@ export default function JournalScreen() {
 
   return (
     <ScreenWrapper scroll={false}>
-      <Text style={styles.title}>Chronicle</Text>
-      <Text style={styles.subtitle}>A living record of your campaign</Text>
+      <ScreenHeader
+        eyebrow="Campaign Log"
+        title="Chronicle"
+        subtitle="A living record of your campaign — vows, milestones, and deeds."
+      />
 
       {(chronicle || offlineEpilogue) && (
         <Card style={styles.chronicleCard}>
@@ -126,11 +137,40 @@ export default function JournalScreen() {
       {todayEntry?.tomorrowVow ? (
         <Card style={styles.vowCard}>
           <Text style={styles.vowOverline}>Tomorrow&apos;s Vow</Text>
-          <Text style={styles.vowText}>{todayEntry.tomorrowVow}</Text>
-          {todayEntry.tomorrowVowTemplateTitle ? (
-            <TouchableOpacity style={styles.vowBtn} onPress={acceptVow} activeOpacity={0.85}>
-              <Text style={styles.vowBtnText}>Add as Quest</Text>
-            </TouchableOpacity>
+          {(() => {
+            const raw = todayEntry.tomorrowVow;
+            const split = raw.split(' — Tomorrow\'s vow: ');
+            const mentorLine = split[0];
+            const vowLine = split[1] ?? vowTemplateTitle ?? raw;
+            return (
+              <>
+                {split.length > 1 ? (
+                  <Text style={styles.vowMentor}>{mentorLine}</Text>
+                ) : null}
+                <Text style={styles.vowText}>
+                  {split.length > 1 ? `Tomorrow's vow: ${vowLine}` : raw}
+                </Text>
+              </>
+            );
+          })()}
+          {vowTemplateTitle ? (
+            <>
+              <View style={styles.vowChip}>
+                <Text style={styles.vowChipText}>{vowTemplateTitle}</Text>
+              </View>
+              <Button
+                title={
+                  vowAlreadyActive || vowAdded ? 'Already on the board' : 'Add as Quest'
+                }
+                onPress={acceptVow}
+                disabled={vowAlreadyActive || vowAdded}
+                variant="secondary"
+                style={styles.vowBtn}
+              />
+              {vowAdded ? (
+                <Text style={styles.vowHint}>Vow accepted — check Adventures.</Text>
+              ) : null}
+            </>
           ) : null}
         </Card>
       ) : null}
@@ -226,20 +266,6 @@ export default function JournalScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: {
-    color: colors.textPrimary,
-    fontSize: fontSize.title,
-    fontWeight: '900',
-    marginTop: spacing.md,
-    ...typography.heading,
-  },
-  subtitle: {
-    color: colors.textSecondary,
-    fontSize: fontSize.sm,
-    marginBottom: spacing.lg,
-    fontStyle: 'italic',
-    ...typography.journal,
-  },
   chronicleCard: { marginBottom: spacing.md },
   chronicleOverline: {
     color: colors.textMuted,
@@ -273,24 +299,43 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginBottom: spacing.xs,
   },
+  vowMentor: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    fontStyle: 'italic',
+    lineHeight: 20,
+    marginBottom: spacing.sm,
+    ...typography.journal,
+  },
   vowText: {
     color: colors.textPrimary,
     fontSize: fontSize.md,
     lineHeight: 22,
+    fontWeight: '600',
     ...typography.journal,
+  },
+  vowChip: {
+    alignSelf: 'flex-start',
+    marginTop: spacing.sm,
+    backgroundColor: `${colors.moon}22`,
+    borderRadius: radius.full,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+  },
+  vowChipText: {
+    color: colors.moon,
+    fontSize: fontSize.xs,
+    fontWeight: '700',
   },
   vowBtn: {
     marginTop: spacing.sm,
     alignSelf: 'flex-start',
-    backgroundColor: `${colors.moon}30`,
-    borderRadius: radius.md,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
   },
-  vowBtnText: {
-    color: colors.moon,
+  vowHint: {
+    marginTop: spacing.xs,
+    color: colors.success,
     fontSize: fontSize.sm,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   stampsCard: { marginBottom: spacing.md },
   stampsTitle: {

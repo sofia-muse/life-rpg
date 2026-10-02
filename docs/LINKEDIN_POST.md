@@ -16,7 +16,7 @@ As a .NET developer I wanted one project that shows the *whole* picture:
 🎮 **Frontend** — React Native + Expo (iOS/Android/Web), TypeScript, Zustand, offline-first
 ⚙️ **Backend** — ASP.NET Core 8 Web API, EF Core, SQL Server, JWT auth, on **Azure** (Bicep IaC + CI/CD)
 🤖 **AI** — "forge" a unique skill on demand: the server prompts an LLM for structured output, then **validates and clamps** the result so it's balanced and tamper-proof
-🔒 **Engineering** — offline-first sync with an idempotent batch endpoint, server-authoritative game logic (anti-cheat), and **119 automated tests** (the game engine is ported identically in C# and TypeScript and proven equal by tests)
+🔒 **Engineering** — offline-first sync with an idempotent batch endpoint, server-authoritative game logic (anti-cheat), and **185 automated tests** (the game engine is ported identically in C# and TypeScript and proven equal by tests)
 
 ▶️ Try it (runs instantly, no sign-up): https://life-rpg-opal-nine.vercel.app/
 💻 Code: https://github.com/sofia-muse/life-rpg
@@ -38,7 +38,7 @@ The fun part for me was the engineering underneath the game:
 • **Server-authoritative** — XP, levels, classes and skill unlocks are recomputed on the server (anti-cheat), while the client computes the same values for instant, animated feedback. The game engine lives in both C# and TypeScript and stays in lockstep — guaranteed by tests.
 • **AI-forged skills** — tap "Forge" and an LLM generates a skill themed to your hero; the server takes only safe fields from the model and **clamps the bonus** so it can't be inflated.
 
-Stack: React Native/Expo + TypeScript on the front; ASP.NET Core 8, EF Core, SQL Server, JWT, deployed to Azure with Bicep + CI/CD on the back. 119 tests, all green.
+Stack: React Native/Expo + TypeScript on the front; ASP.NET Core 8, EF Core, SQL Server, JWT, deployed to Azure with Bicep + CI/CD on the back. 185 tests, all green.
 
 ▶️ Live demo: https://life-rpg-opal-nine.vercel.app/
 💻 Source: https://github.com/sofia-muse/life-rpg
@@ -50,6 +50,6 @@ Always happy to talk shop about any of it. 🙂
 ---
 
 ### Posting tips
-- Add a **screen-recording / GIF** of the level-up → skill-unlock → tier-up cascade as the post media — it dramatically boosts engagement. (Record the live demo: onboarding quiz → complete a quest → watch the cascade.)
+- Attach **`docs/demo-cascade.gif`** (or a fresh screen recording of quest complete → XP → level-up) as the post media — it dramatically boosts engagement.
 - Post Tue–Thu morning for best reach.
 - After deploying the Azure API, you can add: "Live API + Swagger: <url>/swagger".

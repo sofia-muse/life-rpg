@@ -9,6 +9,7 @@ import { useUIStore } from '../../src/store/uiStore';
 import { useSettingsStore } from '../../src/store/settingsStore';
 import { Card } from '../../src/components/layout/Card';
 import { Badge } from '../../src/components/layout/Badge';
+import { ScreenHeader } from '../../src/components/layout/ScreenHeader';
 import { StatBar } from '../../src/components/game/StatBar';
 import { StreakBanner } from '../../src/components/game/StreakBanner';
 import { NiceAvatarCharacter } from '../../src/components/avatar/NiceAvatarCharacter';
@@ -199,15 +200,16 @@ export default function DashboardScreen() {
               />
               <View pointerEvents="none" style={styles.heroPanelOrb} />
 
-              <View style={styles.panelTopRow}>
-                <View style={styles.panelTopCopy}>
-                  <Text style={styles.panelOverline}>Sanctuary Profile</Text>
-                  <Text style={styles.panelTitle}>Your Living Legend</Text>
-                </View>
-                <TouchableOpacity onPress={() => router.push('/modal')} style={styles.settingsBtn}>
-                  <Text style={styles.settingsIcon}>&#9881;</Text>
-                </TouchableOpacity>
-              </View>
+              <ScreenHeader
+                eyebrow="Sanctuary Profile"
+                title="Your Living Legend"
+                subtitle="Stats, streaks, and today's quests — your living campaign board."
+                action={
+                  <TouchableOpacity onPress={() => router.push('/modal')} style={styles.settingsBtn}>
+                    <Text style={styles.settingsIcon}>&#9881;</Text>
+                  </TouchableOpacity>
+                }
+              />
 
               <View style={[styles.header, stackHero && styles.headerStacked]}>
                 <PulseGlow
