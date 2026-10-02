@@ -1,10 +1,6 @@
 import { daysBetween } from './calendar';
-import {
-  getRestDayAllowance,
-  getStreakRetentionRatio,
-  getWeeklyStreakFreezeAllowance,
-} from './skillEngine';
-import { getStreakAfterBreak, isNewDay, shouldResetStreak } from './streakEngine';
+import { getRestDayAllowance } from './skillEngine';
+import { advanceTrackedStreak, isNewDay } from './streakEngine';
 
 export const REST_WINDOW_DAYS = 7;
 
@@ -83,13 +79,6 @@ export function resolveRestDay(input: RestDayInput): RestDayDecision {
   };
 }
 
-function wasUsedRecently(lastUsedDate: string | undefined, today: string, days: number): boolean {
-  if (!lastUsedDate) return false;
-  const gap = daysBetween(lastUsedDate, today);
-  if (gap === null) return false;
-  return gap >= 0 && gap < days;
-}
-
 function continueStreak(input: RestDayInput): {
   currentStreak: number;
   longestStreak: number;
@@ -118,31 +107,19 @@ function continueStreak(input: RestDayInput): {
     };
   }
 
-  let newStreak = input.currentStreak;
-  let usedStreakFreeze = false;
-  let lastStreakFreezeDate = input.lastStreakFreezeDate;
-
-  if (shouldResetStreak(input.lastActiveDate, input.today)) {
-    const allowance = getWeeklyStreakFreezeAllowance(input.unlockedSkillIds);
-    if (allowance > 0 && !wasUsedRecently(input.lastStreakFreezeDate, input.today, REST_WINDOW_DAYS)) {
-      usedStreakFreeze = true;
-      lastStreakFreezeDate = input.today;
-    } else {
-      const retention = getStreakRetentionRatio(input.unlockedSkillIds);
-      newStreak =
-        retention > 0
-          ? Math.floor(input.currentStreak * retention)
-          : getStreakAfterBreak(input.currentStreak, false);
-    }
-  } else {
-    newStreak = input.currentStreak + 1;
-  }
+  const advance = advanceTrackedStreak({
+    currentStreak: input.currentStreak,
+    lastDate: input.lastActiveDate,
+    today: input.today,
+    unlockedSkillIds: input.unlockedSkillIds,
+    lastStreakFreezeDate: input.lastStreakFreezeDate,
+  });
 
   return {
-    currentStreak: newStreak,
-    longestStreak: Math.max(input.longestStreak, newStreak),
+    currentStreak: advance.streak,
+    longestStreak: Math.max(input.longestStreak, advance.streak),
     lastActiveDate: input.today,
-    lastStreakFreezeDate,
-    usedStreakFreeze,
+    lastStreakFreezeDate: advance.lastStreakFreezeDate,
+    usedStreakFreeze: advance.usedFreeze,
   };
 }

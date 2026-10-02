@@ -2,6 +2,10 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { generateId } from '../utils/id';
+import { env } from '../config/env';
+import { heroApi } from '../api/heroApi';
+import { mapApiHero } from '../api/mappers';
+import { useAuthStore } from './authStore';
 import {
   Hero,
   HeroAppearance,
@@ -11,18 +15,13 @@ import {
   StatLevelUpResult,
   STAT_NAMES,
 } from '../types';
-import { calendarToday, daysBetween, deviceTimeZone } from '../engine/calendar';
+import { calendarToday, deviceTimeZone } from '../engine/calendar';
 import { applyXP, getStatDisplayProgress } from '../engine/xpEngine';
 import { calculateHeroLevel, getStatBlock } from '../engine/statEngine';
 import { checkClassEvolution, respecClassIdentity } from '../engine/classEngine';
-import {
-  getNewlyUnlockedSkills,
-  getRestDayXpReward,
-  getStreakRetentionRatio,
-  getWeeklyStreakFreezeAllowance,
-} from '../engine/skillEngine';
+import { getNewlyUnlockedSkills, getRestDayXpReward } from '../engine/skillEngine';
 import { getClassName } from '../config/classes';
-import { shouldResetStreak, isNewDay, getStreakAfterBreak } from '../engine/streakEngine';
+import { advanceTrackedStreak, isNewDay } from '../engine/streakEngine';
 import { resolveRestDay } from '../engine/restDay';
 import {
   getDefaultAppearance,
@@ -83,7 +82,9 @@ const createEmptyStatXP = (): Record<StatName, number> => ({
 
 const today = () => calendarToday(useHeroStore.getState().hero?.timeZone || deviceTimeZone());
 
-const freezeCooldownDays = 7;
+function isAuthoritative(): boolean {
+  return !env.demoMode && useAuthStore.getState().status === 'authenticated';
+}
 
 function getDailyRewardForHero(hero: Hero): { xp: number; stat: StatName; bonusType: string } | null {
   const todayStr = today();
@@ -114,13 +115,6 @@ function getDailyRewardForHero(hero: Hero): { xp: number; stat: StatName; bonusT
     stat: hero.dominantStat,
     bonusType,
   };
-}
-
-function wasUsedRecently(lastUsedDate: string | undefined, days: number): boolean {
-  if (!lastUsedDate) return false;
-  const gap = daysBetween(lastUsedDate, today());
-  if (gap === null) return false;
-  return gap >= 0 && gap < days;
 }
 
 function applyHeroXp(
@@ -274,29 +268,16 @@ export const useHeroStore = create<HeroState>()(
           return { usedStreakFreeze: false, rewardAvailable: getDailyRewardForHero(hero) !== null };
         }
 
-        const streakBroken = shouldResetStreak(hero.lastActiveDate, todayStr);
-        let newStreak = hero.currentStreak;
-        let usedStreakFreeze = false;
-        let lastStreakFreezeDate = hero.lastStreakFreezeDate;
-
-        if (streakBroken) {
-          const streakFreezeAllowance = getWeeklyStreakFreezeAllowance(unlockedSkillIds);
-          const canUseFreeze =
-            streakFreezeAllowance > 0 && !wasUsedRecently(hero.lastStreakFreezeDate, freezeCooldownDays);
-
-          if (canUseFreeze) {
-            usedStreakFreeze = true;
-            lastStreakFreezeDate = todayStr;
-          } else {
-            const retentionRatio = getStreakRetentionRatio(unlockedSkillIds);
-            newStreak =
-              retentionRatio > 0
-                ? Math.floor(hero.currentStreak * retentionRatio)
-                : getStreakAfterBreak(hero.currentStreak, false);
-          }
-        } else {
-          newStreak = hero.currentStreak + 1;
-        }
+        const advance = advanceTrackedStreak({
+          currentStreak: hero.currentStreak,
+          lastDate: hero.lastActiveDate,
+          today: todayStr,
+          unlockedSkillIds,
+          lastStreakFreezeDate: hero.lastStreakFreezeDate,
+        });
+        const newStreak = advance.streak;
+        const usedStreakFreeze = advance.usedFreeze;
+        const lastStreakFreezeDate = advance.lastStreakFreezeDate;
 
         const updatedHero: Hero = {
           ...hero,
@@ -348,7 +329,13 @@ export const useHeroStore = create<HeroState>()(
         };
 
         set({ hero: syncedHero });
-        syncHeroState(syncedHero);
+        if (isAuthoritative()) {
+          void heroApi.takeRest().then((apiHero) => {
+            set({ hero: mapApiHero(apiHero) });
+          }).catch(() => syncHeroState(syncedHero));
+        } else {
+          syncHeroState(syncedHero);
+        }
         return { granted: true, preservedStreak: decision.preservedStreak, xp: decision.xp };
       },
 
@@ -363,7 +350,13 @@ export const useHeroStore = create<HeroState>()(
           updatedAt: new Date().toISOString(),
         };
         set({ hero: updatedHero });
-        syncHeroState(updatedHero);
+        if (isAuthoritative()) {
+          void heroApi.respec(stat).then((apiHero) => {
+            set({ hero: mapApiHero(apiHero) });
+          }).catch(() => syncHeroState(updatedHero));
+        } else {
+          syncHeroState(updatedHero);
+        }
       },
 
       setTimeZone: (timeZone) => {

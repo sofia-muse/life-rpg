@@ -1,4 +1,5 @@
 import { ClassFlair, Quest, QuestType, StatName, WeeklyPath } from '../types';
+import { calendarWeekKey } from '../engine/calendar';
 
 export interface WeeklyPathSettingsLike {
   weeklyPath: WeeklyPath | null;
@@ -78,16 +79,8 @@ export const WEEKLY_PATHS: Record<WeeklyPath, WeeklyPathDefinition> = {
   },
 };
 
-function startOfLocalWeek(date: Date): Date {
-  const normalized = new Date(date);
-  normalized.setHours(0, 0, 0, 0);
-  const day = (normalized.getDay() + 6) % 7;
-  normalized.setDate(normalized.getDate() - day);
-  return normalized;
-}
-
-export function getCurrentWeekKey(now = new Date()): string {
-  return startOfLocalWeek(now).toISOString().split('T')[0];
+export function getCurrentWeekKey(now = new Date(), timeZone?: string | null): string {
+  return calendarWeekKey(timeZone, now);
 }
 
 export function getWeekKeyForIsoDate(value: string | null | undefined): string | null {

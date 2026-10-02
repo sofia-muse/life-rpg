@@ -36,6 +36,43 @@ public class StreakCalculatorTests
         StreakCalculator.GetStreakAfterBreak(streak, regen).Should().Be(expected);
 
     [Fact]
+    public void Advance_continues_a_quest_streak_only_across_adjacent_days()
+    {
+        var today = new DateOnly(2026, 6, 4);
+        var continued = StreakCalculator.Advance(4, today.AddDays(-1), today, null, 0, 0, missingDateStartsAtOne: true, brokenDayCounts: true);
+        continued.Streak.Should().Be(5);
+
+        var broken = StreakCalculator.Advance(4, today.AddDays(-3), today, null, 0, 0, missingDateStartsAtOne: true, brokenDayCounts: true);
+        broken.Streak.Should().Be(1);
+        broken.UsedFreeze.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Advance_freeze_keeps_the_chain_and_retention_keeps_half()
+    {
+        var today = new DateOnly(2026, 6, 4);
+        var frozen = StreakCalculator.Advance(9, today.AddDays(-4), today, null, 1, 0);
+        frozen.Streak.Should().Be(9);
+        frozen.UsedFreeze.Should().BeTrue();
+        frozen.LastFreezeDate.Should().Be(today);
+
+        var retained = StreakCalculator.Advance(9, today.AddDays(-4), today, today, 1, 0.5, brokenDayCounts: true);
+        retained.Streak.Should().Be(4);
+        retained.UsedFreeze.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Side_boss_budget_pays_twice_then_stops()
+    {
+        var settings = new LifeRpg.Domain.ValueObjects.HeroSettings();
+        var today = new DateOnly(2026, 6, 4);
+        BonusPayouts.TryTake(settings, today).Should().BeTrue();
+        BonusPayouts.TryTake(settings, today).Should().BeTrue();
+        BonusPayouts.TryTake(settings, today).Should().BeFalse();
+        BonusPayouts.TryTake(settings, today.AddDays(1)).Should().BeTrue();
+    }
+
+    [Fact]
     public void NextMilestone_after_last_is_null()
     {
         StreakCalculator.GetNextMilestone(400).Should().BeNull();

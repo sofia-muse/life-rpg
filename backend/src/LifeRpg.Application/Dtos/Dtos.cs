@@ -86,7 +86,10 @@ public record QuestDto(
     int DaysCompleted,
     int? TotalSteps,
     int? CompletedSteps,
-    string? EvolutionPathId = null);
+    string? EvolutionPathId = null,
+    DateOnly? LastStreakDate = null);
+
+public record RespecRequest(StatName Stat);
 
 // ─── Quest completion result (mirrors the client's StatLevelUpResult + XPReward) ───
 public record SkillDto(string Id, string Name, string Description, string Category, string Icon, string Effect);

@@ -137,6 +137,9 @@ export interface Hero {
   lastRewardDate: string;
   totalLoginDays: number;
   lastStreakFreezeDate?: string;
+  /** Hero-calendar date of the last side/boss XP payout, and how many were paid that day. */
+  bonusPayoutDate?: string;
+  bonusPayoutsUsed?: number;
 }
 
 export interface Quest {
@@ -155,6 +158,8 @@ export interface Quest {
   streak: number;
   bestStreak: number;
   daysCompleted: number;
+  /** Hero-calendar date of the last completion that counted toward this quest's streak. */
+  lastStreakDate?: string;
   /** Stable id linking a daily to an evolution path (survives title changes). */
   evolutionPathId?: string;
   /** Optional seed title from a template for evolution matching. */

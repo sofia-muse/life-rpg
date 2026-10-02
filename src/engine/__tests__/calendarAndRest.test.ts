@@ -1,6 +1,7 @@
-import { calendarToday, daysBetween } from '../calendar';
+import { calendarToday, calendarWeekKey, daysBetween } from '../calendar';
 import { resolveRestDay } from '../restDay';
-import { bossStepXpShare } from '../xpEngine';
+import { advanceTrackedStreak } from '../streakEngine';
+import { bossStepXpShare, takeSideBossPayout } from '../xpEngine';
 
 describe('calendar', () => {
   it('rolls the day at local midnight, not UTC', () => {
@@ -68,6 +69,67 @@ describe('rest day', () => {
 
     expect(decision.granted).toBe(false);
     expect(decision.currentStreak).toBe(5);
+  });
+});
+
+describe('quest streak', () => {
+  it('continues on the next day and starts over after a gap', () => {
+    const continued = advanceTrackedStreak({
+      currentStreak: 4,
+      lastDate: '2026-06-03',
+      today: '2026-06-04',
+      unlockedSkillIds: [],
+      missingDateStartsAtOne: true,
+      brokenDayCounts: true,
+    });
+    expect(continued.streak).toBe(5);
+
+    const broken = advanceTrackedStreak({
+      currentStreak: 4,
+      lastDate: '2026-06-01',
+      today: '2026-06-04',
+      unlockedSkillIds: [],
+      missingDateStartsAtOne: true,
+      brokenDayCounts: true,
+    });
+    expect(broken.streak).toBe(1);
+    expect(broken.usedFreeze).toBe(false);
+  });
+
+  it('keeps the chain when a freeze is available', () => {
+    const frozen = advanceTrackedStreak({
+      currentStreak: 9,
+      lastDate: '2026-05-30',
+      today: '2026-06-04',
+      unlockedSkillIds: ['wil-2'],
+      missingDateStartsAtOne: true,
+      brokenDayCounts: true,
+    });
+    expect(frozen.streak).toBe(9);
+    expect(frozen.usedFreeze).toBe(true);
+    expect(frozen.lastStreakFreezeDate).toBe('2026-06-04');
+  });
+});
+
+describe('side and boss payout budget', () => {
+  it('grants two payouts per calendar day', () => {
+    const first = takeSideBossPayout(undefined, 0, '2026-06-04');
+    const second = takeSideBossPayout(first.payoutDate, first.payoutsUsed, '2026-06-04');
+    const third = takeSideBossPayout(second.payoutDate, second.payoutsUsed, '2026-06-04');
+    const nextDay = takeSideBossPayout(third.payoutDate, third.payoutsUsed, '2026-06-05');
+    expect(first.granted).toBe(true);
+    expect(second.granted).toBe(true);
+    expect(third.granted).toBe(false);
+    expect(nextDay.granted).toBe(true);
+    expect(nextDay.payoutsUsed).toBe(1);
+  });
+});
+
+describe('calendar week', () => {
+  it('starts the week on Monday in the hero zone', () => {
+    const instant = new Date('2026-06-07T22:00:00.000Z');
+    expect(calendarWeekKey('UTC', instant)).toBe('2026-06-01');
+    expect(calendarWeekKey('Europe/Moscow', instant)).toBe('2026-06-08');
   });
 });
 

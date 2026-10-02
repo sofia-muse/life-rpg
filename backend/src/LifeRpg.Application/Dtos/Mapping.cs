@@ -14,7 +14,7 @@ public static class Mapping
 
     public static QuestDto ToDto(this Quest q) => new(
         q.Id, q.Title, q.Description, q.Type, q.Difficulty, q.Stat, q.XpReward, q.IsCompleted,
-        q.IsActive, q.CreatedAt, q.UpdatedAt, q.CompletedAt, q.Streak, q.BestStreak, q.DaysCompleted, q.TotalSteps, q.CompletedSteps, q.EvolutionPathId);
+        q.IsActive, q.CreatedAt, q.UpdatedAt, q.CompletedAt, q.Streak, q.BestStreak, q.DaysCompleted, q.TotalSteps, q.CompletedSteps, q.EvolutionPathId, q.LastStreakDate);
 
     public static UnlockedSkillDto ToDto(this UnlockedSkill s) => new(s.SkillId, s.UnlockedAt);
 

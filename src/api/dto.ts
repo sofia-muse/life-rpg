@@ -47,6 +47,8 @@ export interface ApiHero {
     timeZone?: string | null;
     activeForgedSkillIds?: string[] | null;
     recentRestDates?: string[];
+    bonusPayoutDate?: string | null;
+    bonusPayoutsUsed?: number;
   };
 }
 
@@ -69,4 +71,5 @@ export interface ApiQuest {
   totalSteps: number | null;
   completedSteps: number | null;
   evolutionPathId?: string | null;
+  lastStreakDate?: string | null;
 }
