@@ -40,8 +40,29 @@ function bonusFromMultiplier(baseXP: number, multiplier: number): number {
   return Math.floor(baseXP * multiplier + 1e-9) - baseXP;
 }
 
-/** Full XP payouts for side quests and boss arcs in one hero-day. Dailies are outside this budget. */
+/** Full XP payouts for side quests and boss arcs in one hero-day. */
 export const DAILY_SIDE_BOSS_PAYOUTS = 2;
+
+/** Daily quests that can still receive XP in one hero-day, before skill bonuses. */
+export const BASE_ACTIVE_DAILY_SLOTS = 3;
+
+/**
+ * Daily XP stops at the hero's daily slot count. A later daily still closes, with no XP.
+ * The count survives deleting the quest.
+ */
+export function takeDailyXpPayout(
+  payoutDate: string | undefined,
+  payoutsUsed: number,
+  today: string,
+  slotCount: number,
+): { granted: boolean; payoutDate: string; payoutsUsed: number } {
+  const used = payoutDate === today ? payoutsUsed : 0;
+  const limit = Math.max(0, slotCount);
+  if (used >= limit) {
+    return { granted: false, payoutDate: today, payoutsUsed: used };
+  }
+  return { granted: true, payoutDate: today, payoutsUsed: used + 1 };
+}
 
 /**
  * A side quest spends one slot. A boss saga spends one slot for the whole arc:

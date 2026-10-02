@@ -138,10 +138,10 @@ public class SyncService
                 XpReward = DifficultyXp.For(dto.Difficulty), // server owns XP
                 IsActive = dto.IsActive && (dto.Type != QuestType.Daily || CanActivateDailyQuest(hero, null)),
                 TotalSteps = dto.TotalSteps,
-                CompletedSteps = dto.CompletedSteps,
+                CompletedSteps = null,
                 EvolutionPathId = dto.EvolutionPathId,
-                IsCompleted = dto.IsCompleted,
-                CompletedAt = dto.CompletedAt,
+                IsCompleted = false,
+                CompletedAt = null,
                 CreatedAt = dto.CreatedAt == default ? _clock.UtcNow : dto.CreatedAt,
                 UpdatedAt = dto.UpdatedAt == default ? _clock.UtcNow : dto.UpdatedAt,
             });
@@ -161,7 +161,6 @@ public class SyncService
         existing.IsActive = dto.IsActive
             && (dto.Type != QuestType.Daily || CanActivateDailyQuest(hero, existing.Id));
         existing.TotalSteps = dto.TotalSteps;
-        existing.CompletedSteps = dto.CompletedSteps;
         existing.EvolutionPathId = dto.EvolutionPathId ?? existing.EvolutionPathId;
         existing.XpReward = DifficultyXp.For(dto.Difficulty);
         existing.UpdatedAt = dto.UpdatedAt;
@@ -235,10 +234,12 @@ public class SyncService
                 {
                     parsed.TimeZone = previous.TimeZone;
                 }
-                if (!settings.TryGetProperty("recentRestDates", out _) && !settings.TryGetProperty("RecentRestDates", out _))
-                {
-                    parsed.RecentRestDates = previous.RecentRestDates;
-                }
+                parsed.RecentRestDates = previous.RecentRestDates;
+                parsed.WeeklyRewardWeekKey = previous.WeeklyRewardWeekKey;
+                parsed.WeeklyRewardTitle = previous.WeeklyRewardTitle;
+                parsed.WeeklyRewardBadge = previous.WeeklyRewardBadge;
+                parsed.DailyXpDate = previous.DailyXpDate;
+                parsed.DailyXpPayoutsUsed = previous.DailyXpPayoutsUsed;
                 if (!settings.TryGetProperty("activeForgedSkillIds", out _) && !settings.TryGetProperty("ActiveForgedSkillIds", out _))
                 {
                     parsed.ActiveForgedSkillIds = previous.ActiveForgedSkillIds;
@@ -259,17 +260,6 @@ public class SyncService
         if (op.Payload.TryGetProperty("timeZone", out var timeZone) && timeZone.ValueKind == JsonValueKind.String)
         {
             hero.Settings.TimeZone = timeZone.GetString();
-        }
-        if (op.Payload.TryGetProperty("recentRestDates", out var recentRestDates) && recentRestDates.ValueKind == JsonValueKind.Array)
-        {
-            hero.Settings.RecentRestDates = recentRestDates.Deserialize<List<string>>(Json) ?? new List<string>();
-        }
-        if (op.Payload.TryGetProperty("dominantStat", out var dominantStat)
-            && dominantStat.ValueKind == JsonValueKind.String
-            && Enum.TryParse<StatName>(dominantStat.GetString(), ignoreCase: true, out var parsedDominant))
-        {
-            hero.DominantStat = parsedDominant;
-            hero.ClassName = ClassDefinitions.GetClassName(parsedDominant, hero.ClassTier);
         }
         if (op.Payload.TryGetProperty("updatedAt", out updatedAtProp)
             && updatedAtProp.ValueKind == JsonValueKind.String

@@ -14,8 +14,18 @@ export function appendCompletionLog(
   const next = [...(log ?? [])];
   const exists = next.some((item) => item.questId === entry.questId && item.date === entry.date);
   if (!exists) next.push(entry);
+  const newest = next.reduce((max, item) => (item.date > max ? item.date : max), entry.date);
   return next.filter((item) => {
-    const age = daysBetween(item.date, entry.date);
+    const age = daysBetween(item.date, newest);
     return age !== null && age >= 0 && age <= KEEP_DAYS;
   });
+}
+
+/** Keep the local log and fold in server rows. An empty incoming list leaves the local log alone. */
+export function mergeCompletionLogs(
+  current: QuestCompletionLogEntry[] | undefined,
+  incoming: QuestCompletionLogEntry[] | undefined,
+): QuestCompletionLogEntry[] {
+  if (!incoming?.length) return current ?? [];
+  return incoming.reduce((log, entry) => appendCompletionLog(log, entry), current ?? []);
 }

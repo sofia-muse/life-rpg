@@ -6,11 +6,12 @@ namespace LifeRpg.Application.Dtos;
 /// <summary>Hand-written mappers (entity ↔ DTO). Kept explicit and dependency-free.</summary>
 public static class Mapping
 {
-    public static HeroDto ToDto(this Hero h) => new(
+    public static HeroDto ToDto(this Hero h, IReadOnlyList<CompletionLogDto>? recentCompletions = null) => new(
         h.Id, h.Name, h.AvatarSeed, h.CreatedAt, h.UpdatedAt, h.HeroLevel, h.ClassName, h.ClassTier, h.DominantStat,
         h.TotalQuestsCompleted, h.CurrentStreak, h.LongestStreak, h.LastActiveDate, h.LastStreakFreezeDate, h.LastRewardDate,
         h.RestDaysUsed, h.TotalLoginDays, h.StatXp, h.Stats, h.Appearance, h.CharacterAppearance,
-        h.UnlockedSkills.OrderBy(s => s.UnlockedAt).Select(s => s.ToDto()).ToList(), h.Settings);
+        h.UnlockedSkills.OrderBy(s => s.UnlockedAt).Select(s => s.ToDto()).ToList(), h.Settings,
+        recentCompletions?.ToList());
 
     public static QuestDto ToDto(this Quest q) => new(
         q.Id, q.Title, q.Description, q.Type, q.Difficulty, q.Stat, q.XpReward, q.IsCompleted,

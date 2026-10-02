@@ -50,7 +50,10 @@ export interface ApiHero {
     bonusPayoutDate?: string | null;
     bonusPayoutsUsed?: number;
     openBossPayoutIds?: string[] | null;
+    dailyXpDate?: string | null;
+    dailyXpPayoutsUsed?: number;
   };
+  recentCompletions?: { questId: string; date: string; stat: StatName }[] | null;
 }
 
 export interface ApiQuest {

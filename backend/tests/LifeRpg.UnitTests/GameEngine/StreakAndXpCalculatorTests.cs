@@ -73,6 +73,20 @@ public class StreakCalculatorTests
     }
 
     [Fact]
+    public void Daily_xp_budget_pays_the_slot_count_then_stops()
+    {
+        var settings = new LifeRpg.Domain.ValueObjects.HeroSettings();
+        var today = new DateOnly(2026, 6, 4);
+        DailyXpBudget.TryTake(settings, today, 3).Should().BeTrue();
+        DailyXpBudget.TryTake(settings, today, 3).Should().BeTrue();
+        DailyXpBudget.TryTake(settings, today, 3).Should().BeTrue();
+        DailyXpBudget.TryTake(settings, today, 3).Should().BeFalse();
+        settings.DailyXpPayoutsUsed.Should().Be(3);
+        DailyXpBudget.TryTake(settings, today.AddDays(1), 3).Should().BeTrue();
+        settings.DailyXpPayoutsUsed.Should().Be(1);
+    }
+
+    [Fact]
     public void Boss_saga_spends_one_payout_for_every_step()
     {
         var settings = new LifeRpg.Domain.ValueObjects.HeroSettings();

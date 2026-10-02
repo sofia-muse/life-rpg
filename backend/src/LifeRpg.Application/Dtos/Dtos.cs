@@ -40,9 +40,12 @@ public record HeroDto(
     HeroAppearance Appearance,
     CharacterAppearance CharacterAppearance,
     List<UnlockedSkillDto> UnlockedSkills,
-    HeroSettings Settings);
+    HeroSettings Settings,
+    List<CompletionLogDto>? RecentCompletions = null);
 
 public record UpdateAppearanceRequest(HeroAppearance? Appearance, CharacterAppearance? CharacterAppearance);
+
+public record CompletionLogDto(Guid QuestId, string Date, StatName Stat);
 
 public record WeeklyCupDto(
     string PathLabel,
@@ -54,7 +57,8 @@ public record WeeklyCupDto(
     int BossProgress,
     int StreakBoost,
     string RewardTitle,
-    string RewardBadge);
+    string RewardBadge,
+    List<CompletionLogDto>? Completions = null);
 
 public record StatProgressDto(StatName Stat, int Level, int CurrentXp, int XpNeeded, double Progress);
 

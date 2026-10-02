@@ -1,8 +1,8 @@
 import { calendarToday, calendarWeekKey, daysBetween } from '../calendar';
 import { resolveRestDay } from '../restDay';
-import { appendCompletionLog } from '../completionLog';
+import { appendCompletionLog, mergeCompletionLogs } from '../completionLog';
 import { advanceTrackedStreak } from '../streakEngine';
-import { bossStepXpShare, takeSideBossPayout } from '../xpEngine';
+import { bossStepXpShare, takeDailyXpPayout, takeSideBossPayout } from '../xpEngine';
 
 describe('calendar', () => {
   it('rolls the day at local midnight, not UTC', () => {
@@ -116,6 +116,16 @@ describe('completion log', () => {
     expect(twice).toHaveLength(1);
     expect(kept.map((entry) => entry.date)).toEqual(['2026-06-26']);
   });
+
+  it('keeps the local log when the server sends nothing', () => {
+    const local = [{ questId: 'daily-1', date: '2026-06-04', stat: 'strength' as const }];
+    expect(mergeCompletionLogs(local, undefined)).toEqual(local);
+    expect(mergeCompletionLogs(local, [])).toEqual(local);
+    expect(mergeCompletionLogs(local, [{ questId: 'daily-2', date: '2026-06-05', stat: 'vitality' }])).toEqual([
+      local[0],
+      { questId: 'daily-2', date: '2026-06-05', stat: 'vitality' },
+    ]);
+  });
 });
 
 describe('quest streak', () => {
@@ -154,6 +164,24 @@ describe('quest streak', () => {
     expect(frozen.streak).toBe(9);
     expect(frozen.usedFreeze).toBe(true);
     expect(frozen.lastStreakFreezeDate).toBe('2026-06-04');
+  });
+});
+
+describe('daily xp budget', () => {
+  it('pays the slot count and resets the next day', () => {
+    const first = takeDailyXpPayout(undefined, 0, '2026-06-04', 3);
+    const second = takeDailyXpPayout(first.payoutDate, first.payoutsUsed, '2026-06-04', 3);
+    const third = takeDailyXpPayout(second.payoutDate, second.payoutsUsed, '2026-06-04', 3);
+    const fourth = takeDailyXpPayout(third.payoutDate, third.payoutsUsed, '2026-06-04', 3);
+    const nextDay = takeDailyXpPayout(fourth.payoutDate, fourth.payoutsUsed, '2026-06-05', 3);
+    expect(first.granted).toBe(true);
+    expect(second.granted).toBe(true);
+    expect(third.granted).toBe(true);
+    expect(third.payoutsUsed).toBe(3);
+    expect(fourth.granted).toBe(false);
+    expect(fourth.payoutsUsed).toBe(3);
+    expect(nextDay.granted).toBe(true);
+    expect(nextDay.payoutsUsed).toBe(1);
   });
 });
 

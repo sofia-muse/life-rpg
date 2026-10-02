@@ -1,9 +1,12 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { heroApi } from '../api/heroApi';
 import { syncManager } from '../api/syncManager';
+import { env } from '../config/env';
 import { WeeklyPath } from '../types';
-import { getCurrentWeekKey, getWeeklyPathDefinition } from '../config/weeklyPaths';
+import { getCurrentWeekKey } from '../config/weeklyPaths';
+import { useAuthStore } from './authStore';
 import { useHeroStore } from './heroStore';
 import { scheduleQuestReminders, cancelQuestReminders } from '../utils/notifications';
 import { setActiveForgedSkillIds as registerActiveForgedSkillIds } from '../config/skills';
@@ -59,7 +62,7 @@ interface SettingsState {
   markAchievementsSeen: (ids: string[]) => void;
   incrementWeeklyContractsCompleted: () => void;
   chooseWeeklyPath: (path: WeeklyPath) => void;
-  claimWeeklyReward: (reward: { title: string; badge: string }) => void;
+  claimWeeklyReward: (reward: { title: string; badge: string }) => boolean | Promise<boolean>;
   clearStaleWeeklyPath: () => void;
   setActiveForgedSkillIds: (ids: string[] | null) => void;
 }
@@ -256,27 +259,30 @@ export const useSettingsStore = create<SettingsState>()(
           };
         }),
 
-      claimWeeklyReward: (reward) =>
+      claimWeeklyReward: (reward) => {
+        const authoritative = !env.demoMode && useAuthStore.getState().status === 'authenticated';
+        const titleIdMap: Record<string, string> = {
+          'Vanguard of Power': 'vanguard_power',
+          'Sage of Focus': 'sage_of_focus',
+          'Warden of Support': 'warden_support',
+        };
+        const titleId = titleIdMap[reward.title] ?? `custom:${reward.title}`;
+        let claimedLocally = false;
+
         set((state) => {
           const weekKey = state.weeklyPathWeekKey ?? getCurrentWeekKey(new Date(), useHeroStore.getState().hero?.timeZone);
-          const path = state.weeklyPath;
-          const pathDef = path ? getWeeklyPathDefinition(path) : null;
-
-          // Map path reward titles to equippable ids
-          const titleIdMap: Record<string, string> = {
-            'Vanguard of Power': 'vanguard_power',
-            'Sage of Focus': 'sage_of_focus',
-            'Warden of Support': 'warden_support',
-          };
-          const titleId = titleIdMap[reward.title] ?? `custom:${reward.title}`;
           const unlockedTitleIds = state.unlockedTitleIds.includes(titleId)
             ? state.unlockedTitleIds
             : [...state.unlockedTitleIds, titleId];
-          const customTitleLabels =
-            titleId.startsWith('custom:')
-              ? { ...state.customTitleLabels, [titleId]: reward.title }
-              : state.customTitleLabels;
+          const customTitleLabels = titleId.startsWith('custom:')
+            ? { ...state.customTitleLabels, [titleId]: reward.title }
+            : state.customTitleLabels;
 
+          if (authoritative) {
+            return { unlockedTitleIds, customTitleLabels, equippedTitleId: titleId };
+          }
+
+          claimedLocally = true;
           const next = {
             ...state,
             weeklyRewardWeekKey: weekKey,
@@ -285,7 +291,6 @@ export const useSettingsStore = create<SettingsState>()(
             unlockedTitleIds,
             customTitleLabels,
             equippedTitleId: titleId,
-            weeklyContractsCompleted: state.weeklyContractsCompleted + (pathDef ? 0 : 0),
           };
           console.info('[SettingsStore] Weekly reward claimed.', {
             weekKey,
@@ -295,14 +300,33 @@ export const useSettingsStore = create<SettingsState>()(
           });
           syncSettings(next);
           return {
-            weeklyRewardWeekKey: next.weeklyRewardWeekKey,
-            weeklyRewardTitle: next.weeklyRewardTitle,
-            weeklyRewardBadge: next.weeklyRewardBadge,
-            unlockedTitleIds: next.unlockedTitleIds,
-            customTitleLabels: next.customTitleLabels,
-            equippedTitleId: next.equippedTitleId,
+            weeklyRewardWeekKey: weekKey,
+            weeklyRewardTitle: reward.title,
+            weeklyRewardBadge: reward.badge,
+            unlockedTitleIds,
+            customTitleLabels,
+            equippedTitleId: titleId,
           };
-        }),
+        });
+
+        if (!authoritative) return claimedLocally;
+
+        return heroApi.claimWeeklyReward().then((apiHero) => {
+          get().replaceSettings(apiHero.settings);
+          const current = get();
+          const unlockedTitleIds = current.unlockedTitleIds.includes(titleId)
+            ? current.unlockedTitleIds
+            : [...current.unlockedTitleIds, titleId];
+          const customTitleLabels = titleId.startsWith('custom:')
+            ? { ...current.customTitleLabels, [titleId]: reward.title }
+            : current.customTitleLabels;
+          set({ unlockedTitleIds, customTitleLabels, equippedTitleId: titleId });
+          return true;
+        }).catch((error) => {
+          console.error('[SettingsStore] Weekly reward claim was refused.', { error });
+          return false;
+        });
+      },
 
       setActiveForgedSkillIds: (ids) =>
         set((state) => {

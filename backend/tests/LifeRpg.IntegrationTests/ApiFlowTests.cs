@@ -203,8 +203,12 @@ public class ApiFlowTests : IClassFixture<LifeRpgApiFactory>
         cup!.PathLabel.Should().Be("Power Cup");
         cup.ContractTitle.Should().Be("Power Path");
         cup.CompletedMatches.Should().Be(2);
+        cup.Completions.Should().HaveCount(2);
         cup.Score.Should().BeGreaterThan(0);
         cup.Rank.Should().NotBeNullOrWhiteSpace();
+
+        var hydrated = await client.GetFromJsonAsync<HeroDto>("/api/v1/heroes/me", Json);
+        hydrated!.RecentCompletions.Should().HaveCount(2);
     }
 
     [Fact]
@@ -342,5 +346,228 @@ public class ApiFlowTests : IClassFixture<LifeRpgApiFactory>
         respec!.DominantStat.Should().Be(Domain.Enums.StatName.Intelligence);
         respec.ClassName.Should().Be("Apprentice Scholar");
         respec.ClassTier.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Quest_sync_creates_the_shell_and_ignores_completion()
+    {
+        var client = await AuthedClientAsync("shell@example.com");
+        await client.PostAsJsonAsync("/api/v1/heroes",
+            new CreateHeroRequest("Shell", "shell", new() { Domain.Enums.StatName.Strength }));
+
+        var created = (await (await client.PostAsJsonAsync("/api/v1/quests",
+            new CreateQuestRequest("Existing", "", Domain.Enums.QuestType.Side, Domain.Enums.QuestDifficulty.Easy,
+                Domain.Enums.StatName.Strength, null))).Content.ReadFromJsonAsync<QuestDto>(Json))!;
+
+        var insertedId = Guid.NewGuid();
+        var now = DateTimeOffset.UtcNow;
+        var syncRes = await client.PostAsJsonAsync("/api/v1/sync",
+            new SyncBatchRequest(null, new()
+            {
+                new SyncOperation(
+                    "shell-insert",
+                    "quest",
+                    "upsert",
+                    JsonSerializer.SerializeToElement(new
+                    {
+                        id = insertedId,
+                        title = "Forged finish",
+                        description = "",
+                        type = "side",
+                        difficulty = "easy",
+                        stat = "strength",
+                        isActive = true,
+                        isCompleted = true,
+                        completedAt = now.ToString("O"),
+                        completedSteps = 4,
+                        streak = 9,
+                        daysCompleted = 9,
+                        createdAt = now.ToString("O"),
+                        updatedAt = now.ToString("O"),
+                    })),
+                new SyncOperation(
+                    "shell-update",
+                    "quest",
+                    "upsert",
+                    JsonSerializer.SerializeToElement(new
+                    {
+                        id = created.Id,
+                        title = "Existing",
+                        description = "",
+                        type = "side",
+                        difficulty = "easy",
+                        stat = "strength",
+                        isActive = true,
+                        isCompleted = true,
+                        completedAt = now.ToString("O"),
+                        completedSteps = 4,
+                        streak = 9,
+                        daysCompleted = 9,
+                        updatedAt = now.AddMinutes(5).ToString("O"),
+                    })),
+            }));
+        syncRes.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var quests = (await client.GetFromJsonAsync<List<QuestDto>>("/api/v1/quests", Json))!;
+        var inserted = quests.Single(q => q.Id == insertedId);
+        inserted.IsCompleted.Should().BeFalse();
+        inserted.CompletedAt.Should().BeNull();
+        inserted.CompletedSteps.Should().BeNull();
+        inserted.Streak.Should().Be(0);
+        inserted.DaysCompleted.Should().Be(0);
+
+        var updated = quests.Single(q => q.Id == created.Id);
+        updated.IsCompleted.Should().BeFalse();
+        updated.CompletedAt.Should().BeNull();
+        updated.CompletedSteps.Should().BeNull();
+        updated.Streak.Should().Be(0);
+        updated.DaysCompleted.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Fourth_daily_pays_nothing_after_a_finished_daily_is_deleted()
+    {
+        var client = await AuthedClientAsync("daily-cap@example.com");
+        await client.PostAsJsonAsync("/api/v1/heroes",
+            new CreateHeroRequest("Day", "day", new() { Domain.Enums.StatName.Strength }));
+
+        async Task<CompleteQuestResult> CompleteDaily(string title)
+        {
+            var quest = await (await client.PostAsJsonAsync("/api/v1/quests",
+                new CreateQuestRequest(title, "", Domain.Enums.QuestType.Daily, Domain.Enums.QuestDifficulty.Easy,
+                    Domain.Enums.StatName.Strength, null))).Content.ReadFromJsonAsync<QuestDto>(Json);
+            return (await (await client.PostAsync($"/api/v1/quests/{quest!.Id}/complete", null))
+                .Content.ReadFromJsonAsync<CompleteQuestResult>(Json))!;
+        }
+
+        var first = await CompleteDaily("One");
+        var second = await CompleteDaily("Two");
+        var third = await CompleteDaily("Three");
+        first.XpAwarded.Should().Be(15);
+        second.XpAwarded.Should().Be(15);
+        third.XpAwarded.Should().Be(15);
+
+        var quests = await client.GetFromJsonAsync<List<QuestDto>>("/api/v1/quests", Json);
+        var finished = quests!.Single(q => q.Title == "Three");
+        (await client.DeleteAsync($"/api/v1/quests/{finished.Id}")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var fourth = await CompleteDaily("Four");
+        fourth.XpAwarded.Should().Be(0);
+        fourth.BonusBudgetSpent.Should().BeTrue();
+        fourth.Hero.Settings.DailyXpPayoutsUsed.Should().Be(3);
+        var after = await client.GetFromJsonAsync<List<QuestDto>>("/api/v1/quests", Json);
+        after!.Single(q => q.Title == "Four").IsCompleted.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Hero_upsert_ignores_rest_class_and_weekly_reward()
+    {
+        var client = await AuthedClientAsync("sealed@example.com");
+        await client.PostAsJsonAsync("/api/v1/heroes",
+            new CreateHeroRequest("Seal", "seal", new() { Domain.Enums.StatName.Strength }));
+
+        var rested = await (await client.PostAsync("/api/v1/heroes/me/rest", null))
+            .Content.ReadFromJsonAsync<HeroDto>(Json);
+        rested!.Settings.RecentRestDates.Should().NotBeEmpty();
+        var restDates = rested.Settings.RecentRestDates;
+
+        var syncRes = await client.PostAsJsonAsync("/api/v1/sync",
+            new SyncBatchRequest(null, new()
+            {
+                new SyncOperation(
+                    "sealed-hero",
+                    "hero",
+                    "upsert",
+                    JsonSerializer.SerializeToElement(new
+                    {
+                        dominantStat = "intelligence",
+                        recentRestDates = Array.Empty<string>(),
+                        settings = new
+                        {
+                            notificationsEnabled = true,
+                            hapticEnabled = true,
+                            reminderTime = "09:00",
+                            aiSkillsEnabled = false,
+                            recentRestDates = Array.Empty<string>(),
+                            weeklyRewardWeekKey = "2099-01-05",
+                            weeklyRewardTitle = "Stolen",
+                            weeklyRewardBadge = "Stolen Cup",
+                            dailyXpDate = "2099-01-05",
+                            dailyXpPayoutsUsed = 0,
+                        },
+                        updatedAt = DateTimeOffset.UtcNow.AddHours(1).ToString("O"),
+                    }))
+            }));
+        syncRes.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var persisted = await client.GetFromJsonAsync<HeroDto>("/api/v1/heroes/me", Json);
+        persisted!.DominantStat.Should().Be(Domain.Enums.StatName.Strength);
+        persisted.ClassName.Should().Be("Apprentice Warrior");
+        persisted.Settings.RecentRestDates.Should().BeEquivalentTo(restDates);
+        persisted.Settings.WeeklyRewardWeekKey.Should().BeNull();
+        persisted.Settings.WeeklyRewardTitle.Should().BeNull();
+        persisted.Settings.WeeklyRewardBadge.Should().BeNull();
+        persisted.Settings.DailyXpDate.Should().BeNull();
+        persisted.Settings.DailyXpPayoutsUsed.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Weekly_reward_is_claimed_only_when_the_contract_is_complete()
+    {
+        var client = await AuthedClientAsync("claim@example.com");
+        await client.PostAsJsonAsync("/api/v1/heroes",
+            new CreateHeroRequest("Claim", "claim", new() { Domain.Enums.StatName.Strength }));
+
+        var weekKey = DateTime.UtcNow.Date.AddDays(-((int)DateTime.UtcNow.DayOfWeek + 6) % 7).ToString("yyyy-MM-dd");
+        var syncRes = await client.PostAsJsonAsync("/api/v1/sync",
+            new SyncBatchRequest(null, new()
+            {
+                new SyncOperation(
+                    "claim-path",
+                    "hero",
+                    "upsert",
+                    JsonSerializer.SerializeToElement(new
+                    {
+                        settings = new
+                        {
+                            notificationsEnabled = true,
+                            hapticEnabled = true,
+                            reminderTime = "09:00",
+                            aiSkillsEnabled = false,
+                            weeklyPath = "power",
+                            weeklyPathWeekKey = weekKey,
+                            weeklyPathStartedAt = DateTimeOffset.UtcNow.ToString("O"),
+                        },
+                        updatedAt = DateTimeOffset.UtcNow.ToString("O"),
+                    }))
+            }));
+        syncRes.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var early = await client.PostAsync("/api/v1/heroes/me/weekly-reward", null);
+        early.StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+        async Task Complete(string title, Domain.Enums.QuestType type, Domain.Enums.StatName stat)
+        {
+            var quest = await (await client.PostAsJsonAsync("/api/v1/quests",
+                new CreateQuestRequest(title, "", type, Domain.Enums.QuestDifficulty.Easy, stat, null)))
+                .Content.ReadFromJsonAsync<QuestDto>(Json);
+            (await client.PostAsync($"/api/v1/quests/{quest!.Id}/complete", null)).StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+
+        await Complete("Lift", Domain.Enums.QuestType.Side, Domain.Enums.StatName.Strength);
+        await Complete("Walk", Domain.Enums.QuestType.Side, Domain.Enums.StatName.Vitality);
+        await Complete("Push", Domain.Enums.QuestType.Daily, Domain.Enums.StatName.Strength);
+        await Complete("Stretch", Domain.Enums.QuestType.Daily, Domain.Enums.StatName.Vitality);
+
+        var claimed = await (await client.PostAsync("/api/v1/heroes/me/weekly-reward", null))
+            .Content.ReadFromJsonAsync<HeroDto>(Json);
+        claimed!.Settings.WeeklyRewardWeekKey.Should().Be(weekKey);
+        claimed.Settings.WeeklyRewardTitle.Should().Be("Vanguard of Power");
+        claimed.Settings.WeeklyRewardBadge.Should().Be("Power Cup");
+
+        var again = await (await client.PostAsync("/api/v1/heroes/me/weekly-reward", null))
+            .Content.ReadFromJsonAsync<HeroDto>(Json);
+        again!.Settings.WeeklyRewardWeekKey.Should().Be(weekKey);
+        again.Settings.WeeklyRewardTitle.Should().Be("Vanguard of Power");
     }
 }

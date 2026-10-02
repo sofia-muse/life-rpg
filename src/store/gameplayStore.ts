@@ -6,10 +6,10 @@ import { questApi } from '../api/questApi';
 import { getSkillById } from '../config/skills';
 import { env } from '../config/env';
 import { generateQuestNarrative, buildTomorrowVow } from '../engine/journalEngine';
-import { getQuestSkillBonus, getBossStepXpBonus, getWeeklyCapacityBonus } from '../engine/skillEngine';
+import { getQuestSkillBonus, getBossStepXpBonus, getWeeklyCapacityBonus, getActiveDailyQuestCapacityBonus } from '../engine/skillEngine';
 import { getHeroStreakMultiplier, getStreakMultiplier } from '../engine/streakEngine';
 import { appendCompletionLog } from '../engine/completionLog';
-import { bossStepXpShare, calculateXPReward, takeSideBossPayout } from '../engine/xpEngine';
+import { BASE_ACTIVE_DAILY_SLOTS, bossStepXpShare, calculateXPReward, takeDailyXpPayout, takeSideBossPayout } from '../engine/xpEngine';
 import { calendarToday, deviceTimeZone } from '../engine/calendar';
 import { getWeeklyPathQuestBonus } from '../config/weeklyPaths';
 import { getPrimaryContract } from '../config/classContracts';
@@ -315,7 +315,29 @@ function completeLocalQuest(questId: string): QuestCompletionFlowResult | null {
       ? bossStepXpShare(xpReward.totalXP, stepCount, stepIndex)
       : xpReward.totalXP;
   let bonusBudgetSpent = false;
-  if (updatedQuest.type !== 'daily') {
+  if (updatedQuest.type === 'daily') {
+    const payingHero = useHeroStore.getState().hero;
+    const slots = BASE_ACTIVE_DAILY_SLOTS + getActiveDailyQuestCapacityBonus(unlockedSkillIds);
+    const payout = takeDailyXpPayout(
+      payingHero?.dailyXpDate,
+      payingHero?.dailyXpPayoutsUsed ?? 0,
+      calendarToday(payingHero?.timeZone || deviceTimeZone()),
+      slots,
+    );
+    if (payingHero) {
+      useHeroStore.setState({
+        hero: {
+          ...payingHero,
+          dailyXpDate: payout.payoutDate,
+          dailyXpPayoutsUsed: payout.payoutsUsed,
+        },
+      });
+    }
+    if (!payout.granted) {
+      awardedXp = 0;
+      bonusBudgetSpent = true;
+    }
+  } else {
     const payingHero = useHeroStore.getState().hero;
     const payout = takeSideBossPayout(
       payingHero?.bonusPayoutDate,
@@ -340,7 +362,12 @@ function completeLocalQuest(questId: string): QuestCompletionFlowResult | null {
       bonusBudgetSpent = true;
     }
   }
-  const progression = heroState.applyQuestReward(updatedQuest.stat, awardedXp, unlockedSkillIds);
+  const progression = heroState.applyQuestReward(
+    updatedQuest.stat,
+    awardedXp,
+    unlockedSkillIds,
+    updatedQuest.isCompleted,
+  );
   if (!progression) {
     console.error('[GameplayStore] Failed to apply the local quest reward.', {
       questId,

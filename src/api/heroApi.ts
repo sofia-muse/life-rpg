@@ -14,6 +14,7 @@ export interface WeeklyCupDto {
   streakBoost: number;
   rewardTitle: string;
   rewardBadge: string;
+  completions?: { questId: string; date: string; stat: StatName }[] | null;
 }
 
 export const heroApi = {
@@ -42,6 +43,8 @@ export const heroApi = {
 
   respec: (stat: StatName) =>
     apiFetch<ApiHero>('/api/v1/heroes/me/respec', { method: 'POST', body: { stat } }),
+
+  claimWeeklyReward: () => apiFetch<ApiHero>('/api/v1/heroes/me/weekly-reward', { method: 'POST' }),
 
   deleteMine: () => apiFetch<void>('/api/v1/heroes/me', { method: 'DELETE' }),
 };
