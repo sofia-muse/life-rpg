@@ -41,9 +41,11 @@ export function buildNiceAvatarConfig(
   dominantStat: StatName,
   classTier: ClassTier,
   mood: Mood = 'neutral',
+  blinking = false,
 ): AvatarConfig {
-  // Mood overrides eye/mouth, but user choice is the base
-  const eyeStyle = mood === 'happy' ? 'smile' : appearance.eyeStyle || 'oval';
+  // Mood sets the resting face. A blink closes the eyes with the library's smile shape,
+  // because the portrait is one SVG and the eyes cannot be scaled on their own.
+  const eyeStyle = blinking || mood === 'happy' ? 'smile' : appearance.eyeStyle || 'oval';
   const mouthStyle =
     mood === 'happy' ? 'laugh' : mood === 'sad' ? 'peace' : appearance.mouthStyle || 'smile';
   const glassesStyle = appearance.glassesStyle || 'none';

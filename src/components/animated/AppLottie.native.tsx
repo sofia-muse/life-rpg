@@ -18,12 +18,15 @@ const AppLottie = React.forwardRef<AppLottieHandle, AppLottieProps>((props, ref)
     [],
   );
 
-  const { source, ...rest } = props;
+  const { source, autoPlay, loop, speed, style } = props;
   return (
     <LottieView
       ref={lottieRef}
       source={source as string | AnimationObject | { uri: string }}
-      {...rest}
+      autoPlay={autoPlay}
+      loop={loop}
+      speed={speed}
+      style={style}
     />
   );
 });

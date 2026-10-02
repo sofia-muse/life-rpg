@@ -33,7 +33,6 @@ export function presentQuestCompletionFeedback(
   if (result.stepAdvancedOnly) {
     void playGameFeedback('bossPhase', haptic);
     setCharacterEvent('bossPhase');
-    setTimeout(() => setCharacterEvent('idle'), 1500);
     return;
   }
 
@@ -44,7 +43,6 @@ export function presentQuestCompletionFeedback(
   void playGameFeedback('questComplete', haptic);
   showXP(result.quest.stat, result.xpAwarded);
   setCharacterEvent('questComplete');
-  setTimeout(() => setCharacterEvent('idle'), 1500);
 
   grantSagaOrChapterRewards(result.quest);
 
@@ -53,7 +51,6 @@ export function presentQuestCompletionFeedback(
       void playGameFeedback('evolution', haptic);
       setEvolution(priorEvolution.nextRankName!, result.quest.title);
       setCharacterEvent('evolution');
-      setTimeout(() => setCharacterEvent('idle'), 2000);
     }, 800);
   }
 
@@ -62,12 +59,14 @@ export function presentQuestCompletionFeedback(
     setTimeout(() => {
       void playGameFeedback('levelUp', haptic);
       setLevelUp(stat, newLevel);
+      setCharacterEvent('levelUp');
     }, 1200);
 
     if (tierUp) {
       setTimeout(() => {
         void playGameFeedback('tierUp', haptic);
         setTierUp(tierUp.newTier, tierUp.newClass);
+        setCharacterEvent('tierUp');
       }, 2500);
     }
   }

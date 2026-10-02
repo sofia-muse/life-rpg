@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, View } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { AccessibilityInfo, Animated, StyleSheet, View } from 'react-native';
 import Avatar from '@zamplyy/react-native-nice-avatar';
 import { CharacterAppearance, ClassTier, StatName, STAT_COLORS } from '../../types';
 import { buildNiceAvatarConfig } from '../../config/anime/niceAvatarConfig';
@@ -9,6 +9,7 @@ import { useHeroStore } from '../../store/heroStore';
 import AppLottie from '../animated/AppLottie';
 import { AppLottieHandle } from '../animated/AppLottie.types';
 import { PulseGlow } from '../animated/PulseGlow';
+import { LivingMotes } from './LivingMotes';
 import { colors } from '../../config/theme';
 
 interface Props {
@@ -17,6 +18,7 @@ interface Props {
   classTier: ClassTier;
   size?: number;
   event?: CharacterEvent;
+  eventNonce?: number;
 }
 
 export function NiceAvatarCharacter({
@@ -25,16 +27,54 @@ export function NiceAvatarCharacter({
   classTier,
   size = 80,
   event = 'idle',
+  eventNonce = 0,
 }: Props) {
   const hero = useHeroStore((s) => s.hero);
   const { mood } = useExpressionState(hero);
-  const anims = useCharacterAnimations(event);
+  const [blinking, setBlinking] = useState(false);
+  const [reduceMotion, setReduceMotion] = useState(false);
+  const blinkTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const onBlink = useCallback(() => {
+    setBlinking(true);
+    if (blinkTimer.current) clearTimeout(blinkTimer.current);
+    blinkTimer.current = setTimeout(() => setBlinking(false), 160);
+  }, []);
+
+  const anims = useCharacterAnimations({
+    event,
+    eventNonce,
+    mood,
+    reduceMotion,
+    onBlink,
+  });
   const accentColor = STAT_COLORS[dominantStat];
 
   const sparkleRef = useRef<AppLottieHandle>(null);
   const levelUpRef = useRef<AppLottieHandle>(null);
 
   useEffect(() => {
+    return () => {
+      if (blinkTimer.current) clearTimeout(blinkTimer.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    void AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
+      if (mounted) setReduceMotion(enabled);
+    });
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', (enabled) => {
+      setReduceMotion(enabled);
+    });
+    return () => {
+      mounted = false;
+      subscription?.remove();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (reduceMotion) return;
     if (event === 'questComplete' && sparkleRef.current) {
       sparkleRef.current.reset();
       sparkleRef.current.play();
@@ -48,34 +88,25 @@ export function NiceAvatarCharacter({
       levelUpRef.current.reset();
       levelUpRef.current.play();
     }
-  }, [event]);
+  }, [event, eventNonce, reduceMotion]);
 
-  const config = buildNiceAvatarConfig(appearance, dominantStat, classTier, mood);
-  const flashScale = anims.flashOpacity.interpolate({
-    inputRange: [0, 0.7],
-    outputRange: [0.96, 1.16],
-  });
-  const auraScale = anims.breathY.interpolate({
-    inputRange: [-1.5, 0],
-    outputRange: [1.04, 0.98],
-  });
-  const tiltScale = anims.flashOpacity.interpolate({
-    inputRange: [0, 0.7],
-    outputRange: [1, 1.05],
-  });
+  const config = buildNiceAvatarConfig(appearance, dominantStat, classTier, mood, blinking);
+  const moteCount = mood === 'sad' ? 4 : 5;
+  const stage = size + 96;
 
   return (
     <Animated.View
       style={[
         styles.container,
-        { width: size + 20, height: size + 20 },
-        { transform: [{ translateY: anims.bounceY }] },
+        { width: stage, height: stage },
+        { transform: [{ translateY: anims.bounceY }, { translateX: anims.shakeX }] },
       ]}
     >
       <PulseGlow
         color={accentColor}
         intensity={classTier >= 4 ? 'strong' : classTier >= 2 ? 'medium' : 'soft'}
-        style={[styles.glowFrame, { width: size + 28, height: size + 28 }]}
+        active={!reduceMotion}
+        style={[styles.glowFrame, { width: stage, height: stage }]}
       >
         <Animated.View
           pointerEvents="none"
@@ -85,42 +116,50 @@ export function NiceAvatarCharacter({
               width: size + 18,
               height: size + 18,
               borderRadius: (size + 18) / 2,
-              borderColor: `${accentColor}35`,
-              backgroundColor: `${accentColor}12`,
-              transform: [{ rotate: anims.hairBackRotate }, { scale: auraScale }],
+              borderColor: `${accentColor}55`,
+              backgroundColor: `${accentColor}14`,
+              transform: [{ rotate: anims.auraRotate }, { scale: anims.auraScale }],
             },
           ]}
         />
 
-        {/* Lottie: Aura glow for tier 3+ */}
-        {classTier >= 3 && (
+        <LivingMotes
+          color={accentColor}
+          count={moteCount}
+          duration={anims.orbitMs}
+          orbit={size / 2 + 30}
+          active={!reduceMotion}
+        />
+
+        {classTier >= 3 && !reduceMotion && (
           <AppLottie
             source={require('../../../assets/animations/aura-glow.json')}
+            variant="aura"
             autoPlay
             loop
-            speed={0.5}
-            style={[styles.lottieBackground, { width: size + 30, height: size + 30 }]}
+            speed={mood === 'happy' ? 0.7 : 0.5}
+            style={[styles.lottieBackground, { width: size + 36, height: size + 36 }]}
           />
         )}
 
-        {/* Lottie: Sparkle (quest complete) */}
         <AppLottie
           ref={sparkleRef}
           source={require('../../../assets/animations/sparkle.json')}
+          variant="sparkle"
           loop={false}
           autoPlay={false}
           speed={1.2}
-          style={[styles.lottieOverlay, { width: size + 10, height: size + 10 }]}
+          style={[styles.lottieOverlay, { width: size + 16, height: size + 16 }]}
         />
 
-        {/* Lottie: Level up burst */}
         <AppLottie
           ref={levelUpRef}
           source={require('../../../assets/animations/levelup.json')}
+          variant="levelup"
           loop={false}
           autoPlay={false}
           speed={0.8}
-          style={[styles.lottieOverlay, { width: size + 20, height: size + 20 }]}
+          style={[styles.lottieOverlay, { width: size + 24, height: size + 24 }]}
         />
 
         <Animated.View
@@ -133,18 +172,22 @@ export function NiceAvatarCharacter({
               borderRadius: (size + 12) / 2,
               backgroundColor: accentColor,
               opacity: anims.flashOpacity,
-              transform: [{ scale: flashScale }],
+              transform: [{ scale: anims.flashScale }],
             },
           ]}
         />
 
-        {/* Nice Avatar with breathing animation */}
         <Animated.View
+          testID="avatar-body"
           style={{
+            zIndex: 3,
             transform: [
+              { translateX: anims.glanceX },
               { translateY: anims.breathY },
-              { rotate: anims.hairFrontRotate },
-              { scale: tiltScale },
+              { rotate: anims.bodyRotate },
+              { rotate: anims.reactionRotate },
+              { scale: anims.breathScale },
+              { scale: anims.punchScale },
             ],
           }}
         >
@@ -193,11 +236,10 @@ const styles = StyleSheet.create({
   },
   lottieBackground: {
     position: 'absolute',
-    zIndex: -1,
+    zIndex: 0,
   },
   lottieOverlay: {
     position: 'absolute',
     zIndex: 10,
-    pointerEvents: 'none',
   },
 });

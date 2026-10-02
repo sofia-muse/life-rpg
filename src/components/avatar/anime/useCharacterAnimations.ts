@@ -1,136 +1,289 @@
 import { useEffect, useRef } from 'react';
-import { Animated } from 'react-native';
-import { CharacterEvent } from './useExpressionState';
+import { Animated, Easing } from 'react-native';
+import { CharacterEvent, Mood } from './useExpressionState';
 
-export function useCharacterAnimations(event: CharacterEvent = 'idle') {
-  // Breathing
+export const MOOD_MOTION: Record<
+  Mood,
+  { breathMs: number; lift: number; scale: number; swayDeg: number; glance: number; orbitMs: number }
+> = {
+  happy: { breathMs: 780, lift: 36, scale: 1.2, swayDeg: 10, glance: 10, orbitMs: 2600 },
+  neutral: { breathMs: 980, lift: 30, scale: 1.16, swayDeg: 8, glance: 6, orbitMs: 3400 },
+  sad: { breathMs: 1600, lift: 14, scale: 1.06, swayDeg: 4, glance: 2, orbitMs: 6200 },
+};
+
+interface Options {
+  event?: CharacterEvent;
+  eventNonce?: number;
+  mood?: Mood;
+  reduceMotion?: boolean;
+  onBlink?: () => void;
+}
+
+export function useCharacterAnimations({
+  event = 'idle',
+  eventNonce = 0,
+  mood = 'neutral',
+  reduceMotion = false,
+  onBlink,
+}: Options = {}) {
   const breathY = useRef(new Animated.Value(0)).current;
-  // Hair sway
-  const hairBackRotate = useRef(new Animated.Value(0)).current;
-  const hairFrontRotate = useRef(new Animated.Value(0)).current;
-  // Eye blink
-  const eyeScaleY = useRef(new Animated.Value(1)).current;
-  // Celebration bounce
+  const breathScale = useRef(new Animated.Value(1)).current;
+  const sway = useRef(new Animated.Value(0)).current;
+  const glanceShift = useRef(new Animated.Value(0)).current;
   const bounceY = useRef(new Animated.Value(0)).current;
-  // Power-up flash
+  const shakeX = useRef(new Animated.Value(0)).current;
+  const reactionTilt = useRef(new Animated.Value(0)).current;
+  const punchScale = useRef(new Animated.Value(1)).current;
   const flashOpacity = useRef(new Animated.Value(0)).current;
+  const onBlinkRef = useRef(onBlink);
+  onBlinkRef.current = onBlink;
 
-  const blinkTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const profile = MOOD_MOTION[mood];
 
-  // Idle breathing loop
   useEffect(() => {
+    if (reduceMotion) {
+      breathY.setValue(0);
+      breathScale.setValue(1);
+      sway.setValue(0);
+      glanceShift.setValue(0);
+      return undefined;
+    }
+
     const breathing = Animated.loop(
       Animated.sequence([
-        Animated.timing(breathY, { toValue: -1.5, duration: 1500, useNativeDriver: true }),
-        Animated.timing(breathY, { toValue: 0, duration: 1500, useNativeDriver: true }),
+        Animated.parallel([
+          Animated.timing(breathY, {
+            toValue: -profile.lift,
+            duration: profile.breathMs,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: true,
+          }),
+          Animated.timing(breathScale, {
+            toValue: profile.scale,
+            duration: profile.breathMs,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.parallel([
+          Animated.timing(breathY, {
+            toValue: 0,
+            duration: profile.breathMs,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: true,
+          }),
+          Animated.timing(breathScale, {
+            toValue: 1,
+            duration: profile.breathMs,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: true,
+          }),
+        ]),
       ]),
     );
+
+    const swaying = Animated.loop(
+      Animated.sequence([
+        Animated.timing(sway, {
+          toValue: 1,
+          duration: profile.breathMs * 1.8,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(sway, {
+          toValue: -1,
+          duration: profile.breathMs * 1.8,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+
+    const glancing = Animated.loop(
+      Animated.sequence([
+        Animated.timing(glanceShift, {
+          toValue: 1,
+          duration: profile.breathMs * 2.4,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(glanceShift, {
+          toValue: -1,
+          duration: profile.breathMs * 2.4,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+
     breathing.start();
-    return () => breathing.stop();
-  }, []);
+    swaying.start();
+    const glanceDelay = setTimeout(() => glancing.start(), 400);
 
-  // Hair sway loops
-  useEffect(() => {
-    const backSway = Animated.loop(
-      Animated.sequence([
-        Animated.timing(hairBackRotate, { toValue: 1, duration: 2000, useNativeDriver: true }),
-        Animated.timing(hairBackRotate, { toValue: -1, duration: 2000, useNativeDriver: true }),
-      ]),
-    );
-    const frontSway = Animated.loop(
-      Animated.sequence([
-        Animated.timing(hairFrontRotate, { toValue: -0.8, duration: 2200, useNativeDriver: true }),
-        Animated.timing(hairFrontRotate, { toValue: 0.8, duration: 2200, useNativeDriver: true }),
-      ]),
-    );
-    backSway.start();
-    setTimeout(() => frontSway.start(), 500);
     return () => {
-      backSway.stop();
-      frontSway.stop();
+      clearTimeout(glanceDelay);
+      breathing.stop();
+      swaying.stop();
+      glancing.stop();
     };
-  }, []);
+  }, [breathScale, breathY, glanceShift, profile, reduceMotion, sway]);
 
-  // Eye blink at random intervals
   useEffect(() => {
-    const doBlink = () => {
-      Animated.sequence([
-        Animated.timing(eyeScaleY, { toValue: 0.1, duration: 75, useNativeDriver: true }),
-        Animated.timing(eyeScaleY, { toValue: 1, duration: 75, useNativeDriver: true }),
-      ]).start();
-      scheduleNextBlink();
+    if (reduceMotion) return undefined;
+
+    let blinkTimer: ReturnType<typeof setTimeout> | null = null;
+    let cancelled = false;
+
+    const blink = () => {
+      if (cancelled) return;
+      onBlinkRef.current?.();
+      blinkTimer = setTimeout(blink, 2200 + Math.random() * 1800);
     };
 
-    const scheduleNextBlink = () => {
-      const delay = 3000 + Math.random() * 3000;
-      blinkTimeout.current = setTimeout(doBlink, delay);
-    };
-
-    scheduleNextBlink();
+    blinkTimer = setTimeout(blink, 600 + Math.random() * 800);
     return () => {
-      if (blinkTimeout.current) clearTimeout(blinkTimeout.current);
+      cancelled = true;
+      if (blinkTimer) clearTimeout(blinkTimer);
     };
-  }, []);
+  }, [reduceMotion]);
 
-  // Event reactions
   useEffect(() => {
-    if (event === 'questComplete') {
-      Animated.sequence([
-        Animated.timing(bounceY, { toValue: -8, duration: 150, useNativeDriver: true }),
-        Animated.spring(bounceY, { toValue: 0, friction: 3, useNativeDriver: true }),
-      ]).start();
-    } else if (event === 'levelUp' || event === 'tierUp') {
-      Animated.sequence([
-        Animated.timing(bounceY, {
-          toValue: event === 'tierUp' ? -12 : -6,
-          duration: 160,
-          useNativeDriver: true,
-        }),
-        Animated.spring(bounceY, {
-          toValue: 0,
-          friction: event === 'tierUp' ? 2.5 : 3.5,
-          useNativeDriver: true,
-        }),
-        Animated.timing(flashOpacity, { toValue: 0.7, duration: 200, useNativeDriver: true }),
-        Animated.timing(flashOpacity, { toValue: 0, duration: 500, useNativeDriver: true }),
-      ]).start();
-    } else if (event === 'rest') {
-      Animated.sequence([
-        Animated.timing(bounceY, { toValue: 4, duration: 220, useNativeDriver: true }),
-        Animated.spring(bounceY, { toValue: 0, friction: 6, useNativeDriver: true }),
-      ]).start();
-    } else if (event === 'bossPhase' || event === 'evolution') {
-      Animated.sequence([
-        Animated.timing(bounceY, { toValue: -5, duration: 120, useNativeDriver: true }),
-        Animated.spring(bounceY, { toValue: 0, friction: 4, useNativeDriver: true }),
-      ]).start();
-    } else if (event === 'contractComplete') {
-      Animated.sequence([
-        Animated.timing(bounceY, { toValue: -10, duration: 180, useNativeDriver: true }),
-        Animated.spring(bounceY, { toValue: 0, friction: 2.5, useNativeDriver: true }),
-        Animated.timing(flashOpacity, { toValue: 0.5, duration: 180, useNativeDriver: true }),
-        Animated.timing(flashOpacity, { toValue: 0, duration: 400, useNativeDriver: true }),
-      ]).start();
+    if (reduceMotion || event === 'idle') {
+      bounceY.setValue(0);
+      shakeX.setValue(0);
+      reactionTilt.setValue(0);
+      punchScale.setValue(1);
+      flashOpacity.setValue(0);
+      return undefined;
     }
-  }, [event]);
 
-  // Convert rotation values to interpolated strings
-  const hairBackRotateInterp = hairBackRotate.interpolate({
+    const reaction = reactionFor(event, {
+      bounceY,
+      shakeX,
+      reactionTilt,
+      punchScale,
+      flashOpacity,
+    });
+    reaction.start();
+    return () => reaction.stop();
+  }, [bounceY, event, eventNonce, flashOpacity, punchScale, reactionTilt, reduceMotion, shakeX]);
+
+  const bodyRotate = sway.interpolate({
     inputRange: [-1, 1],
-    outputRange: ['-2deg', '2deg'],
+    outputRange: [`-${profile.swayDeg}deg`, `${profile.swayDeg}deg`],
   });
-
-  const hairFrontRotateInterp = hairFrontRotate.interpolate({
-    inputRange: [-0.8, 0.8],
-    outputRange: ['-1.5deg', '1.5deg'],
+  const auraRotate = sway.interpolate({
+    inputRange: [-1, 1],
+    outputRange: ['7deg', '-7deg'],
+  });
+  const glanceX = glanceShift.interpolate({
+    inputRange: [-1, 1],
+    outputRange: [-profile.glance, profile.glance],
+  });
+  const reactionRotate = reactionTilt.interpolate({
+    inputRange: [-1, 1],
+    outputRange: ['-8deg', '8deg'],
+  });
+  const auraScale = breathScale.interpolate({
+    inputRange: [1, 1.22],
+    outputRange: [0.9, 1.22],
+    extrapolate: 'clamp',
+  });
+  const flashScale = flashOpacity.interpolate({
+    inputRange: [0, 0.75],
+    outputRange: [0.96, 1.18],
   });
 
   return {
     breathY,
-    hairBackRotate: hairBackRotateInterp,
-    hairFrontRotate: hairFrontRotateInterp,
-    eyeScaleY,
+    breathScale,
     bounceY,
+    shakeX,
+    punchScale,
     flashOpacity,
+    bodyRotate,
+    auraRotate,
+    glanceX,
+    reactionRotate,
+    auraScale,
+    flashScale,
+    orbitMs: profile.orbitMs,
   };
+}
+
+function reactionFor(
+  event: Exclude<CharacterEvent, 'idle'>,
+  v: {
+    bounceY: Animated.Value;
+    shakeX: Animated.Value;
+    reactionTilt: Animated.Value;
+    punchScale: Animated.Value;
+    flashOpacity: Animated.Value;
+  },
+) {
+  const hop = (to: number, friction = 3) =>
+    Animated.sequence([
+      Animated.timing(v.bounceY, { toValue: to, duration: 150, useNativeDriver: true }),
+      Animated.spring(v.bounceY, { toValue: 0, friction, useNativeDriver: true }),
+    ]);
+
+  const flash = (peak: number) =>
+    Animated.sequence([
+      Animated.timing(v.flashOpacity, { toValue: peak, duration: 140, useNativeDriver: true }),
+      Animated.timing(v.flashOpacity, { toValue: 0, duration: 520, useNativeDriver: true }),
+    ]);
+
+  const wobble = () =>
+    Animated.sequence([
+      Animated.timing(v.reactionTilt, { toValue: 1, duration: 110, useNativeDriver: true }),
+      Animated.timing(v.reactionTilt, { toValue: -0.8, duration: 140, useNativeDriver: true }),
+      Animated.spring(v.reactionTilt, { toValue: 0, friction: 4, useNativeDriver: true }),
+    ]);
+
+  const shake = () =>
+    Animated.sequence([
+      Animated.timing(v.shakeX, { toValue: -7, duration: 45, useNativeDriver: true }),
+      Animated.timing(v.shakeX, { toValue: 7, duration: 45, useNativeDriver: true }),
+      Animated.timing(v.shakeX, { toValue: -5, duration: 40, useNativeDriver: true }),
+      Animated.timing(v.shakeX, { toValue: 4, duration: 40, useNativeDriver: true }),
+      Animated.timing(v.shakeX, { toValue: 0, duration: 40, useNativeDriver: true }),
+    ]);
+
+  switch (event) {
+    case 'questComplete':
+      return Animated.parallel([hop(-12), wobble(), flash(0.38)]);
+    case 'levelUp':
+    case 'tierUp':
+    case 'contractComplete': {
+      const lift = event === 'tierUp' ? -18 : event === 'contractComplete' ? -14 : -15;
+      const peak = event === 'tierUp' ? 0.78 : 0.62;
+      const punch = event === 'tierUp' ? 1.14 : 1.08;
+      return Animated.parallel([
+        Animated.sequence([hop(lift, event === 'tierUp' ? 2.4 : 3), hop(lift * 0.45, 4)]),
+        Animated.sequence([
+          Animated.timing(v.punchScale, { toValue: punch, duration: 180, useNativeDriver: true }),
+          Animated.spring(v.punchScale, { toValue: 1, friction: 4, useNativeDriver: true }),
+        ]),
+        flash(peak),
+        wobble(),
+      ]);
+    }
+    case 'rest':
+      return Animated.parallel([
+        Animated.sequence([
+          Animated.timing(v.bounceY, { toValue: 6, duration: 260, useNativeDriver: true }),
+          Animated.spring(v.bounceY, { toValue: 0, friction: 7, useNativeDriver: true }),
+        ]),
+        Animated.sequence([
+          Animated.timing(v.punchScale, { toValue: 0.96, duration: 220, useNativeDriver: true }),
+          Animated.spring(v.punchScale, { toValue: 1, friction: 6, useNativeDriver: true }),
+        ]),
+      ]);
+    case 'bossPhase':
+      return Animated.parallel([shake(), flash(0.28)]);
+    case 'evolution':
+      return Animated.parallel([hop(-10, 3.2), shake(), flash(0.55), wobble()]);
+    default:
+      return Animated.delay(0);
+  }
 }

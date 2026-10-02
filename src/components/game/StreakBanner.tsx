@@ -43,7 +43,6 @@ export function StreakBanner({ streakDays }: Props) {
     takeRestDay(getUnlockedSkillIds());
     void playGameFeedback('questComplete', hapticEnabled);
     setCharacterEvent('rest');
-    setTimeout(() => setCharacterEvent('idle'), 1500);
   };
 
   if (streakDays === 0) {

@@ -2,6 +2,24 @@ import { create } from 'zustand';
 import { Skill, StatName, ClassTier } from '../types';
 import { AchievementDefinition } from '../config/achievements';
 
+export const CHARACTER_EVENT_HOLD_MS = {
+  questComplete: 1600,
+  levelUp: 2200,
+  tierUp: 2400,
+  rest: 1500,
+  bossPhase: 1400,
+  evolution: 2000,
+  contractComplete: 2200,
+} as const;
+
+let characterEventTimer: ReturnType<typeof setTimeout> | null = null;
+
+function clearCharacterEventTimer() {
+  if (!characterEventTimer) return;
+  clearTimeout(characterEventTimer);
+  characterEventTimer = null;
+}
+
 interface UIState {
   showLevelUpModal: boolean;
   levelUpData: { stat: StatName; newLevel: number } | null;
@@ -15,6 +33,7 @@ interface UIState {
   showAppearanceUnlock: boolean;
   appearanceUnlockData: { type: 'shape' | 'sigil'; name: string } | null;
   characterEvent: 'idle' | 'questComplete' | 'levelUp' | 'tierUp' | 'rest' | 'bossPhase' | 'evolution' | 'contractComplete';
+  characterEventNonce: number;
   showEvolutionModal: boolean;
   evolutionData: { rankName: string; nextTitle?: string } | null;
   showAchievementModal: boolean;
@@ -42,7 +61,7 @@ interface UIState {
   dismissStreakMilestone: () => void;
 }
 
-export const useUIStore = create<UIState>((set) => ({
+export const useUIStore = create<UIState>((set, get) => ({
   showLevelUpModal: false,
   levelUpData: null,
   showSkillUnlockModal: false,
@@ -55,6 +74,7 @@ export const useUIStore = create<UIState>((set) => ({
   showAppearanceUnlock: false,
   appearanceUnlockData: null,
   characterEvent: 'idle' as const,
+  characterEventNonce: 0,
   showEvolutionModal: false,
   evolutionData: null,
   showAchievementModal: false,
@@ -86,7 +106,21 @@ export const useUIStore = create<UIState>((set) => ({
 
   dismissAppearanceUnlock: () => set({ showAppearanceUnlock: false, appearanceUnlockData: null }),
 
-  setCharacterEvent: (event) => set({ characterEvent: event }),
+  setCharacterEvent: (event) => {
+    clearCharacterEventTimer();
+    if (event === 'idle') {
+      set({ characterEvent: 'idle' });
+      return;
+    }
+
+    const nonce = get().characterEventNonce + 1;
+    set({ characterEvent: event, characterEventNonce: nonce });
+    characterEventTimer = setTimeout(() => {
+      characterEventTimer = null;
+      if (get().characterEventNonce !== nonce) return;
+      set({ characterEvent: 'idle' });
+    }, CHARACTER_EVENT_HOLD_MS[event]);
+  },
 
   setEvolution: (rankName, nextTitle) =>
     set({ showEvolutionModal: true, evolutionData: { rankName, nextTitle } }),
