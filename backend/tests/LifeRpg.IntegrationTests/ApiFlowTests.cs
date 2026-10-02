@@ -206,4 +206,52 @@ public class ApiFlowTests : IClassFixture<LifeRpgApiFactory>
         cup.Score.Should().BeGreaterThan(0);
         cup.Rank.Should().NotBeNullOrWhiteSpace();
     }
+
+    [Fact]
+    public async Task Third_side_quest_in_a_day_completes_without_xp()
+    {
+        var client = await AuthedClientAsync("budget@example.com");
+        await client.PostAsJsonAsync("/api/v1/heroes",
+            new CreateHeroRequest("Bud", "bud", new() { Domain.Enums.StatName.Strength }));
+
+        async Task<int> CompleteSide(string title)
+        {
+            var quest = await (await client.PostAsJsonAsync("/api/v1/quests",
+                new CreateQuestRequest(title, "", Domain.Enums.QuestType.Side, Domain.Enums.QuestDifficulty.Easy,
+                    Domain.Enums.StatName.Strength, null))).Content.ReadFromJsonAsync<QuestDto>(Json);
+            var result = await (await client.PostAsync($"/api/v1/quests/{quest!.Id}/complete", null))
+                .Content.ReadFromJsonAsync<CompleteQuestResult>(Json);
+            result!.Hero.TotalQuestsCompleted.Should().BeGreaterThan(0);
+            return result.XpAwarded;
+        }
+
+        (await CompleteSide("One")).Should().Be(15);
+        (await CompleteSide("Two")).Should().Be(15);
+        (await CompleteSide("Three")).Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Rest_and_respec_are_server_commands()
+    {
+        var client = await AuthedClientAsync("rest@example.com");
+        await client.PostAsJsonAsync("/api/v1/heroes",
+            new CreateHeroRequest("Rin", "rin", new() { Domain.Enums.StatName.Strength }));
+
+        var rested = await (await client.PostAsync("/api/v1/heroes/me/rest", null))
+            .Content.ReadFromJsonAsync<HeroDto>(Json);
+        rested!.CurrentStreak.Should().Be(1);
+        rested.StatXp.Vitality.Should().BeGreaterThan(0);
+        rested.RestDaysUsed.Should().Be(1);
+
+        var again = await (await client.PostAsync("/api/v1/heroes/me/rest", null))
+            .Content.ReadFromJsonAsync<HeroDto>(Json);
+        again!.StatXp.Vitality.Should().Be(rested.StatXp.Vitality);
+        again.RestDaysUsed.Should().Be(1);
+
+        var respec = await (await client.PostAsJsonAsync("/api/v1/heroes/me/respec",
+            new RespecRequest(Domain.Enums.StatName.Intelligence))).Content.ReadFromJsonAsync<HeroDto>(Json);
+        respec!.DominantStat.Should().Be(Domain.Enums.StatName.Intelligence);
+        respec.ClassName.Should().Be("Apprentice Scholar");
+        respec.ClassTier.Should().Be(1);
+    }
 }

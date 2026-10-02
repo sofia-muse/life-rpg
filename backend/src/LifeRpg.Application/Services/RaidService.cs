@@ -169,7 +169,7 @@ public class RaidService
             return Result<RaidDto>.Conflict("This raid has already been completed");
         }
 
-        if (raid.Deadline is { } deadline && deadline < _clock.Today)
+        if (raid.Deadline is { } deadline && deadline < TodayFor(hero))
         {
             return Result<RaidDto>.Conflict("This raid's deadline has passed");
         }
@@ -249,12 +249,12 @@ public class RaidService
             return Result<ContributeRaidResult>.Conflict("This raid has already been completed");
         }
 
-        if (raid.Deadline is { } deadline && deadline < _clock.Today)
+        if (raid.Deadline is { } deadline && deadline < TodayFor(hero))
         {
             return Result<ContributeRaidResult>.Conflict("This raid's deadline has passed");
         }
 
-        var today = _clock.Today;
+        var today = TodayFor(hero);
         var contributions = UniqueContributions(raid.Contributions);
         var todayTotal = contributions
             .Where(c => c.HeroId == hero.Id && c.ContributionDate == today)
@@ -367,6 +367,8 @@ public class RaidService
         };
         return label;
     }
+
+    private DateOnly TodayFor(Hero hero) => HeroCalendar.Today(hero.Settings.TimeZone, _clock.UtcNow);
 
     private async Task<Hero?> HeroAsync(CancellationToken ct)
     {

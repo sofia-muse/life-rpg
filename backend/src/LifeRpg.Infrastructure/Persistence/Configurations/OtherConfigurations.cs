@@ -18,6 +18,7 @@ public class QuestConfiguration : IEntityTypeConfiguration<Quest>
         b.Property(q => q.Difficulty).HasConversion<string>().HasMaxLength(12);
         b.Property(q => q.Stat).HasConversion<string>().HasMaxLength(20);
         b.Property(q => q.EvolutionPathId).HasMaxLength(40);
+        b.Property(q => q.LastStreakDate);
         // RowVersion promoted to rowversion for SQL Server in OnModelCreating (SQLite-safe otherwise).
         b.HasIndex(q => new { q.HeroId, q.Type, q.IsActive });
     }

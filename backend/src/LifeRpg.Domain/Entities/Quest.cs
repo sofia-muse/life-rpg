@@ -23,6 +23,9 @@ public class Quest : Entity
     public int BestStreak { get; set; }
     public int DaysCompleted { get; set; }
 
+    /// <summary>Hero-calendar date of the completion that last moved this streak. Survives the daily reset.</summary>
+    public DateOnly? LastStreakDate { get; set; }
+
     /// <summary>Stable evolution path id. Survives a player renaming the quest.</summary>
     public string? EvolutionPathId { get; set; }
 

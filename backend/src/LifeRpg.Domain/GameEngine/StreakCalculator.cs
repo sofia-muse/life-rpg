@@ -67,4 +67,64 @@ public static class StreakCalculator
         var next = GetNextMilestone(streakDays);
         return next is null ? null : next.Days - streakDays;
     }
+
+    public const int FreezeCooldownDays = 7;
+
+    public readonly record struct StreakAdvance(int Streak, DateOnly? LastFreezeDate, bool UsedFreeze);
+
+    /// <summary>
+    /// Move a streak across calendar days. A one-day gap continues. A wider gap keeps the
+    /// chain only with a freeze or a retention ratio. <paramref name="brokenDayCounts"/>
+    /// makes a broken quest completed today start at 1; the hero's return day can stay at 0.
+    /// </summary>
+    public static StreakAdvance Advance(
+        int currentStreak,
+        DateOnly? lastDate,
+        DateOnly today,
+        DateOnly? lastFreezeDate,
+        int freezeAllowance,
+        double retentionRatio,
+        bool missingDateStartsAtOne = false,
+        bool brokenDayCounts = false,
+        bool freezeAlreadyUsed = false)
+    {
+        if (lastDate is null)
+        {
+            var started = missingDateStartsAtOne ? Math.Max(currentStreak, 1) : currentStreak;
+            return new StreakAdvance(started, lastFreezeDate, false);
+        }
+
+        var gap = today.DayNumber - lastDate.Value.DayNumber;
+        if (gap <= 0)
+        {
+            return new StreakAdvance(currentStreak, lastFreezeDate, false);
+        }
+
+        if (gap == 1)
+        {
+            return new StreakAdvance(currentStreak + 1, lastFreezeDate, false);
+        }
+
+        var freezeReady = freezeAlreadyUsed || (freezeAllowance > 0 && !FreezeUsedRecently(lastFreezeDate, today));
+        if (freezeReady)
+        {
+            return new StreakAdvance(
+                currentStreak,
+                freezeAlreadyUsed ? lastFreezeDate : today,
+                !freezeAlreadyUsed);
+        }
+
+        var kept = retentionRatio > 0
+            ? (int)Math.Floor(currentStreak * retentionRatio)
+            : GetStreakAfterBreak(currentStreak, false);
+        if (brokenDayCounts)
+        {
+            kept = Math.Max(kept, 1);
+        }
+
+        return new StreakAdvance(kept, lastFreezeDate, false);
+    }
+
+    private static bool FreezeUsedRecently(DateOnly? lastFreezeDate, DateOnly today) =>
+        lastFreezeDate is { } used && today.DayNumber - used.DayNumber >= 0 && today.DayNumber - used.DayNumber < FreezeCooldownDays;
 }

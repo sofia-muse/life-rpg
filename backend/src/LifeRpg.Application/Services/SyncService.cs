@@ -273,6 +273,11 @@ public class SyncService
                 {
                     parsed.ActiveForgedSkillIds = previous.ActiveForgedSkillIds;
                 }
+                if (!settings.TryGetProperty("bonusPayoutDate", out _) && !settings.TryGetProperty("BonusPayoutDate", out _))
+                {
+                    parsed.BonusPayoutDate = previous.BonusPayoutDate;
+                    parsed.BonusPayoutsUsed = previous.BonusPayoutsUsed;
+                }
                 hero.Settings = parsed;
             }
         }

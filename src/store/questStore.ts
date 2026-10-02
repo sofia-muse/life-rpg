@@ -7,6 +7,7 @@ import { syncManager } from '../api/syncManager';
 import { calendarDateInZone, calendarToday, deviceTimeZone } from '../engine/calendar';
 import { getActiveDailyQuestCapacityBonus } from '../engine/skillEngine';
 import { applyQuestEvolution } from '../engine/questProgression';
+import { advanceTrackedStreak } from '../engine/streakEngine';
 import { useHeroStore } from './heroStore';
 import { useSkillStore } from './skillStore';
 
@@ -26,7 +27,10 @@ interface QuestState {
       | 'daysCompleted'
     >,
   ) => void;
-  completeQuest: (questId: string) => Quest | null;
+  completeQuest: (
+    questId: string,
+    streakContext?: { lastStreakFreezeDate?: string; freezeJustUsed?: boolean },
+  ) => Quest | null;
   deleteQuest: (questId: string) => void;
   toggleQuestActive: (questId: string) => void;
   getDailyQuests: () => Quest[];
@@ -79,11 +83,26 @@ export const useQuestStore = create<QuestState>()(
         syncManager.enqueue('quest', 'upsert', quest);
       },
 
-      completeQuest: (questId) => {
+      completeQuest: (questId, streakContext) => {
         const quest = get().quests.find((q) => q.id === questId);
         if (!quest || quest.isCompleted || !quest.isActive) return null;
 
         const timestamp = new Date().toISOString();
+        const todayStr = today();
+        const streakAdvance =
+          quest.type === 'daily'
+            ? advanceTrackedStreak({
+                currentStreak: quest.streak,
+                lastDate: quest.lastStreakDate,
+                today: todayStr,
+                unlockedSkillIds: useSkillStore.getState().getUnlockedSkillIds(),
+                lastStreakFreezeDate: streakContext?.lastStreakFreezeDate,
+                missingDateStartsAtOne: true,
+                brokenDayCounts: true,
+                freezeAlreadyUsed: streakContext?.freezeJustUsed,
+              })
+            : null;
+        const streak = streakAdvance?.streak ?? quest.streak + 1;
 
         const updated = applyQuestEvolution(
           {
@@ -91,12 +110,26 @@ export const useQuestStore = create<QuestState>()(
             isCompleted: true,
             updatedAt: timestamp,
             completedAt: timestamp,
-            streak: quest.streak + 1,
-            bestStreak: Math.max(quest.bestStreak, quest.streak + 1),
+            streak,
+            bestStreak: Math.max(quest.bestStreak, streak),
             daysCompleted: quest.daysCompleted + 1,
+            lastStreakDate: quest.type === 'daily' ? todayStr : quest.lastStreakDate,
           },
           useSkillStore.getState().getUnlockedSkillIds(),
         );
+
+        if (streakAdvance?.usedFreeze) {
+          useHeroStore.setState((state) => {
+            if (!state.hero) return state;
+            return {
+              hero: {
+                ...state.hero,
+                lastStreakFreezeDate: streakAdvance.lastStreakFreezeDate,
+                updatedAt: timestamp,
+              },
+            };
+          });
+        }
 
         set((state) => ({
           quests: state.quests.map((q) => (q.id === questId ? updated : q)),

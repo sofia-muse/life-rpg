@@ -31,4 +31,11 @@ public class HeroesController : ApiControllerBase
 
     [HttpGet("me/weekly-cup")]
     public async Task<IActionResult> WeeklyCup() => ToResponse(await _heroes.GetWeeklyCupAsync());
+
+    [HttpPost("me/rest")]
+    public async Task<IActionResult> Rest() => ToResponse(await _heroes.TakeRestAsync());
+
+    [HttpPost("me/respec")]
+    public async Task<IActionResult> Respec(RespecRequest request) =>
+        ToResponse(await _heroes.RespecAsync(request.Stat));
 }

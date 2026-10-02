@@ -55,4 +55,10 @@ public sealed class HeroSettings
 
     /// <summary>Recent rest dates (YYYY-MM-DD) inside the hero's calendar.</summary>
     public List<string> RecentRestDates { get; set; } = new();
+
+    /// <summary>Hero-calendar date of the last side/boss XP payout.</summary>
+    public string? BonusPayoutDate { get; set; }
+
+    /// <summary>Side and boss XP payouts already granted on <see cref="BonusPayoutDate"/>.</summary>
+    public int BonusPayoutsUsed { get; set; }
 }

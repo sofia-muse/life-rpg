@@ -34,7 +34,16 @@ export function calendarDateInZone(instant: Date, timeZone?: string | null): str
   return instant.toISOString().slice(0, 10);
 }
 
-/** Days since Unix epoch for a YYYY-MM-DD calendar date, or null when the date is invalid. */
+/** Monday-start week key for a calendar date in the given zone. */
+export function calendarWeekKey(timeZone?: string | null, now: Date = new Date()): string {
+  const today = calendarToday(timeZone, now);
+  const [year, month, day] = today.split('-').map(Number);
+  const utc = new Date(Date.UTC(year, (month ?? 1) - 1, day ?? 1));
+  const diff = (utc.getUTCDay() + 6) % 7;
+  utc.setUTCDate(utc.getUTCDate() - diff);
+  return utc.toISOString().slice(0, 10);
+}
+
 export function calendarDayNumber(isoDate: string): number | null {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
   if (!match) return null;

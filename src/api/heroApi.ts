@@ -38,5 +38,10 @@ export const heroApi = {
 
   getWeeklyCup: () => apiFetch<WeeklyCupDto>('/api/v1/heroes/me/weekly-cup'),
 
+  takeRest: () => apiFetch<ApiHero>('/api/v1/heroes/me/rest', { method: 'POST' }),
+
+  respec: (stat: StatName) =>
+    apiFetch<ApiHero>('/api/v1/heroes/me/respec', { method: 'POST', body: { stat } }),
+
   deleteMine: () => apiFetch<void>('/api/v1/heroes/me', { method: 'DELETE' }),
 };

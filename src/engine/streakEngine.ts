@@ -1,5 +1,6 @@
 import { StreakMilestone } from '../types';
 import { daysBetween } from './calendar';
+import { getStreakRetentionRatio, getWeeklyStreakFreezeAllowance } from './skillEngine';
 
 export const STREAK_MILESTONES: StreakMilestone[] = [
   { days: 3, multiplier: 1.1, title: 'Getting Started' },
@@ -100,4 +101,76 @@ export function daysUntilNextMilestone(
   const next = getNextMilestone(streakDays, milestones);
   if (!next) return null;
   return next.days - streakDays;
+}
+
+export const STREAK_FREEZE_COOLDOWN_DAYS = 7;
+
+export interface StreakAdvanceInput {
+  currentStreak: number;
+  lastDate?: string | null;
+  today: string;
+  unlockedSkillIds: string[];
+  lastStreakFreezeDate?: string;
+  /** No history yet. A quest completion starts at 1. A hero with no date keeps the current count. */
+  missingDateStartsAtOne?: boolean;
+  /** A broken quest done today starts at 1. The hero's return day can stay at 0. */
+  brokenDayCounts?: boolean;
+  /** The hero already spent the freeze on this gap, so the quest is covered too. */
+  freezeAlreadyUsed?: boolean;
+}
+
+export interface StreakAdvance {
+  streak: number;
+  lastStreakFreezeDate?: string;
+  usedFreeze: boolean;
+}
+
+/**
+ * Move a streak across calendar days. A gap of one day continues. A wider gap
+ * keeps the chain only with a freeze or a retention skill.
+ */
+export function advanceTrackedStreak(input: StreakAdvanceInput): StreakAdvance {
+  const freezeDate = input.lastStreakFreezeDate;
+  if (!input.lastDate) {
+    const streak = input.missingDateStartsAtOne ? Math.max(input.currentStreak, 1) : input.currentStreak;
+    return { streak, lastStreakFreezeDate: freezeDate, usedFreeze: false };
+  }
+
+  const gap = daysBetween(input.lastDate, input.today);
+  if (gap === null || gap <= 0) {
+    return { streak: input.currentStreak, lastStreakFreezeDate: freezeDate, usedFreeze: false };
+  }
+  if (gap === 1) {
+    return { streak: input.currentStreak + 1, lastStreakFreezeDate: freezeDate, usedFreeze: false };
+  }
+
+  const allowance = getWeeklyStreakFreezeAllowance(input.unlockedSkillIds);
+  const freezeReady =
+    input.freezeAlreadyUsed ||
+    (allowance > 0 && !freezeUsedRecently(freezeDate, input.today));
+  if (freezeReady) {
+    return {
+      streak: input.currentStreak,
+      lastStreakFreezeDate: input.freezeAlreadyUsed ? freezeDate : input.today,
+      usedFreeze: !input.freezeAlreadyUsed,
+    };
+  }
+
+  const retention = getStreakRetentionRatio(input.unlockedSkillIds);
+  const kept =
+    retention > 0
+      ? Math.floor(input.currentStreak * retention)
+      : getStreakAfterBreak(input.currentStreak, false);
+  return {
+    streak: input.brokenDayCounts ? Math.max(kept, 1) : kept,
+    lastStreakFreezeDate: freezeDate,
+    usedFreeze: false,
+  };
+}
+
+function freezeUsedRecently(lastUsed: string | undefined, today: string): boolean {
+  if (!lastUsed) return false;
+  const gap = daysBetween(lastUsed, today);
+  if (gap === null) return false;
+  return gap >= 0 && gap < STREAK_FREEZE_COOLDOWN_DAYS;
 }

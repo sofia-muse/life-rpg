@@ -8,7 +8,8 @@ import { env } from '../config/env';
 import { generateQuestNarrative, buildTomorrowVow } from '../engine/journalEngine';
 import { getQuestSkillBonus, getBossStepXpBonus, getWeeklyCapacityBonus } from '../engine/skillEngine';
 import { getHeroStreakMultiplier, getStreakMultiplier } from '../engine/streakEngine';
-import { bossStepXpShare, calculateXPReward } from '../engine/xpEngine';
+import { bossStepXpShare, calculateXPReward, takeSideBossPayout } from '../engine/xpEngine';
+import { calendarToday, deviceTimeZone } from '../engine/calendar';
 import { getWeeklyPathQuestBonus } from '../config/weeklyPaths';
 import { getPrimaryContract } from '../config/classContracts';
 import { useAuthStore } from './authStore';
@@ -238,21 +239,26 @@ function completeLocalQuest(questId: string): QuestCompletionFlowResult | null {
 
   const unlockedSkillIds = skillState.getUnlockedSkillIds();
   const settings = useSettingsStore.getState();
+  const streakUpdate = heroState.updateStreak(unlockedSkillIds);
+  if (streakUpdate?.usedStreakFreeze) {
+    console.info('[GameplayStore] Preserved the current streak with a freeze during quest completion.', {
+      questId,
+    });
+  }
+  const heroAfterStreak = useHeroStore.getState().hero;
   const updatedQuest =
-    quest.type === 'boss' ? questState.completeBossStep(quest.id) : questState.completeQuest(quest.id);
+    quest.type === 'boss'
+      ? questState.completeBossStep(quest.id)
+      : questState.completeQuest(quest.id, {
+          lastStreakFreezeDate: heroAfterStreak?.lastStreakFreezeDate,
+          freezeJustUsed: streakUpdate?.usedStreakFreeze,
+        });
   if (!updatedQuest) {
     console.warn('[GameplayStore] Quest completion was ignored because the quest is inactive or already done.', {
       questId,
       questType: quest.type,
     });
     return null;
-  }
-
-  const streakUpdate = heroState.updateStreak(unlockedSkillIds);
-  if (streakUpdate?.usedStreakFreeze) {
-    console.info('[GameplayStore] Preserved the current streak with a freeze during quest completion.', {
-      questId,
-    });
   }
 
   const heroStreak = useHeroStore.getState().hero?.currentStreak ?? hero.currentStreak;
@@ -277,10 +283,28 @@ function completeLocalQuest(questId: string): QuestCompletionFlowResult | null {
   );
   const stepCount = updatedQuest.totalSteps ?? 1;
   const stepIndex = updatedQuest.type === 'boss' ? updatedQuest.completedSteps || stepCount : stepCount;
-  const awardedXp =
+  let awardedXp =
     updatedQuest.type === 'boss'
       ? bossStepXpShare(xpReward.totalXP, stepCount, stepIndex)
       : xpReward.totalXP;
+  if (updatedQuest.type !== 'daily') {
+    const payingHero = useHeroStore.getState().hero;
+    const payout = takeSideBossPayout(
+      payingHero?.bonusPayoutDate,
+      payingHero?.bonusPayoutsUsed ?? 0,
+      calendarToday(payingHero?.timeZone || deviceTimeZone()),
+    );
+    if (payingHero) {
+      useHeroStore.setState({
+        hero: {
+          ...payingHero,
+          bonusPayoutDate: payout.payoutDate,
+          bonusPayoutsUsed: payout.payoutsUsed,
+        },
+      });
+    }
+    if (!payout.granted) awardedXp = 0;
+  }
   const progression = heroState.applyQuestReward(updatedQuest.stat, awardedXp, unlockedSkillIds);
   if (!progression) {
     console.error('[GameplayStore] Failed to apply the local quest reward.', {

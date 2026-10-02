@@ -40,6 +40,21 @@ function bonusFromMultiplier(baseXP: number, multiplier: number): number {
   return Math.floor(baseXP * multiplier + 1e-9) - baseXP;
 }
 
+/** Full XP payouts for side quests and boss steps in one hero-day. Dailies are outside this budget. */
+export const DAILY_SIDE_BOSS_PAYOUTS = 2;
+
+export function takeSideBossPayout(
+  payoutDate: string | undefined,
+  payoutsUsed: number,
+  today: string,
+): { granted: boolean; payoutDate: string; payoutsUsed: number } {
+  const used = payoutDate === today ? payoutsUsed : 0;
+  if (used >= DAILY_SIDE_BOSS_PAYOUTS) {
+    return { granted: false, payoutDate: today, payoutsUsed: used };
+  }
+  return { granted: true, payoutDate: today, payoutsUsed: used + 1 };
+}
+
 /** Slice of a full quest reward for one boss step. The last step keeps the remainder. */
 export function bossStepXpShare(totalXp: number, totalSteps: number, completedStep: number): number {
   const steps = Math.max(1, totalSteps);

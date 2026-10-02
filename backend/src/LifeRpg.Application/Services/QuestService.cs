@@ -208,10 +208,34 @@ public class QuestService
         }
 
         var unlockedIds = hero.UnlockedSkills.Select(s => s.SkillId).ToList();
-        AdvanceStreak(hero, today);
+        var heroAdvance = AdvanceStreak(hero, today, unlockedIds);
+        var questStreak = quest.Streak;
+        DateOnly? questStreakDate = quest.LastStreakDate;
+        var questFreezeUsed = false;
+        if (quest.Type == QuestType.Daily && markComplete)
+        {
+            var questAdvance = StreakCalculator.Advance(
+                quest.Streak,
+                quest.LastStreakDate,
+                today,
+                hero.LastStreakFreezeDate,
+                SkillResolver.GetWeeklyStreakFreezeAllowance(unlockedIds),
+                SkillResolver.GetStreakRetentionRatio(unlockedIds),
+                missingDateStartsAtOne: true,
+                brokenDayCounts: true,
+                freezeAlreadyUsed: heroAdvance.UsedFreeze);
+            questStreak = questAdvance.Streak;
+            questStreakDate = today;
+            questFreezeUsed = questAdvance.UsedFreeze;
+            if (questFreezeUsed)
+            {
+                hero.LastStreakFreezeDate = questAdvance.LastFreezeDate;
+            }
+        }
+
         var heroStreakMultiplier = StreakCalculator.GetHeroMultiplier(hero.CurrentStreak);
         var questStreakMultiplier = quest.Type == QuestType.Daily
-            ? StreakCalculator.GetMultiplier(quest.Streak + 1)
+            ? StreakCalculator.GetMultiplier(questStreak)
             : 1d;
         var skillBonus = SkillResolver.GetSkillBonusForQuest(quest.Type, quest.Stat, unlockedIds)
             + SkillResolver.GetForgedBonusForStat(quest.Stat, hero.GeneratedSkills, hero.Settings.ActiveForgedSkillIds)
@@ -225,6 +249,11 @@ public class QuestService
         {
             var share = XpCalculator.BossStepShare(reward.TotalXp, quest.TotalSteps.Value, quest.CompletedSteps ?? quest.TotalSteps.Value);
             reward = reward with { TotalXp = share };
+        }
+
+        if (quest.Type != QuestType.Daily && !BonusPayouts.TryTake(hero.Settings, today))
+        {
+            reward = reward with { TotalXp = 0 };
         }
 
         var oldTier = hero.ClassTier;
@@ -251,7 +280,15 @@ public class QuestService
             {
                 quest.CompletedSteps = bossSteps;
             }
-            quest.Streak += 1;
+            if (quest.Type == QuestType.Daily)
+            {
+                quest.Streak = questStreak;
+                quest.LastStreakDate = questStreakDate;
+            }
+            else
+            {
+                quest.Streak += 1;
+            }
             quest.BestStreak = Math.Max(quest.BestStreak, quest.Streak);
             quest.DaysCompleted += 1;
             QuestEvolutionResolver.Apply(quest, unlockedIds);
@@ -296,24 +333,25 @@ public class QuestService
                 hero.ToDto()));
     }
 
-    private void AdvanceStreak(Hero hero, DateOnly today)
+    private static StreakCalculator.StreakAdvance AdvanceStreak(Hero hero, DateOnly today, IReadOnlyCollection<string> unlockedIds)
     {
-        if (hero.LastActiveDate == today)
-        {
-            return;
-        }
-
-        if (hero.LastActiveDate is { } last && !StreakCalculator.ShouldResetStreak(last, today))
-        {
-            hero.CurrentStreak += 1;
-        }
-        else
-        {
-            hero.CurrentStreak = 1;
-        }
-
-        hero.LongestStreak = Math.Max(hero.LongestStreak, hero.CurrentStreak);
+        var advance = StreakCalculator.Advance(
+            hero.CurrentStreak,
+            hero.LastActiveDate,
+            today,
+            hero.LastStreakFreezeDate,
+            SkillResolver.GetWeeklyStreakFreezeAllowance(unlockedIds),
+            SkillResolver.GetStreakRetentionRatio(unlockedIds),
+            missingDateStartsAtOne: true);
+        hero.CurrentStreak = advance.Streak;
+        hero.LongestStreak = Math.Max(hero.LongestStreak, advance.Streak);
         hero.LastActiveDate = today;
+        if (advance.UsedFreeze)
+        {
+            hero.LastStreakFreezeDate = advance.LastFreezeDate;
+        }
+
+        return advance;
     }
 
     private Task<Hero?> HeroAsync(CancellationToken ct) =>

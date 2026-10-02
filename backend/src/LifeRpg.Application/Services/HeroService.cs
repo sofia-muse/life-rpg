@@ -137,8 +137,9 @@ public class HeroService
             return Result<WeeklyCupDto>.NotFound("Hero not found");
         }
 
+        var today = HeroCalendar.Today(hero.Settings.TimeZone, _clock.UtcNow);
         var path = hero.Settings.WeeklyPath?.Trim().ToLowerInvariant();
-        if (string.IsNullOrWhiteSpace(path) || hero.Settings.WeeklyPathWeekKey != WeekKey(_clock.Today))
+        if (string.IsNullOrWhiteSpace(path) || hero.Settings.WeeklyPathWeekKey != WeekKey(today))
         {
             return Result<WeeklyCupDto>.Conflict("No weekly path is active");
         }
@@ -156,7 +157,7 @@ public class HeroService
             q.IsCompleted
             && statSet.Contains(q.Stat)
             && q.CompletedAt is { } completedAt
-            && WeekKey(DateOnly.FromDateTime(completedAt.UtcDateTime)) == hero.Settings.WeeklyPathWeekKey);
+            && WeekKey(HeroCalendar.DateInTimeZone(completedAt, hero.Settings.TimeZone)) == hero.Settings.WeeklyPathWeekKey);
 
         var bossProgress = Math.Min(20, (int)Math.Round(hero.Quests
             .Where(q => q.Type == QuestType.Boss && statSet.Contains(q.Stat) && q.TotalSteps is > 0)
@@ -204,6 +205,55 @@ public class HeroService
             hero.ClassTier = newTier;
             hero.ClassName = ClassDefinitions.GetClassName(classStat, newTier);
         }
+    }
+
+    public async Task<Result<HeroDto>> TakeRestAsync(CancellationToken ct = default)
+    {
+        var hero = await LoadAsync(ct);
+        if (hero is null)
+        {
+            return Result<HeroDto>.NotFound("Hero not found");
+        }
+
+        var today = HeroCalendar.Today(hero.Settings.TimeZone, _clock.UtcNow);
+        var unlocked = hero.UnlockedSkills.Select(s => s.SkillId).ToList();
+        var vitalityLevel = XpTable.LevelFromXp(hero.StatXp[StatName.Vitality]);
+        var decision = RestDayResolver.Resolve(hero, today, vitalityLevel, unlocked);
+        if (!decision.Granted)
+        {
+            return Result<HeroDto>.Success(hero.ToDto());
+        }
+
+        var application = XpCalculator.ApplyXp(hero.StatXp[StatName.Vitality], decision.Xp);
+        hero.StatXp[StatName.Vitality] = application.NewXp;
+        hero.CurrentStreak = decision.CurrentStreak;
+        hero.LongestStreak = decision.LongestStreak;
+        hero.LastActiveDate = decision.LastActiveDate;
+        hero.LastStreakFreezeDate = decision.LastStreakFreezeDate;
+        hero.RestDaysUsed = decision.RestDaysUsed;
+        hero.Settings.RecentRestDates = decision.RecentRestDates.ToList();
+        RecomputeProgression(hero);
+        await _db.SaveChangesAsync(ct);
+        return Result<HeroDto>.Success(hero.ToDto());
+    }
+
+    public async Task<Result<HeroDto>> RespecAsync(StatName stat, CancellationToken ct = default)
+    {
+        var hero = await LoadAsync(ct);
+        if (hero is null)
+        {
+            return Result<HeroDto>.NotFound("Hero not found");
+        }
+
+        if (!Enum.IsDefined(stat))
+        {
+            return Result<HeroDto>.Validation("Unknown stat");
+        }
+
+        hero.DominantStat = stat;
+        hero.ClassName = ClassDefinitions.GetClassName(stat, hero.ClassTier);
+        await _db.SaveChangesAsync(ct);
+        return Result<HeroDto>.Success(hero.ToDto());
     }
 
     private static string WeekKey(DateOnly date)

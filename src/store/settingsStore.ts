@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { syncManager } from '../api/syncManager';
 import { WeeklyPath } from '../types';
 import { getCurrentWeekKey, getWeeklyPathDefinition } from '../config/weeklyPaths';
+import { useHeroStore } from './heroStore';
 import { scheduleQuestReminders, cancelQuestReminders } from '../utils/notifications';
 import { setActiveForgedSkillIds as registerActiveForgedSkillIds } from '../config/skills';
 
@@ -228,7 +229,7 @@ export const useSettingsStore = create<SettingsState>()(
       chooseWeeklyPath: (path) =>
         set((state) => {
           const now = new Date();
-          const weekKey = getCurrentWeekKey(now);
+          const weekKey = getCurrentWeekKey(now, useHeroStore.getState().hero?.timeZone);
           const keepReward = state.weeklyRewardWeekKey === weekKey;
           const next = {
             ...state,
@@ -257,7 +258,7 @@ export const useSettingsStore = create<SettingsState>()(
 
       claimWeeklyReward: (reward) =>
         set((state) => {
-          const weekKey = state.weeklyPathWeekKey ?? getCurrentWeekKey();
+          const weekKey = state.weeklyPathWeekKey ?? getCurrentWeekKey(new Date(), useHeroStore.getState().hero?.timeZone);
           const path = state.weeklyPath;
           const pathDef = path ? getWeeklyPathDefinition(path) : null;
 
@@ -313,7 +314,7 @@ export const useSettingsStore = create<SettingsState>()(
 
       clearStaleWeeklyPath: () => {
         const state = get();
-        if (!state.weeklyPathWeekKey || state.weeklyPathWeekKey === getCurrentWeekKey()) {
+        if (!state.weeklyPathWeekKey || state.weeklyPathWeekKey === getCurrentWeekKey(new Date(), useHeroStore.getState().hero?.timeZone)) {
           return;
         }
 
