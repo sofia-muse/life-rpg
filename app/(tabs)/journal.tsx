@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { FlatList, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { Card } from '../../src/components/layout/Card';
 import { EmptyState } from '../../src/components/layout/EmptyState';
 import { ScreenWrapper } from '../../src/components/layout/ScreenWrapper';
@@ -8,13 +8,15 @@ import { useJournalStore } from '../../src/store/journalStore';
 import { useHeroStore } from '../../src/store/heroStore';
 import { useSettingsStore } from '../../src/store/settingsStore';
 import { useAuthStore } from '../../src/store/authStore';
-import { STAT_COLORS, STAT_ICONS, StatName } from '../../src/types';
+import { useQuestStore } from '../../src/store/questStore';
+import { STAT_COLORS, STAT_ICONS, StatName, DIFFICULTY_XP } from '../../src/types';
 import { getCurrentWeekKey } from '../../src/config/weeklyPaths';
 import { STREAK_MILESTONES } from '../../src/engine/streakEngine';
 import { guidanceApi, ChronicleDto } from '../../src/api/guidanceApi';
 import { env } from '../../src/config/env';
 import { generateDailySummary } from '../../src/engine/journalEngine';
-import { useQuestStore } from '../../src/store/questStore';
+import { getDailyTemplates } from '../../src/config/questTemplates';
+import { resolveEvolutionPathId } from '../../src/engine/questProgression';
 
 function getCampaignDay(createdAt: string, entryDate: string): number {
   const start = new Date(createdAt);
@@ -34,10 +36,31 @@ export default function JournalScreen() {
   const { entries } = useJournalStore();
   const hero = useHeroStore((s) => s.hero);
   const settings = useSettingsStore();
-  const { quests } = useQuestStore();
+  const { quests, addQuest } = useQuestStore();
   const authenticated = useAuthStore((s) => s.status === 'authenticated');
   const canUseChronicle = settings.aiSkillsEnabled && !env.demoMode && authenticated;
   const [chronicle, setChronicle] = useState<ChronicleDto | null>(null);
+
+  const todayEntry = entries.find((e) => e.date === new Date().toISOString().split('T')[0]);
+
+  const acceptVow = () => {
+    if (!todayEntry?.tomorrowVowTemplateTitle || !hero) return;
+    const templates = getDailyTemplates(hero.dominantStat);
+    const template =
+      templates.find((t) => t.title === todayEntry.tomorrowVowTemplateTitle) ?? templates[0];
+    if (!template) return;
+    addQuest({
+      title: template.title,
+      description: template.description,
+      type: 'daily',
+      difficulty: template.difficulty,
+      stat: template.stat,
+      xpReward: DIFFICULTY_XP[template.difficulty],
+      isActive: true,
+      evolutionPathId: resolveEvolutionPathId(template.title),
+      templateTitle: template.title,
+    });
+  };
 
   useEffect(() => {
     if (!canUseChronicle) return;
@@ -99,6 +122,18 @@ export default function JournalScreen() {
           ))}
         </Card>
       )}
+
+      {todayEntry?.tomorrowVow ? (
+        <Card style={styles.vowCard}>
+          <Text style={styles.vowOverline}>Tomorrow&apos;s Vow</Text>
+          <Text style={styles.vowText}>{todayEntry.tomorrowVow}</Text>
+          {todayEntry.tomorrowVowTemplateTitle ? (
+            <TouchableOpacity style={styles.vowBtn} onPress={acceptVow} activeOpacity={0.85}>
+              <Text style={styles.vowBtnText}>Add as Quest</Text>
+            </TouchableOpacity>
+          ) : null}
+        </Card>
+      ) : null}
 
       {streakMilestones.length > 0 && (
         <Card style={styles.stampsCard}>
@@ -229,6 +264,33 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: fontSize.sm,
     marginTop: spacing.xs,
+  },
+  vowCard: { marginBottom: spacing.md, borderColor: colors.moon },
+  vowOverline: {
+    color: colors.moon,
+    fontSize: fontSize.xs,
+    textTransform: 'uppercase',
+    fontWeight: '700',
+    marginBottom: spacing.xs,
+  },
+  vowText: {
+    color: colors.textPrimary,
+    fontSize: fontSize.md,
+    lineHeight: 22,
+    ...typography.journal,
+  },
+  vowBtn: {
+    marginTop: spacing.sm,
+    alignSelf: 'flex-start',
+    backgroundColor: `${colors.moon}30`,
+    borderRadius: radius.md,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+  },
+  vowBtnText: {
+    color: colors.moon,
+    fontSize: fontSize.sm,
+    fontWeight: '700',
   },
   stampsCard: { marginBottom: spacing.md },
   stampsTitle: {

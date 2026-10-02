@@ -42,6 +42,19 @@ export type SkillEffect =
   | {
       type: 'activeDailyQuestCapacity';
       additionalSlots: number;
+    }
+  | {
+      type: 'difficultyUnlock';
+      difficulty: QuestDifficulty;
+      stats?: StatName[];
+    }
+  | {
+      type: 'bossStepXp';
+      percent: number;
+    }
+  | {
+      type: 'weeklyCapacity';
+      additionalSlots: number;
     };
 
 export type ClassTier = 1 | 2 | 3 | 4 | 5;
@@ -138,9 +151,15 @@ export interface Quest {
   streak: number;
   bestStreak: number;
   daysCompleted: number;
+  /** Stable id linking a daily to an evolution path (survives title changes). */
+  evolutionPathId?: string;
+  /** Optional seed title from a template for evolution matching. */
+  templateTitle?: string;
   // Boss quest fields
   totalSteps?: number;
   completedSteps?: number;
+  /** Campaign chapter id when spawned from the World Map. */
+  campaignChapterId?: string;
 }
 
 export interface Skill {
@@ -171,6 +190,9 @@ export interface JournalEntry {
   levelsGained: StatName[];
   skillsUnlocked: string[];
   milestones: string[];
+  /** Mentor-backed intent for the next day (title + optional template hint). */
+  tomorrowVow?: string | null;
+  tomorrowVowTemplateTitle?: string | null;
 }
 
 export interface ClassDefinition {

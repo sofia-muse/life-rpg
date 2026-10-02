@@ -146,6 +146,96 @@ public class GuidanceService
                 .ToList()));
     }
 
+    /// <summary>
+    /// Sanitize-only raid saga helper (ILlmClient has no raid-saga method yet).
+    /// Returns a usable default plan without calling the LLM.
+    /// </summary>
+    public async Task<Result<RaidSagaPlanDto>> PlanRaidSagaAsync(
+        RaidSagaPlanRequest request,
+        CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(request.Title) && string.IsNullOrWhiteSpace(request.Goal))
+        {
+            return Result<RaidSagaPlanDto>.Validation("Title or goal is required");
+        }
+
+        var hero = await HeroWithQuestsAsync(ct);
+        if (hero is null)
+        {
+            return _user.IsAuthenticated
+                ? Result<RaidSagaPlanDto>.NotFound("Hero not found")
+                : Result<RaidSagaPlanDto>.Unauthorized();
+        }
+
+        var title = Truncate(
+            string.IsNullOrWhiteSpace(request.Title) ? request.Goal!.Trim() : request.Title.Trim(),
+            70);
+        var unit = Truncate(
+            string.IsNullOrWhiteSpace(request.UnitLabel) ? "reps" : request.UnitLabel.Trim(),
+            40);
+        var stat = request.Stat ?? hero.DominantStat;
+        var target = Math.Clamp(request.TargetAmount ?? 100, 10, 100_000);
+
+        return Result<RaidSagaPlanDto>.Success(new RaidSagaPlanDto(
+            Truncate($"{title} Campaign", 70),
+            title,
+            Truncate(
+                string.IsNullOrWhiteSpace(request.Goal)
+                    ? $"Pool {target} {unit} as a party and claim victory together."
+                    : request.Goal.Trim(),
+                220),
+            unit,
+            target,
+            stat,
+            Truncate($"{hero.ClassName} Cohort", 70)));
+    }
+
+    /// <summary>
+    /// Sanitize-only weekly path coach (ILlmClient has no weekly-path method yet).
+    /// Picks a path from hero focus / dominant stat without calling the LLM.
+    /// </summary>
+    public async Task<Result<WeeklyPathSuggestionDto>> SuggestWeeklyPathAsync(CancellationToken ct = default)
+    {
+        var hero = await HeroWithQuestsAsync(ct);
+        if (hero is null)
+        {
+            return _user.IsAuthenticated
+                ? Result<WeeklyPathSuggestionDto>.NotFound("Hero not found")
+                : Result<WeeklyPathSuggestionDto>.Unauthorized();
+        }
+
+        var path = hero.DominantStat switch
+        {
+            StatName.Strength or StatName.Vitality => "power",
+            StatName.Intelligence or StatName.Dexterity => "focus",
+            _ => "support",
+        };
+
+        var (label, focus, vow, rewardTitle, rewardBadge) = path switch
+        {
+            "power" => ("Power", "physical power, recovery, and resilience",
+                "Train boldly. Recover deliberately. Let your body prove your resolve.",
+                "Vanguard of Power", "Power Cup"),
+            "focus" => ("Focus", "deep work, precision, and clean execution",
+                "Protect attention. Move with precision. Finish what matters most.",
+                "Sage of Focus", "Focus Cup"),
+            _ => ("Support", "steady discipline, support, and emotional leadership",
+                "Hold the line. Lift others. Build trust through steady action.",
+                "Warden of Support", "Support Cup"),
+        };
+
+        return Result<WeeklyPathSuggestionDto>.Success(new WeeklyPathSuggestionDto(
+            path,
+            label,
+            Truncate(focus, 120),
+            Truncate(vow, 180),
+            Truncate(
+                $"{label} weeks suit a {hero.ClassName} leaning on {hero.DominantStat.ToString().ToLowerInvariant()}.",
+                180),
+            Truncate(rewardTitle, 70),
+            Truncate(rewardBadge, 40)));
+    }
+
     private async Task<Domain.Entities.Hero?> HeroWithQuestsAsync(CancellationToken ct) =>
         _user.UserId is { } userId
             ? await _db.Heroes.Include(h => h.Quests).FirstOrDefaultAsync(h => h.UserId == userId, ct)

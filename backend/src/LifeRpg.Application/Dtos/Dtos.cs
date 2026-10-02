@@ -190,4 +190,8 @@ public record RaidDto(
     List<RaidMemberDto> Members,
     List<RaidContributionDto> RecentContributions);
 
-public record ContributeRaidResult(RaidDto Raid, bool JustCompleted);
+public record ContributeRaidResult(
+    RaidDto Raid,
+    bool JustCompleted,
+    int XpAwarded = 0,
+    string? RewardTitleGranted = null);

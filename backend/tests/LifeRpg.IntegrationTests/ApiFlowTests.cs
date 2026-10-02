@@ -42,10 +42,10 @@ public class ApiFlowTests : IClassFixture<LifeRpgApiFactory>
     }
 
     [Fact]
-    public async Task Skills_catalog_is_public_and_has_24()
+    public async Task Skills_catalog_is_public_and_has_36()
     {
         var skills = await _client.GetFromJsonAsync<List<SkillDto>>("/api/v1/skills", Json);
-        skills.Should().HaveCount(24);
+        skills.Should().HaveCount(36);
     }
 
     [Fact]

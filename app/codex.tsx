@@ -15,8 +15,18 @@ import { getClassDefinition } from '../src/config/classes';
 import { SKILLS } from '../src/config/skills';
 import { STREAK_MILESTONES } from '../src/engine/streakEngine';
 import { getBossSagaState } from '../src/engine/questProgression';
+import { APPEARANCE_UNLOCKS } from '../src/config/appearanceConfig';
 import { colors, spacing, fontSize, radius, typography } from '../src/config/theme';
-import { STAT_ICONS, STAT_NAMES, ClassTier } from '../src/types';
+import { STAT_ICONS, STAT_NAMES, ClassTier, CrestShape, SigilStyle } from '../src/types';
+
+const KNOWN_BOSS_RELICS = [
+  { bossTitle: 'Couch to 5K', sagaTitle: 'The Five-Kilometer Rite', rewardTitle: "Trailblazer's Crest" },
+  { bossTitle: '30-Day Fitness Challenge', sagaTitle: 'The Thirty-Day Crucible', rewardTitle: 'Champion of Momentum' },
+  { bossTitle: 'Build a Sleep Routine', sagaTitle: 'The Moonlit Accord', rewardTitle: 'Keeper of Recovery' },
+  { bossTitle: 'Read 5 Books', sagaTitle: "The Scholar's Pilgrimage", rewardTitle: 'Bearer of Five Tomes' },
+  { bossTitle: 'Ship a Project', sagaTitle: 'The Launch Campaign', rewardTitle: 'Builder of Finished Things' },
+  { bossTitle: '30-Day Meditation Streak', sagaTitle: 'The Stillness Trial', rewardTitle: 'Warden of Resolve' },
+];
 
 export default function CodexScreen() {
   const router = useRouter();
@@ -165,10 +175,76 @@ export default function CodexScreen() {
         </Card>
       )}
 
+      <Card>
+        <Text style={styles.sectionTitle}>Unlock Ledger — Abilities</Text>
+        {SKILLS.map((skill) => {
+          const unlocked = isSkillUnlocked(skill.id);
+          return (
+            <View
+              key={skill.id}
+              style={[styles.skillRow, !unlocked && styles.ledgerLocked]}
+            >
+              <Text style={styles.skillIcon}>{unlocked ? skill.icon : '🔒'}</Text>
+              <View style={styles.skillInfo}>
+                <Text style={styles.skillName}>
+                  {unlocked ? skill.name : '????'}
+                </Text>
+                <Text style={styles.skillEffect} numberOfLines={1}>
+                  {unlocked
+                    ? skill.effect
+                    : `${skill.requiredStat ?? 'cross'} L${skill.requiredLevel}${
+                        skill.secondaryLevel ? ` + ${skill.secondaryStat} L${skill.secondaryLevel}` : ''
+                      }`}
+                </Text>
+              </View>
+            </View>
+          );
+        })}
+      </Card>
+
+      {hero && (
+        <Card>
+          <Text style={styles.sectionTitle}>Unlock Ledger — Crests &amp; Sigils</Text>
+          {APPEARANCE_UNLOCKS.map((unlock) => {
+            const owned =
+              unlock.type === 'shape'
+                ? hero.appearance.unlockedCrestShapes.includes(unlock.id as CrestShape)
+                : hero.appearance.unlockedSigils.includes(unlock.id as SigilStyle);
+            return (
+              <View
+                key={`${unlock.type}-${unlock.id}`}
+                style={[styles.skillRow, !owned && styles.ledgerLocked]}
+              >
+                <Text style={styles.skillIcon}>{owned ? '✦' : '·'}</Text>
+                <View style={styles.skillInfo}>
+                  <Text style={styles.skillName}>{unlock.label}</Text>
+                  <Text style={styles.skillEffect}>{unlock.condition}</Text>
+                </View>
+              </View>
+            );
+          })}
+        </Card>
+      )}
+
+      <Card>
+        <Text style={styles.sectionTitle}>Unlock Ledger — Boss Relics</Text>
+        {KNOWN_BOSS_RELICS.map((relic) => {
+          const earned = completedBosses.some((b) => b.title === relic.bossTitle);
+          return (
+            <View key={relic.bossTitle} style={[styles.bossRow, !earned && styles.ledgerLocked]}>
+              <Text style={styles.bossTitle}>{earned ? relic.sagaTitle : '????'}</Text>
+              <Text style={styles.bossReward}>
+                {earned ? `Relic: ${relic.rewardTitle}` : `Clear: ${relic.bossTitle}`}
+              </Text>
+            </View>
+          );
+        })}
+      </Card>
+
       {unlockedSkills.length > 0 && (
         <Card>
-          <Text style={styles.sectionTitle}>Discovered Abilities</Text>
-          {unlockedSkills.slice(0, 8).map((skill) => (
+          <Text style={styles.sectionTitle}>Recently Awakened</Text>
+          {unlockedSkills.slice(-6).reverse().map((skill) => (
             <View key={skill.id} style={styles.skillRow}>
               <Text style={styles.skillIcon}>{skill.icon}</Text>
               <View style={styles.skillInfo}>
@@ -374,6 +450,9 @@ const styles = StyleSheet.create({
   skillEffect: {
     color: colors.textMuted,
     fontSize: fontSize.xs,
+  },
+  ledgerLocked: {
+    opacity: 0.4,
   },
   bossRow: {
     paddingVertical: spacing.sm,

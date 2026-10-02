@@ -2,6 +2,7 @@ using LifeRpg.Application.Common;
 using LifeRpg.Application.Dtos;
 using LifeRpg.Domain.Entities;
 using LifeRpg.Domain.Enums;
+using LifeRpg.Domain.GameEngine;
 using Microsoft.EntityFrameworkCore;
 
 namespace LifeRpg.Application.Services;
@@ -239,7 +240,8 @@ public class RaidService
         if (existing is not null)
         {
             // Idempotent replay — return current state without double-counting.
-            return Result<ContributeRaidResult>.Success(new ContributeRaidResult(ToDto(raid, hero.Id), false));
+            return Result<ContributeRaidResult>.Success(
+                new ContributeRaidResult(ToDto(raid, hero.Id), false, XpAwarded: 0));
         }
 
         if (raid.IsCompleted)
@@ -289,10 +291,81 @@ public class RaidService
             justCompleted = true;
         }
 
+        // Clamped personal XP on the raid's target stat (anti-cheat: server owns the award).
+        var xpAwarded = Math.Min(req.Amount, 25);
+        string? rewardTitleGranted = null;
+        if (justCompleted)
+        {
+            xpAwarded += 50;
+            rewardTitleGranted = GrantRaidRewardTitle(hero, raid.RewardTitle);
+        }
+
+        if (xpAwarded > 0)
+        {
+            var application = XpCalculator.ApplyXp(hero.StatXp[raid.Stat], xpAwarded);
+            hero.StatXp[raid.Stat] = application.NewXp;
+            HeroService.RecomputeProgression(hero);
+
+            var unlockedIds = hero.UnlockedSkills.Select(s => s.SkillId).ToHashSet();
+            foreach (var def in SkillResolver.GetNewlyUnlockedSkills(hero.StatXp, unlockedIds))
+            {
+                hero.UnlockedSkills.Add(new UnlockedSkill
+                {
+                    HeroId = hero.Id,
+                    SkillId = def.Id,
+                    UnlockedAt = _clock.UtcNow,
+                });
+            }
+
+            hero.UpdatedAt = _clock.UtcNow;
+        }
+
         await _db.SaveChangesAsync(ct);
 
         var loaded = await LoadRaidAsync(raid.Id, ct);
-        return Result<ContributeRaidResult>.Success(new ContributeRaidResult(ToDto(loaded!, hero.Id), justCompleted));
+        return Result<ContributeRaidResult>.Success(
+            new ContributeRaidResult(ToDto(loaded!, hero.Id), justCompleted, xpAwarded, rewardTitleGranted));
+    }
+
+    private static string? GrantRaidRewardTitle(Hero hero, string rewardTitle)
+    {
+        if (string.IsNullOrWhiteSpace(rewardTitle))
+        {
+            return null;
+        }
+
+        var label = rewardTitle.Trim();
+        var titleId = $"custom:{label}";
+        var settings = hero.Settings;
+        var unlocked = new List<string>(settings.UnlockedTitleIds ?? new List<string> { "adventurer" });
+        if (!unlocked.Contains(titleId))
+        {
+            unlocked.Add(titleId);
+        }
+
+        var labels = new Dictionary<string, string>(settings.CustomTitleLabels ?? new Dictionary<string, string>())
+        {
+            [titleId] = label,
+        };
+
+        // Reassign so the JSON value-converter + comparer pick up nested mutations.
+        hero.Settings = new Domain.ValueObjects.HeroSettings
+        {
+            NotificationsEnabled = settings.NotificationsEnabled,
+            HapticEnabled = settings.HapticEnabled,
+            ReminderTime = settings.ReminderTime,
+            AiSkillsEnabled = settings.AiSkillsEnabled,
+            EquippedTitleId = titleId,
+            UnlockedTitleIds = unlocked,
+            CustomTitleLabels = labels,
+            WeeklyPath = settings.WeeklyPath,
+            WeeklyPathWeekKey = settings.WeeklyPathWeekKey,
+            WeeklyPathStartedAt = settings.WeeklyPathStartedAt,
+            WeeklyRewardWeekKey = settings.WeeklyRewardWeekKey,
+            WeeklyRewardTitle = settings.WeeklyRewardTitle,
+            WeeklyRewardBadge = settings.WeeklyRewardBadge,
+        };
+        return label;
     }
 
     private async Task<Hero?> HeroAsync(CancellationToken ct)
@@ -302,7 +375,9 @@ public class RaidService
             return null;
         }
 
-        return await _db.Heroes.FirstOrDefaultAsync(h => h.UserId == userId, ct);
+        return await _db.Heroes
+            .Include(h => h.UnlockedSkills)
+            .FirstOrDefaultAsync(h => h.UserId == userId, ct);
     }
 
     private async Task<Raid?> LoadRaidAsync(Guid raidId, CancellationToken ct)

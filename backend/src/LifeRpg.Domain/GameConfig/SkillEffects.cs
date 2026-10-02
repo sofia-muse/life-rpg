@@ -21,4 +21,12 @@ public abstract record SkillEffectDefinition
     public sealed record StreakFreeze(int MissesPerWeek) : SkillEffectDefinition;
 
     public sealed record ActiveDailyQuestCapacity(int AdditionalSlots) : SkillEffectDefinition;
+
+    public sealed record DifficultyUnlock(
+        QuestDifficulty Difficulty,
+        IReadOnlyList<StatName>? Stats = null) : SkillEffectDefinition;
+
+    public sealed record BossStepXp(int Percent) : SkillEffectDefinition;
+
+    public sealed record WeeklyCapacity(int AdditionalSlots) : SkillEffectDefinition;
 }

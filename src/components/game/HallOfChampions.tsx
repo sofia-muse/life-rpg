@@ -46,7 +46,7 @@ export function HallOfChampions({ entries, currentScore, currentRank }: Props) {
 
       {sorted.length === 0 ? (
         <Text style={styles.empty}>
-          Complete a weekly contract to enter the hall. Your legend starts here.
+          Choose a weekly path and complete its contract to enter the hall. Your legend starts here.
         </Text>
       ) : (
         sorted.map((entry, index) => (

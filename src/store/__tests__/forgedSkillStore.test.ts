@@ -7,6 +7,10 @@ jest.mock('../../api/skillApi', () => ({
   skillApi: { forge: jest.fn(), listForged: jest.fn() },
 }));
 
+jest.mock('../../config/env', () => ({
+  env: { apiUrl: 'http://localhost:5005', demoMode: false },
+}));
+
 describe('forgedSkillStore', () => {
   beforeEach(() => {
     useForgedSkillStore.setState({ forged: [], loading: false, error: null });

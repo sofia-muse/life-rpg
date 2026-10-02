@@ -108,6 +108,30 @@ public class SkillResolverTests
         SkillResolver.GetWeeklyStreakFreezeAllowance(new[] { "wil-2" }).Should().Be(1);
         SkillResolver.GetActiveDailyQuestCapacityBonus(new[] { "dex-2" }).Should().Be(2);
     }
+
+    [Fact]
+    public void Difficulty_unlocks_gate_hard_and_legendary_per_stat()
+    {
+        SkillResolver.IsDifficultyAllowed(QuestDifficulty.Medium, StatName.Strength, Array.Empty<string>())
+            .Should().BeTrue();
+        SkillResolver.IsDifficultyAllowed(QuestDifficulty.Hard, StatName.Strength, Array.Empty<string>())
+            .Should().BeFalse();
+        SkillResolver.IsDifficultyAllowed(QuestDifficulty.Hard, StatName.Strength, new[] { "str-2" })
+            .Should().BeTrue();
+        SkillResolver.IsDifficultyAllowed(QuestDifficulty.Legendary, StatName.Strength, new[] { "str-2" })
+            .Should().BeFalse();
+        SkillResolver.IsDifficultyAllowed(QuestDifficulty.Legendary, StatName.Strength, new[] { "str-3" })
+            .Should().BeTrue();
+        SkillResolver.IsDifficultyAllowed(QuestDifficulty.Hard, StatName.Vitality, new[] { "str-2" })
+            .Should().BeFalse();
+    }
+
+    [Fact]
+    public void Boss_step_and_weekly_capacity_bonuses_sum_across_skills()
+    {
+        SkillResolver.GetBossStepXpBonus(new[] { "str-4", "int-4" }).Should().Be(25);
+        SkillResolver.GetWeeklyCapacityBonus(new[] { "str-5", "vit-5" }).Should().Be(2);
+    }
 }
 
 public class ClassResolverTests

@@ -27,11 +27,14 @@ import { HeroCrest } from '../../src/components/avatar/HeroCrest';
 import { PulseGlow } from '../../src/components/animated/PulseGlow';
 import { getPrimaryContract } from '../../src/config/classContracts';
 import { buildWeeklyCupSummary, getActiveWeeklyPath } from '../../src/config/weeklyPaths';
+import { getWeeklyCapacityBonus } from '../../src/engine/skillEngine';
 import { buildWeeklyChallengePayload } from '../../src/config/weeklyCompetition';
 import { buildHallOfFameEntry, useHallOfFameStore } from '../../src/store/hallOfFameStore';
 import { EQUIPPABLE_TITLES } from '../../src/config/achievements';
 import { useForgedSkillStore } from '../../src/store/forgedSkillStore';
+import { useGameplayStore } from '../../src/store/gameplayStore';
 import { getTimeOfDayGreeting, PERIOD_GRADIENTS } from '../../src/utils/gameFeedback';
+import { presentQuestCompletionFeedback } from '../../src/utils/questCompletionFeedback';
 import {
   getContentMaxWidth,
   getScreenHorizontalPadding,
@@ -46,7 +49,9 @@ export default function DashboardScreen() {
   const getDailyRewardPreview = useHeroStore((s) => s.getDailyRewardPreview);
   const claimDailyReward = useHeroStore((s) => s.claimDailyReward);
   const getActiveQuests = useQuestStore((s) => s.getActiveQuests);
+  const getQuestById = useQuestStore((s) => s.getQuestById);
   const getUnlockedSkillIds = useSkillStore((s) => s.getUnlockedSkillIds);
+  const completeQuestFlow = useGameplayStore((s) => s.completeQuest);
   const showXPPopup = useUIStore((s) => s.showXPPopup);
   const xpPopupData = useUIStore((s) => s.xpPopupData);
   const dismissXP = useUIStore((s) => s.dismissXP);
@@ -58,7 +63,9 @@ export default function DashboardScreen() {
   const forged = useForgedSkillStore((s) => s.forged);
   const { greeting, period } = getTimeOfDayGreeting();
   const equippedTitle =
-    EQUIPPABLE_TITLES.find((t) => t.id === settings.equippedTitleId)?.label ?? 'Humble Adventurer';
+    settings.customTitleLabels[settings.equippedTitleId] ??
+    EQUIPPABLE_TITLES.find((t) => t.id === settings.equippedTitleId)?.label ??
+    'Humble Adventurer';
 
   useEffect(() => {
     settings.clearStaleWeeklyPath();
@@ -68,7 +75,12 @@ export default function DashboardScreen() {
     if (!hero) return;
     settings.claimWeeklyReward(reward);
     settings.incrementWeeklyContractsCompleted();
-    const contract = getPrimaryContract(hero, settings, quests);
+    const contract = getPrimaryContract(
+      hero,
+      settings,
+      quests,
+      getWeeklyCapacityBonus(getUnlockedSkillIds()),
+    );
     const payload = buildWeeklyChallengePayload(hero, settings, contract, quests);
     if (payload && settings.weeklyPathWeekKey) {
       addHallEntry(
@@ -107,6 +119,19 @@ export default function DashboardScreen() {
     setDailyReward(null);
   };
 
+  const handleCompleteTodayQuest = (questId: string) => {
+    void (async () => {
+      try {
+        const priorQuest = getQuestById(questId);
+        const result = await completeQuestFlow(questId);
+        if (!result) return;
+        presentQuestCompletionFeedback(priorQuest, result);
+      } catch (error) {
+        console.error('[Home] Failed to complete quest.', { questId, error });
+      }
+    })();
+  };
+
   if (!hero) {
     return <View style={styles.center} />;
   }
@@ -114,8 +139,9 @@ export default function DashboardScreen() {
   const activeQuests = getActiveQuests();
   const unlockedSkillCount = getUnlockedSkillIds().length;
   const unlockedSkillIds = getUnlockedSkillIds();
+  const weeklyCapacityBonus = getWeeklyCapacityBonus(unlockedSkillIds);
   const todayQuests = activeQuests.filter((q) => q.type === 'daily');
-  const contract = getPrimaryContract(hero, settings, quests);
+  const contract = getPrimaryContract(hero, settings, quests, weeklyCapacityBonus);
   const cup = getActiveWeeklyPath(settings)
     ? buildWeeklyCupSummary(
         settings,
@@ -326,7 +352,11 @@ export default function DashboardScreen() {
                   ) : (
                     todayQuests.map((quest, i) => (
                       <FadeIn key={quest.id} delay={600 + i * 60} slideFrom="right" slideDistance={12}>
-                        <View style={styles.questRow}>
+                        <TouchableOpacity
+                          style={styles.questRow}
+                          onPress={() => handleCompleteTodayQuest(quest.id)}
+                          activeOpacity={0.8}
+                        >
                           <View style={[styles.questDot, { backgroundColor: STAT_COLORS[quest.stat] }]} />
                           <Text style={styles.questTitle} numberOfLines={useTwoColumns ? 2 : 1}>
                             {quest.title}
@@ -334,7 +364,7 @@ export default function DashboardScreen() {
                           <Text style={[styles.questXP, { color: STAT_COLORS[quest.stat] }]}>
                             +{quest.xpReward}
                           </Text>
-                        </View>
+                        </TouchableOpacity>
                       </FadeIn>
                     ))
                   )}

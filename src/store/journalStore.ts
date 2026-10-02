@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { generateId } from '../utils/id';
 import { JournalEntry } from '../types';
+import { syncManager } from '../api/syncManager';
 
 interface JournalState {
   entries: JournalEntry[];
@@ -71,10 +72,17 @@ export const useJournalStore = create<JournalState>()(
             levelsGained: mergeUnique(existing.levelsGained, updates.levelsGained),
             skillsUnlocked: mergeUnique(existing.skillsUnlocked, updates.skillsUnlocked),
             milestones: mergeUnique(existing.milestones, updates.milestones),
+            tomorrowVow:
+              updates.tomorrowVow !== undefined ? updates.tomorrowVow : existing.tomorrowVow,
+            tomorrowVowTemplateTitle:
+              updates.tomorrowVowTemplateTitle !== undefined
+                ? updates.tomorrowVowTemplateTitle
+                : existing.tomorrowVowTemplateTitle,
           };
           set((state) => ({
             entries: state.entries.map((e) => (e.id === existing.id ? merged : e)),
           }));
+          syncManager.enqueue('journal', 'upsert', merged);
         } else {
           // Create new entry for today
           const newEntry: JournalEntry = {
@@ -89,6 +97,7 @@ export const useJournalStore = create<JournalState>()(
             ...updates,
           };
           set((state) => ({ entries: [newEntry, ...state.entries] }));
+          syncManager.enqueue('journal', 'upsert', newEntry);
         }
       },
 

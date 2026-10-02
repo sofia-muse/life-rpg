@@ -9,6 +9,7 @@ interface EvolutionStage {
 }
 
 interface EvolutionPath {
+  id: string;
   stages: EvolutionStage[];
 }
 
@@ -38,6 +39,7 @@ export interface BossSagaState {
 
 const EVOLUTION_PATHS: EvolutionPath[] = [
   {
+    id: 'pushups',
     stages: [
       {
         unlockAt: 0,
@@ -70,6 +72,7 @@ const EVOLUTION_PATHS: EvolutionPath[] = [
     ],
   },
   {
+    id: 'hydration',
     stages: [
       {
         unlockAt: 0,
@@ -102,6 +105,7 @@ const EVOLUTION_PATHS: EvolutionPath[] = [
     ],
   },
   {
+    id: 'reading',
     stages: [
       {
         unlockAt: 0,
@@ -134,6 +138,7 @@ const EVOLUTION_PATHS: EvolutionPath[] = [
     ],
   },
   {
+    id: 'social',
     stages: [
       {
         unlockAt: 0,
@@ -166,6 +171,7 @@ const EVOLUTION_PATHS: EvolutionPath[] = [
     ],
   },
   {
+    id: 'productivity',
     stages: [
       {
         unlockAt: 0,
@@ -198,6 +204,7 @@ const EVOLUTION_PATHS: EvolutionPath[] = [
     ],
   },
   {
+    id: 'meditation',
     stages: [
       {
         unlockAt: 0,
@@ -264,10 +271,37 @@ const BOSS_SAGAS: Record<string, BossSagaBlueprint> = {
   },
 };
 
+/** Resolve an evolution path id from a template/seed title (any stage title matches). */
+export function resolveEvolutionPathId(title: string): string | undefined {
+  const path = EVOLUTION_PATHS.find((p) => p.stages.some((stage) => stage.title === title));
+  return path?.id;
+}
+
 function getEvolutionPath(quest: Quest): EvolutionPath | null {
+  if (quest.evolutionPathId) {
+    return EVOLUTION_PATHS.find((path) => path.id === quest.evolutionPathId) ?? null;
+  }
+
+  const seed = quest.templateTitle ?? quest.title;
   return (
-    EVOLUTION_PATHS.find((path) => path.stages.some((stage) => stage.title === quest.title)) ?? null
+    EVOLUTION_PATHS.find(
+      (path) => path.stages.some((stage) => stage.title === seed || stage.title === quest.title),
+    ) ?? null
   );
+}
+
+function getCurrentStageIndex(path: EvolutionPath, quest: Quest): number {
+  const byTitle = path.stages.findIndex((stage) => stage.title === quest.title);
+  if (byTitle !== -1) return byTitle;
+
+  // Custom/renamed titles: infer the highest stage the hero has already unlocked by completions.
+  let index = 0;
+  for (let i = 0; i < path.stages.length; i++) {
+    if (quest.daysCompleted >= path.stages[i].unlockAt) {
+      index = i;
+    }
+  }
+  return index;
 }
 
 export function getQuestEvolutionState(quest: Quest): QuestEvolutionState | null {
@@ -276,9 +310,7 @@ export function getQuestEvolutionState(quest: Quest): QuestEvolutionState | null
   const path = getEvolutionPath(quest);
   if (!path) return null;
 
-  const currentStageIndex = path.stages.findIndex((stage) => stage.title === quest.title);
-  if (currentStageIndex === -1) return null;
-
+  const currentStageIndex = getCurrentStageIndex(path, quest);
   const currentStage = path.stages[currentStageIndex];
   const nextStage = path.stages[currentStageIndex + 1];
 
@@ -296,16 +328,38 @@ export function applyQuestEvolution(quest: Quest): Quest {
   const path = getEvolutionPath(quest);
   if (!path) return quest;
 
-  const currentStageIndex = path.stages.findIndex((stage) => stage.title === quest.title);
-  if (currentStageIndex === -1) return quest;
+  const titleIndex = path.stages.findIndex((stage) => stage.title === quest.title);
 
-  const nextStage = path.stages[currentStageIndex + 1];
+  // Renamed dailies: jump to the stage unlocked by daysCompleted (not "next from inferred").
+  if (titleIndex === -1) {
+    let targetIndex = 0;
+    for (let i = 0; i < path.stages.length; i++) {
+      if (quest.daysCompleted >= path.stages[i].unlockAt) {
+        targetIndex = i;
+      }
+    }
+    const target = path.stages[targetIndex];
+    return {
+      ...quest,
+      evolutionPathId: path.id,
+      title: target.title,
+      description: target.description,
+      difficulty: target.difficulty,
+      xpReward: DIFFICULTY_XP[target.difficulty],
+    };
+  }
+
+  const nextStage = path.stages[titleIndex + 1];
   if (!nextStage || quest.daysCompleted < nextStage.unlockAt) {
-    return quest;
+    return {
+      ...quest,
+      evolutionPathId: quest.evolutionPathId ?? path.id,
+    };
   }
 
   return {
     ...quest,
+    evolutionPathId: path.id,
     title: nextStage.title,
     description: nextStage.description,
     difficulty: nextStage.difficulty,
@@ -348,7 +402,12 @@ export function getLeadingEvolutionQuest(quests: Quest[]): Quest | null {
       ): entry is { quest: Quest; evolution: QuestEvolutionState & { nextUnlockAt: number } } =>
         !!entry.evolution?.nextUnlockAt,
     )
-    .sort((a, b) => a.evolution.nextUnlockAt - a.quest.daysCompleted - (b.evolution.nextUnlockAt - b.quest.daysCompleted));
+    .sort(
+      (a, b) =>
+        a.evolution.nextUnlockAt -
+        a.quest.daysCompleted -
+        (b.evolution.nextUnlockAt - b.quest.daysCompleted),
+    );
 
   return evolving[0]?.quest ?? null;
 }

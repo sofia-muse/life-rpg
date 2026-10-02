@@ -8,7 +8,7 @@ namespace LifeRpg.Api.Controllers;
 
 public class SkillsController : ApiControllerBase
 {
-    /// <summary>The full static skill catalog (24 skills). Public — it's reference data.</summary>
+    /// <summary>The full static skill catalog (36 skills). Public — it's reference data.</summary>
     [HttpGet]
     [AllowAnonymous]
     public IActionResult Catalog() =>

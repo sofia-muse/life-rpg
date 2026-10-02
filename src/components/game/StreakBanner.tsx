@@ -1,11 +1,16 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, StyleSheet, Animated, TouchableOpacity } from 'react-native';
 import { colors, spacing, fontSize, radius } from '../../config/theme';
 import {
   getStreakMultiplier,
   getCurrentMilestone,
   daysUntilNextMilestone,
 } from '../../engine/streakEngine';
+import { useHeroStore } from '../../store/heroStore';
+import { useSkillStore } from '../../store/skillStore';
+import { useUIStore } from '../../store/uiStore';
+import { playGameFeedback } from '../../utils/gameFeedback';
+import { useSettingsStore } from '../../store/settingsStore';
 
 interface Props {
   streakDays: number;
@@ -15,12 +20,15 @@ export function StreakBanner({ streakDays }: Props) {
   const multiplier = getStreakMultiplier(streakDays);
   const currentMilestone = getCurrentMilestone(streakDays);
   const daysToNext = daysUntilNextMilestone(streakDays);
+  const takeRestDay = useHeroStore((s) => s.takeRestDay);
+  const getUnlockedSkillIds = useSkillStore((s) => s.getUnlockedSkillIds);
+  const setCharacterEvent = useUIStore((s) => s.setCharacterEvent);
+  const hapticEnabled = useSettingsStore((s) => s.hapticEnabled);
 
   const fireScale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     if (streakDays === 0) return;
-    // Fire icon bounce loop
     const bounce = Animated.loop(
       Animated.sequence([
         Animated.timing(fireScale, { toValue: 1.2, duration: 600, useNativeDriver: true }),
@@ -29,12 +37,22 @@ export function StreakBanner({ streakDays }: Props) {
     );
     bounce.start();
     return () => bounce.stop();
-  }, [streakDays]);
+  }, [streakDays, fireScale]);
+
+  const handleRestDay = () => {
+    takeRestDay(getUnlockedSkillIds());
+    void playGameFeedback('questComplete', hapticEnabled);
+    setCharacterEvent('rest');
+    setTimeout(() => setCharacterEvent('idle'), 1500);
+  };
 
   if (streakDays === 0) {
     return (
       <View style={styles.container}>
         <Text style={styles.label}>Complete a quest to start your streak!</Text>
+        <TouchableOpacity style={styles.restBtn} onPress={handleRestDay} activeOpacity={0.85}>
+          <Text style={styles.restBtnText}>Take a Rest Day</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -59,6 +77,9 @@ export function StreakBanner({ streakDays }: Props) {
           {daysToNext} day{daysToNext !== 1 ? 's' : ''} to next milestone
         </Text>
       )}
+      <TouchableOpacity style={styles.restBtn} onPress={handleRestDay} activeOpacity={0.85}>
+        <Text style={styles.restBtnText}>Rest Day · Second Wind XP</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -112,5 +133,20 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: fontSize.xs,
     marginTop: 2,
+  },
+  restBtn: {
+    marginTop: spacing.sm,
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    backgroundColor: colors.bgInput,
+  },
+  restBtnText: {
+    color: colors.textSecondary,
+    fontSize: fontSize.xs,
+    fontWeight: '700',
   },
 });

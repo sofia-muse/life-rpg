@@ -5,8 +5,9 @@ import { SkillUnlockModal } from './SkillUnlockModal';
 import { TierUpModal } from './TierUpModal';
 import { QuestCreateModal } from './QuestCreateModal';
 import { AppearanceUnlockModal } from './AppearanceUnlockModal';
-
 import { EvolutionModal } from './EvolutionModal';
+import { AchievementUnlockModal } from './AchievementUnlockModal';
+import { StreakMilestoneModal } from './StreakMilestoneModal';
 
 export function GlobalModals() {
   const {
@@ -25,6 +26,12 @@ export function GlobalModals() {
     showEvolutionModal,
     evolutionData,
     dismissEvolution,
+    showAchievementModal,
+    achievementData,
+    dismissAchievement,
+    showStreakMilestoneModal,
+    streakMilestoneData,
+    dismissStreakMilestone,
   } = useUIStore();
 
   return (
@@ -70,6 +77,22 @@ export function GlobalModals() {
           rankName={evolutionData.rankName}
           nextTitle={evolutionData.nextTitle}
           onDismiss={dismissEvolution}
+        />
+      )}
+
+      <AchievementUnlockModal
+        visible={showAchievementModal}
+        achievement={achievementData}
+        onDismiss={dismissAchievement}
+      />
+
+      {streakMilestoneData && (
+        <StreakMilestoneModal
+          visible={showStreakMilestoneModal}
+          days={streakMilestoneData.days}
+          title={streakMilestoneData.title}
+          multiplier={streakMilestoneData.multiplier}
+          onDismiss={dismissStreakMilestone}
         />
       )}
     </>

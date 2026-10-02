@@ -23,4 +23,12 @@ public class GuidanceController : ApiControllerBase
     [HttpGet("chronicle")]
     public async Task<IActionResult> Chronicle() =>
         ToResponse(await _guidance.ChronicleAsync());
+
+    [HttpPost("raid-saga")]
+    public async Task<IActionResult> RaidSaga(RaidSagaPlanRequest request) =>
+        ToResponse(await _guidance.PlanRaidSagaAsync(request));
+
+    [HttpGet("weekly-path")]
+    public async Task<IActionResult> WeeklyPath() =>
+        ToResponse(await _guidance.SuggestWeeklyPathAsync());
 }

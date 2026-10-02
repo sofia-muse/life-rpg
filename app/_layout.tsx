@@ -5,6 +5,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { View, ActivityIndicator } from 'react-native';
 import { useHeroStore } from '../src/store/heroStore';
 import { useAuthStore } from '../src/store/authStore';
+import { useForgedSkillStore } from '../src/store/forgedSkillStore';
 import { GlobalModals } from '../src/components/game/GlobalModals';
 import { syncManager } from '../src/api/syncManager';
 import { env } from '../src/config/env';
@@ -38,6 +39,9 @@ export default function RootLayout() {
   useEffect(() => {
     void bootstrap();
     void syncManager.init();
+    if (env.demoMode) {
+      useForgedSkillStore.getState().seedDemo();
+    }
   }, [bootstrap]);
 
   useEffect(() => {
