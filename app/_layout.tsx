@@ -8,6 +8,9 @@ import { useAuthStore } from '../src/store/authStore';
 import { useForgedSkillStore } from '../src/store/forgedSkillStore';
 import { useGameplayStore } from '../src/store/gameplayStore';
 import { GlobalModals } from '../src/components/game/GlobalModals';
+import { CombatTextLayer } from '../src/components/game/CombatTextLayer';
+import { ToastHost } from '../src/components/game/ToastHost';
+import { ScreenShake } from '../src/components/animated/ScreenShake';
 import { syncManager } from '../src/api/syncManager';
 import { env } from '../src/config/env';
 
@@ -78,18 +81,22 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={rpgDarkTheme}>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="(auth)" options={{ gestureEnabled: false }} />
-        <Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', headerShown: false }} />
-        <Stack.Screen name="customize" options={{ presentation: 'modal', headerShown: false }} />
-        <Stack.Screen name="codex" options={{ headerShown: false }} />
-        <Stack.Screen name="map" options={{ headerShown: false }} />
-        <Stack.Screen name="achievements" options={{ headerShown: false }} />
-      </Stack>
-      {mustSignIn ? <Redirect href="/login" /> : !isOnboarded && <Redirect href="/onboarding" />}
-      <GlobalModals />
+      <ScreenShake>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="(auth)" options={{ gestureEnabled: false }} />
+          <Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
+          <Stack.Screen name="modal" options={{ presentation: 'modal', headerShown: false }} />
+          <Stack.Screen name="customize" options={{ presentation: 'modal', headerShown: false }} />
+          <Stack.Screen name="codex" options={{ headerShown: false }} />
+          <Stack.Screen name="map" options={{ headerShown: false }} />
+          <Stack.Screen name="achievements" options={{ headerShown: false }} />
+        </Stack>
+        {mustSignIn ? <Redirect href="/login" /> : !isOnboarded && <Redirect href="/onboarding" />}
+        <GlobalModals />
+        <CombatTextLayer />
+      </ScreenShake>
+      <ToastHost />
     </ThemeProvider>
   );
 }

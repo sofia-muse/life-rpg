@@ -1,21 +1,35 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Tabs } from 'expo-router';
-import { View, Text, StyleSheet, Platform, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, Platform, useWindowDimensions, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, typography } from '../../src/config/theme';
 import { getTabDockWidth, getViewportSize } from '../../src/config/responsive';
+import { useHeroStore } from '../../src/store/heroStore';
+import { useRaidStore } from '../../src/store/raidStore';
 
 function TabIcon({
   label,
   icon,
   focused,
   wide,
+  badge,
 }: {
   label: string;
   icon: string;
   focused: boolean;
   wide: boolean;
+  badge?: boolean;
 }) {
+  const scale = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.spring(scale, {
+      toValue: focused ? 1.12 : 1,
+      friction: 5,
+      useNativeDriver: true,
+    }).start();
+  }, [focused, scale]);
+
   return (
     <View style={[styles.tabItem, wide && styles.tabItemWide, focused && styles.tabItemActive]}>
       {focused && (
@@ -27,8 +41,11 @@ function TabIcon({
         />
       )}
       <View pointerEvents="none" style={[styles.innerBorder, focused && styles.innerBorderActive]} />
-      <Text style={[styles.tabIcon, focused && styles.tabIconActive]}>{icon}</Text>
+      <Animated.Text style={[styles.tabIcon, focused && styles.tabIconActive, { transform: [{ scale }] }]}>
+        {icon}
+      </Animated.Text>
       <Text style={[styles.tabLabel, focused && styles.tabLabelActive]}>{label}</Text>
+      {badge ? <View style={styles.badge} /> : null}
     </View>
   );
 }
@@ -36,6 +53,10 @@ function TabIcon({
 export default function TabLayout() {
   const { width } = useWindowDimensions();
   const viewport = getViewportSize(width);
+  const lastRewardDate = useHeroStore((s) => s.hero?.lastRewardDate);
+  const getDailyRewardPreview = useHeroStore((s) => s.getDailyRewardPreview);
+  const dailyReady = lastRewardDate !== undefined && getDailyRewardPreview() !== null;
+  const raidBadge = useRaidStore((s) => s.unseenRaidCount) > 0;
   const floatingDock = Platform.OS === 'web' && viewport !== 'phone';
   const dockWidth = getTabDockWidth(width);
 
@@ -61,7 +82,9 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon label="Home" icon="⌂" focused={focused} wide={floatingDock} />,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon label="Home" icon="⌂" focused={focused} wide={floatingDock} badge={dailyReady} />
+          ),
         }}
       />
       <Tabs.Screen
@@ -73,7 +96,9 @@ export default function TabLayout() {
       <Tabs.Screen
         name="raids"
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon label="Raids" icon="⛨" focused={focused} wide={floatingDock} />,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon label="Raids" icon="⛨" focused={focused} wide={floatingDock} badge={raidBadge} />
+          ),
         }}
       />
       <Tabs.Screen
@@ -167,5 +192,14 @@ const styles = StyleSheet.create({
   tabLabelActive: {
     color: colors.tabActive,
     fontWeight: '600',
+  },
+  badge: {
+    position: 'absolute',
+    top: 6,
+    right: 10,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.gold,
   },
 });

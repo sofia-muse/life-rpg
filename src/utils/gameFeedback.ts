@@ -1,12 +1,37 @@
 import * as Haptics from 'expo-haptics';
 import { Platform } from 'react-native';
+import { useSettingsStore } from '../store/settingsStore';
+import { playSfx, SfxId } from './sfx';
 
-type FeedbackEvent = 'questComplete' | 'levelUp' | 'tierUp' | 'dailyReward' | 'evolution' | 'bossPhase';
+type FeedbackEvent =
+  | 'questComplete'
+  | 'levelUp'
+  | 'tierUp'
+  | 'dailyReward'
+  | 'evolution'
+  | 'bossPhase'
+  | 'click'
+  | 'raidEnter';
+
+const SFX: Record<FeedbackEvent, SfxId> = {
+  questComplete: 'questComplete',
+  levelUp: 'levelUp',
+  tierUp: 'levelUp',
+  dailyReward: 'questComplete',
+  evolution: 'levelUp',
+  bossPhase: 'bossHit',
+  click: 'click',
+  raidEnter: 'raidEnter',
+};
 
 export async function playGameFeedback(
   event: FeedbackEvent,
   hapticEnabled: boolean,
 ): Promise<void> {
+  if (useSettingsStore.getState().soundEnabled !== false) {
+    playSfx(SFX[event]);
+  }
+
   if (!hapticEnabled || Platform.OS === 'web') return;
 
   switch (event) {

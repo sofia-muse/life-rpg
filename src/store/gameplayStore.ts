@@ -25,6 +25,12 @@ export interface QuestCompletionFlowResult {
   quest: Quest;
   completed: boolean;
   xpAwarded: number;
+  /** Extra XP from the streak multiplier, when known. */
+  streakBonus?: number;
+  /** Extra XP from skills, when known. */
+  skillBonus?: number;
+  /** Skill percent that produced `skillBonus`, when the client computed it. */
+  skillBonusPercent?: number;
   levelResult: StatLevelUpResult | null;
   newSkills: Skill[];
   appearanceUnlock: { shapes: string[]; sigils: string[] } | null;
@@ -116,6 +122,8 @@ async function completeAuthoritativeQuest(quest: Quest): Promise<QuestCompletion
     | {
         stat: StatName;
         xpAwarded: number;
+        streakBonus?: number;
+        skillBonus?: number;
         oldLevel: number;
         newLevel: number;
         tierUp: { newTier: number; newClass: string } | null;
@@ -142,6 +150,8 @@ async function completeAuthoritativeQuest(quest: Quest): Promise<QuestCompletion
     completion = {
       stat: stepResult.completion.stat,
       xpAwarded: stepResult.completion.xpAwarded,
+      streakBonus: stepResult.completion.streakBonus,
+      skillBonus: stepResult.completion.skillBonus,
       oldLevel: stepResult.completion.oldLevel,
       newLevel: stepResult.completion.newLevel,
       tierUp: stepResult.completion.tierUp,
@@ -151,6 +161,8 @@ async function completeAuthoritativeQuest(quest: Quest): Promise<QuestCompletion
     completion = {
       stat: result.stat,
       xpAwarded: result.xpAwarded,
+      streakBonus: result.streakBonus,
+      skillBonus: result.skillBonus,
       oldLevel: result.oldLevel,
       newLevel: result.newLevel,
       tierUp: result.tierUp,
@@ -181,6 +193,8 @@ async function completeAuthoritativeQuest(quest: Quest): Promise<QuestCompletion
     quest: refreshedQuest,
     completed: true,
     xpAwarded,
+    streakBonus: completion?.streakBonus,
+    skillBonus: completion?.skillBonus,
     levelResult,
     newSkills,
     appearanceUnlock,
@@ -277,6 +291,9 @@ function completeLocalQuest(questId: string): QuestCompletionFlowResult | null {
     quest: updatedQuest,
     completed: true,
     xpAwarded: xpReward.totalXP,
+    streakBonus: xpReward.streakBonus,
+    skillBonus: xpReward.skillBonus,
+    skillBonusPercent: skillBonus + weeklyPathBonus + bossBonus,
     levelResult: progression.levelResult,
     newSkills,
     appearanceUnlock,

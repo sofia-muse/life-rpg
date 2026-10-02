@@ -6,6 +6,8 @@ import { detectNewAchievements } from '../config/achievementTracker';
 import { grantSagaOrChapterRewards } from '../config/progressionRewards';
 import { useHeroStore } from '../store/heroStore';
 import { useSettingsStore } from '../store/settingsStore';
+import { STAT_COLORS } from '../types';
+import { colors } from '../config/theme';
 import { useUIStore } from '../store/uiStore';
 import { playGameFeedback } from './gameFeedback';
 
@@ -28,10 +30,15 @@ export function presentQuestCompletionFeedback(
     setEvolution,
     setAchievementUnlock,
     setStreakMilestone,
+    pushFloater,
+    triggerShake,
+    markSkillSpark,
   } = useUIStore.getState();
 
   if (result.stepAdvancedOnly) {
     void playGameFeedback('bossPhase', haptic);
+    triggerShake();
+    pushFloater('HIT', STAT_COLORS[result.quest.stat]);
     setCharacterEvent('bossPhase');
     setTimeout(() => setCharacterEvent('idle'), 1500);
     return;
@@ -43,6 +50,15 @@ export function presentQuestCompletionFeedback(
 
   void playGameFeedback('questComplete', haptic);
   showXP(result.quest.stat, result.xpAwarded);
+  if (result.streakBonus && result.streakBonus > 0) {
+    pushFloater(`STREAK +${result.streakBonus}`, colors.warning);
+  }
+  if (result.skillBonusPercent && result.skillBonusPercent > 0) {
+    pushFloater(`SKILL +${result.skillBonusPercent}%`, colors.gold);
+  } else if (result.skillBonus && result.skillBonus > 0) {
+    pushFloater(`SKILL +${result.skillBonus}`, colors.gold);
+  }
+  if (result.quest.type === 'boss') triggerShake();
   setCharacterEvent('questComplete');
   setTimeout(() => setCharacterEvent('idle'), 1500);
 
@@ -73,8 +89,10 @@ export function presentQuestCompletionFeedback(
   }
 
   if (result.newSkills.length > 0) {
+    const unlocked = result.newSkills[0];
     setTimeout(() => {
-      setSkillUnlock(result.newSkills[0]);
+      setSkillUnlock(unlocked);
+      markSkillSpark(unlocked.id);
     }, result.levelResult ? 3000 : 1200);
   }
 

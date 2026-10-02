@@ -1,6 +1,18 @@
 import { create } from 'zustand';
-import { Skill, StatName, ClassTier } from '../types';
+import { Skill, StatName, ClassTier, STAT_COLORS } from '../types';
 import { AchievementDefinition } from '../config/achievements';
+import { generateId } from '../utils/id';
+
+export interface CombatFloater {
+  id: string;
+  label: string;
+  color: string;
+}
+
+export interface GameToast {
+  id: string;
+  message: string;
+}
 
 interface UIState {
   showLevelUpModal: boolean;
@@ -21,6 +33,10 @@ interface UIState {
   achievementData: AchievementDefinition | null;
   showStreakMilestoneModal: boolean;
   streakMilestoneData: { days: number; title: string; multiplier: number } | null;
+  combatFloaters: CombatFloater[];
+  toasts: GameToast[];
+  shakeNonce: number;
+  skillSparkId: string | null;
 
   setLevelUp: (stat: StatName, newLevel: number) => void;
   setSkillUnlock: (skill: Skill) => void;
@@ -40,6 +56,13 @@ interface UIState {
   dismissAchievement: () => void;
   setStreakMilestone: (days: number, title: string, multiplier: number) => void;
   dismissStreakMilestone: () => void;
+  pushFloater: (label: string, color: string) => void;
+  dismissFloater: (id: string) => void;
+  pushToast: (message: string) => void;
+  dismissToast: (id: string) => void;
+  triggerShake: () => void;
+  markSkillSpark: (skillId: string) => void;
+  clearSkillSpark: () => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -61,6 +84,10 @@ export const useUIStore = create<UIState>((set) => ({
   achievementData: null,
   showStreakMilestoneModal: false,
   streakMilestoneData: null,
+  combatFloaters: [],
+  toasts: [],
+  shakeNonce: 0,
+  skillSparkId: null,
 
   setLevelUp: (stat, newLevel) => set({ showLevelUpModal: true, levelUpData: { stat, newLevel } }),
 
@@ -69,7 +96,19 @@ export const useUIStore = create<UIState>((set) => ({
   setTierUp: (newTier, newClass) =>
     set({ showTierUpModal: true, tierUpData: { newTier, newClass } }),
 
-  showXP: (stat, amount) => set({ showXPPopup: true, xpPopupData: { stat, amount } }),
+  showXP: (stat, amount) =>
+    set((state) => ({
+      showXPPopup: true,
+      xpPopupData: { stat, amount },
+      combatFloaters: [
+        ...state.combatFloaters,
+        {
+          id: generateId(),
+          label: `+${amount} ${stat.slice(0, 3).toUpperCase()}`,
+          color: STAT_COLORS[stat],
+        },
+      ].slice(-5),
+    })),
 
   dismissLevelUp: () => set({ showLevelUpModal: false, levelUpData: null }),
 
@@ -106,4 +145,33 @@ export const useUIStore = create<UIState>((set) => ({
 
   dismissStreakMilestone: () =>
     set({ showStreakMilestoneModal: false, streakMilestoneData: null }),
+
+  pushFloater: (label, color) =>
+    set((state) => ({
+      combatFloaters: [...state.combatFloaters, { id: generateId(), label, color }].slice(-5),
+    })),
+
+  dismissFloater: (id) =>
+    set((state) => {
+      const combatFloaters = state.combatFloaters.filter((floater) => floater.id !== id);
+      return {
+        combatFloaters,
+        showXPPopup: combatFloaters.length > 0 ? state.showXPPopup : false,
+        xpPopupData: combatFloaters.length > 0 ? state.xpPopupData : null,
+      };
+    }),
+
+  pushToast: (message) =>
+    set((state) => ({
+      toasts: [...state.toasts, { id: generateId(), message }].slice(-4),
+    })),
+
+  dismissToast: (id) =>
+    set((state) => ({ toasts: state.toasts.filter((toast) => toast.id !== id) })),
+
+  triggerShake: () => set((state) => ({ shakeNonce: state.shakeNonce + 1 })),
+
+  markSkillSpark: (skillId) => set({ skillSparkId: skillId }),
+
+  clearSkillSpark: () => set({ skillSparkId: null }),
 }));

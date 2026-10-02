@@ -4,6 +4,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { generateId } from '../utils/id';
 import { StatName } from '../types';
 import { CreateRaidRequest, RaidDto, raidApi } from '../api/raidApi';
+import { STAT_COLORS } from '../types';
+import { playGameFeedback } from '../utils/gameFeedback';
 import { useJournalStore } from './journalStore';
 import { useSettingsStore } from './settingsStore';
 import { useUIStore } from './uiStore';
@@ -26,12 +28,15 @@ interface RaidState {
   mutating: boolean;
   error: string | null;
   personal: RaidPersonalStats;
+  seenContributionIds: string[];
+  unseenRaidCount: number;
   load: () => Promise<void>;
   selectRaid: (id: string | null) => void;
   createRaid: (req: CreateRaidRequest) => Promise<RaidDto | null>;
   joinRaid: (inviteCode: string) => Promise<RaidDto | null>;
   contribute: (raidId: string, amount: number, note?: string) => Promise<RaidDto | null>;
   refreshRaid: (raidId: string) => Promise<void>;
+  markContributionsSeen: (ids: string[]) => void;
   clear: () => void;
 }
 
@@ -72,6 +77,31 @@ export function computePersonalStats(raids: RaidDto[], previous?: RaidPersonalSt
   };
 }
 
+function contributionIds(raids: RaidDto[]): string[] {
+  return raids.flatMap((raid) => raid.recentContributions.map((entry) => entry.id));
+}
+
+function countUnseen(raids: RaidDto[], seen: string[]): number {
+  const seenSet = new Set(seen);
+  return contributionIds(raids).filter((id) => !seenSet.has(id)).length;
+}
+
+function announceFreshLogs(previous: RaidDto | undefined, raid: RaidDto) {
+  if (!previous) return;
+  const known = new Set(previous.recentContributions.map((entry) => entry.id));
+  const fresh = raid.recentContributions.filter((entry) => !known.has(entry.id));
+  if (fresh.length === 0) return;
+
+  const heroId = useHeroStore.getState().hero?.id;
+  const ui = useUIStore.getState();
+  for (const entry of fresh.slice(0, 3)) {
+    const label = `${entry.heroName} +${entry.amount}`;
+    if (entry.heroId === heroId) continue;
+    ui.pushToast(`${entry.heroName} logged +${entry.amount} ${raid.unitLabel}`);
+    ui.pushFloater(label, STAT_COLORS[raid.stat] ?? '#C4A962');
+  }
+}
+
 function chronicleRaidVictory(raid: RaidDto) {
   const milestone = `Raid cleared: ${raid.sagaTitle || raid.title}`;
   const narrative = [
@@ -97,6 +127,8 @@ export const useRaidStore = create<RaidState>()(
       mutating: false,
       error: null,
       personal: emptyRaidPersonal(),
+      seenContributionIds: [],
+      unseenRaidCount: 0,
 
       load: async () => {
         set({ loading: true, error: null });
@@ -105,6 +137,7 @@ export const useRaidStore = create<RaidState>()(
           set({
             raids,
             personal: computePersonalStats(raids, get().personal),
+            unseenRaidCount: countUnseen(raids, get().seenContributionIds),
             loading: false,
           });
         } catch (e) {
@@ -182,7 +215,13 @@ export const useRaidStore = create<RaidState>()(
             if (hero) {
               useSkillStore.getState().checkAndUnlockSkills(hero.statXP);
             }
+            useUIStore.getState().showXP(result.raid.stat, result.xpAwarded);
           }
+
+          const haptic = useSettingsStore.getState().hapticEnabled;
+          void playGameFeedback(result.justCompleted ? 'levelUp' : 'bossPhase', haptic);
+          useUIStore.getState().triggerShake();
+          useUIStore.getState().pushToast(`Raid +${amount} ${result.raid.unitLabel}`);
 
           const raids = upsertRaid(get().raids, result.raid);
           set({
@@ -202,16 +241,28 @@ export const useRaidStore = create<RaidState>()(
 
       refreshRaid: async (raidId) => {
         try {
+          const previous = get().raids.find((raid) => raid.id === raidId);
           const raid = await raidApi.get(raidId);
+          announceFreshLogs(previous, raid);
           const raids = upsertRaid(get().raids, raid);
           set({
             raids,
             personal: computePersonalStats(raids, get().personal),
+            unseenRaidCount: countUnseen(raids, get().seenContributionIds),
           });
         } catch (e) {
           set({ error: e instanceof Error ? e.message : 'Failed to refresh raid' });
         }
       },
+
+      markContributionsSeen: (ids) =>
+        set((state) => {
+          const seenContributionIds = Array.from(new Set([...state.seenContributionIds, ...ids])).slice(-200);
+          return {
+            seenContributionIds,
+            unseenRaidCount: countUnseen(state.raids, seenContributionIds),
+          };
+        }),
 
       clear: () =>
         set({
@@ -221,6 +272,8 @@ export const useRaidStore = create<RaidState>()(
           mutating: false,
           error: null,
           personal: emptyRaidPersonal(),
+          seenContributionIds: [],
+          unseenRaidCount: 0,
         }),
     }),
     {
@@ -229,6 +282,7 @@ export const useRaidStore = create<RaidState>()(
       partialize: (state) => ({
         personal: state.personal,
         selectedRaidId: state.selectedRaidId,
+        seenContributionIds: state.seenContributionIds,
       }),
     },
   ),

@@ -23,6 +23,10 @@ export default function SkillsScreen() {
   const authenticated = useAuthStore((s) => s.status === 'authenticated');
   const { forged, loading: forging, load: loadForged, forge } = useForgedSkillStore();
   const setSkillUnlock = useUIStore((s) => s.setSkillUnlock);
+  const skillSparkId = useUIStore((s) => s.skillSparkId);
+  const clearSkillSpark = useUIStore((s) => s.clearSkillSpark);
+  const setCharacterEvent = useUIStore((s) => s.setCharacterEvent);
+  const pushToast = useUIStore((s) => s.pushToast);
   const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);
 
   // The forge feature is online-only (needs the backend + key).
@@ -34,8 +38,19 @@ export default function SkillsScreen() {
 
   const handleForge = async () => {
     const skill = await forge();
-    if (skill) setSkillUnlock(skill);
+    if (!skill) return;
+    setSkillUnlock(skill);
+    useUIStore.getState().markSkillSpark(skill.id);
+    setCharacterEvent('questComplete');
+    pushToast(`Forged ${skill.name}`);
+    setTimeout(() => setCharacterEvent('idle'), 1600);
   };
+
+  useEffect(() => {
+    if (!skillSparkId) return undefined;
+    const timer = setTimeout(() => clearSkillSpark(), 1600);
+    return () => clearTimeout(timer);
+  }, [clearSkillSpark, skillSparkId]);
 
   if (!hero) return null;
 
@@ -63,12 +78,15 @@ export default function SkillsScreen() {
           </View>
           {forged.length > 0 && (
             <View style={styles.nodesRow}>
-              {forged.map((skill) => (
+              {forged.map((skill, index) => (
                 <SkillNode
                   key={skill.id}
                   skill={skill}
                   isUnlocked
                   progress={1}
+                  showLink={index > 0}
+                  linked
+                  sparkle={skillSparkId === skill.id}
                   onPress={setSelectedSkill}
                 />
               ))}
@@ -105,15 +123,22 @@ export default function SkillsScreen() {
               <Text style={[styles.treeName, { color: cat.color }]}>{cat.label}</Text>
             </View>
             <View style={styles.nodesRow}>
-              {skills.map((skill) => (
-                <SkillNode
-                  key={skill.id}
-                  skill={skill}
-                  isUnlocked={isSkillUnlocked(skill.id)}
-                  progress={getSkillProgress(skill, hero.statXP)}
-                  onPress={setSelectedSkill}
-                />
-              ))}
+              {skills.map((skill, index) => {
+                const previous = index > 0 ? skills[index - 1] : undefined;
+                const unlocked = isSkillUnlocked(skill.id);
+                return (
+                  <SkillNode
+                    key={skill.id}
+                    skill={skill}
+                    isUnlocked={unlocked}
+                    progress={getSkillProgress(skill, hero.statXP)}
+                    showLink={index > 0}
+                    linked={Boolean(previous && unlocked && isSkillUnlocked(previous.id))}
+                    sparkle={skillSparkId === skill.id}
+                    onPress={setSelectedSkill}
+                  />
+                );
+              })}
             </View>
           </Card>
         );

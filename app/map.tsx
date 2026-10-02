@@ -1,46 +1,88 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ScreenWrapper } from '../src/components/layout/ScreenWrapper';
 import { ScreenHeader } from '../src/components/layout/ScreenHeader';
 import { Card } from '../src/components/layout/Card';
 import { Button } from '../src/components/layout/Button';
+import { WorldMap } from '../src/components/game/WorldMap';
 import { useHeroStore } from '../src/store/heroStore';
 import { useQuestStore } from '../src/store/questStore';
-import { CAMPAIGN_CHAPTERS, STAT_REGIONS, getChapterForHero } from '../src/config/campaignChapters';
+import { useSettingsStore } from '../src/store/settingsStore';
+import { useUIStore } from '../src/store/uiStore';
+import {
+  CAMPAIGN_CHAPTERS,
+  STAT_REGIONS,
+  getChapterForHero,
+  isChapterLocked,
+} from '../src/config/campaignChapters';
 import { colors, spacing, fontSize, radius, typography } from '../src/config/theme';
-import { STAT_COLORS, STAT_ICONS, DIFFICULTY_XP } from '../src/types';
+import { STAT_COLORS, STAT_ICONS, DIFFICULTY_XP, StatName } from '../src/types';
+import { playGameFeedback } from '../src/utils/gameFeedback';
 
 export default function MapScreen() {
   const router = useRouter();
   const hero = useHeroStore((s) => s.hero);
+  const hapticEnabled = useSettingsStore((s) => s.hapticEnabled);
   const { quests, addQuest } = useQuestStore();
-  const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
+  const [selectedRegion, setSelectedRegion] = useState<StatName | null>(null);
+  const [shakingId, setShakingId] = useState<string | null>(null);
+  const flash = useRef(new Animated.Value(0)).current;
+  const shake = useRef(new Animated.Value(0)).current;
 
   if (!hero) return null;
 
   const activeChapter = getChapterForHero(hero.dominantStat);
   const bossQuests = quests.filter((q) => q.type === 'boss' && !q.isCompleted);
+  const bossCounts = STAT_REGIONS.reduce<Partial<Record<StatName, number>>>((counts, region) => {
+    counts[region.stat] = bossQuests.filter((quest) => quest.stat === region.stat).length;
+    return counts;
+  }, {});
+
+  const shakeChapter = (chapterId: string) => {
+    setShakingId(chapterId);
+    shake.setValue(0);
+    Animated.sequence([
+      Animated.timing(shake, { toValue: 1, duration: 40, useNativeDriver: true }),
+      Animated.timing(shake, { toValue: -1, duration: 40, useNativeDriver: true }),
+      Animated.timing(shake, { toValue: 0, duration: 40, useNativeDriver: true }),
+    ]).start(() => setShakingId(null));
+    void playGameFeedback('click', hapticEnabled);
+  };
 
   const handleStartChapter = () => {
-    const chapter = CAMPAIGN_CHAPTERS.find((c) => c.id === activeChapter.id) ?? activeChapter;
-    addQuest({
-      title: chapter.bossTemplateTitle,
-      description: chapter.narrative,
-      type: 'boss',
-      difficulty: 'hard',
-      stat: chapter.dominantStats[0],
-      xpReward: DIFFICULTY_XP.hard,
-      isActive: true,
-      totalSteps: 30,
-      completedSteps: 0,
-      campaignChapterId: chapter.id,
+    if (isChapterLocked(activeChapter, hero.heroLevel, hero.dominantStat)) {
+      shakeChapter(activeChapter.id);
+      useUIStore.getState().pushToast(`Requires hero level ${activeChapter.minHeroLevel}`);
+      return;
+    }
+
+    void playGameFeedback('bossPhase', hapticEnabled);
+    flash.setValue(0.85);
+    Animated.timing(flash, { toValue: 0, duration: 620, useNativeDriver: true }).start(({ finished }) => {
+      if (!finished) return;
+      addQuest({
+        title: activeChapter.bossTemplateTitle,
+        description: activeChapter.narrative,
+        type: 'boss',
+        difficulty: 'hard',
+        stat: activeChapter.dominantStats[0],
+        xpReward: DIFFICULTY_XP.hard,
+        isActive: true,
+        totalSteps: 30,
+        completedSteps: 0,
+        campaignChapterId: activeChapter.id,
+      });
+      router.push('/quests');
     });
-    router.push('/quests');
   };
+
+  const selected = STAT_REGIONS.find((region) => region.stat === selectedRegion);
+  const shakeX = shake.interpolate({ inputRange: [-1, 1], outputRange: [-6, 6] });
 
   return (
     <ScreenWrapper contentWidth="wide">
+      <Animated.View pointerEvents="none" style={[styles.flash, { opacity: flash }]} />
       <ScreenHeader
         eyebrow="Campaign Atlas"
         title="World Map"
@@ -62,76 +104,73 @@ export default function MapScreen() {
       </Card>
 
       <Text style={styles.sectionTitle}>The Six Regions</Text>
-      <View style={styles.regionGrid}>
-        {STAT_REGIONS.map((region) => {
-          const level = hero.stats[region.stat];
-          const brightness = Math.min(level / 20, 1);
-          const regionBosses = bossQuests.filter((q) => q.stat === region.stat);
-          const isSelected = selectedRegion === region.stat;
+      <WorldMap
+        dominantStat={hero.dominantStat}
+        stats={hero.stats}
+        bossCounts={bossCounts}
+        selected={selectedRegion}
+        onSelect={setSelectedRegion}
+        onArrived={(stat) => {
+          void playGameFeedback('click', hapticEnabled);
+          router.push({ pathname: '/quests', params: { region: stat } });
+        }}
+      />
 
-          return (
-            <TouchableOpacity
-              key={region.stat}
-              style={[
-                styles.regionCard,
-                { borderColor: STAT_COLORS[region.stat], opacity: 0.5 + brightness * 0.5 },
-                isSelected && styles.regionCardSelected,
-              ]}
-              onPress={() => setSelectedRegion(isSelected ? null : region.stat)}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.regionIcon}>{region.icon}</Text>
-              <Text style={styles.regionLabel}>{region.label}</Text>
-              <Text style={[styles.regionLevel, { color: STAT_COLORS[region.stat] }]}>
-                Lv.{level}
-              </Text>
-              {regionBosses.length > 0 && (
-                <View style={styles.dungeonNode}>
-                  <Text style={styles.dungeonText}>🐉 {regionBosses.length}</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-
-      {selectedRegion && (
+      {selected ? (
         <Card style={styles.regionDetail}>
-          {(() => {
-            const region = STAT_REGIONS.find((r) => r.stat === selectedRegion)!;
-            return (
-              <>
-                <Text style={styles.regionDetailTitle}>
-                  {STAT_ICONS[region.stat]} {region.label}
-                </Text>
-                <Text style={styles.regionDetailDesc}>{region.description}</Text>
-                <Button
-                  title="View Adventures"
-                  variant="secondary"
-                  onPress={() => router.push('/quests')}
-                />
-              </>
-            );
-          })()}
+          <Text style={styles.regionDetailTitle}>
+            {STAT_ICONS[selected.stat]} {selected.label}
+          </Text>
+          <Text style={styles.regionDetailDesc}>{selected.description}</Text>
+          <Text style={[styles.regionLevel, { color: STAT_COLORS[selected.stat] }]}>
+            Region level {hero.stats[selected.stat]}
+          </Text>
         </Card>
-      )}
+      ) : null}
 
       <Card style={styles.chaptersList}>
         <Text style={styles.sectionTitle}>All Campaign Chapters</Text>
-        {CAMPAIGN_CHAPTERS.map((chapter) => (
-          <View key={chapter.id} style={styles.chapterRow}>
-            <Text style={styles.chapterRowTitle}>{chapter.title}</Text>
-            <Text style={styles.chapterRowMeta}>
-              {chapter.durationWeeks} weeks · {chapter.rewardTitle}
-            </Text>
-          </View>
-        ))}
+        {CAMPAIGN_CHAPTERS.map((chapter) => {
+          const locked = isChapterLocked(chapter, hero.heroLevel, hero.dominantStat);
+          const row = (
+            <View style={[styles.chapterRow, locked && styles.chapterLocked]}>
+              <Text style={styles.chapterRowTitle}>
+                {locked ? '🔒 ' : ''}
+                {chapter.title}
+              </Text>
+              <Text style={styles.chapterRowMeta}>
+                {locked
+                  ? `Shrouded until hero level ${chapter.minHeroLevel}`
+                  : `${chapter.durationWeeks} weeks · ${chapter.rewardTitle}`}
+              </Text>
+            </View>
+          );
+          if (!locked) return <View key={chapter.id}>{row}</View>;
+          return (
+            <Animated.View
+              key={chapter.id}
+              style={shakingId === chapter.id ? { transform: [{ translateX: shakeX }] } : undefined}
+            >
+              <TouchableOpacity onPress={() => {
+                shakeChapter(chapter.id);
+                useUIStore.getState().pushToast(`Requires hero level ${chapter.minHeroLevel}`);
+              }}>
+                {row}
+              </TouchableOpacity>
+            </Animated.View>
+          );
+        })}
       </Card>
     </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
+  flash: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.goldBright,
+    zIndex: 20,
+  },
   backBtn: {
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.md,
@@ -181,44 +220,6 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     ...typography.headingWide,
   },
-  regionGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginBottom: spacing.lg,
-  },
-  regionCard: {
-    width: '47%',
-    minWidth: 140,
-    padding: spacing.md,
-    borderRadius: radius.lg,
-    borderWidth: 2,
-    backgroundColor: colors.bgInset,
-    alignItems: 'center',
-  },
-  regionCardSelected: {
-    backgroundColor: colors.bgCardRaised,
-  },
-  regionIcon: { fontSize: 28, marginBottom: spacing.xs },
-  regionLabel: {
-    color: colors.textPrimary,
-    fontSize: fontSize.sm,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  regionLevel: {
-    fontSize: fontSize.md,
-    fontWeight: '900',
-    marginTop: spacing.xs,
-  },
-  dungeonNode: {
-    marginTop: spacing.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: radius.full,
-    backgroundColor: colors.bgInput,
-  },
-  dungeonText: { fontSize: fontSize.xs, color: colors.warning },
   regionDetail: { marginBottom: spacing.lg },
   regionDetailTitle: {
     color: colors.textPrimary,
@@ -230,13 +231,20 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: fontSize.sm,
     lineHeight: 18,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  regionLevel: {
+    fontSize: fontSize.md,
+    fontWeight: '900',
   },
   chaptersList: { marginBottom: spacing.xl },
   chapterRow: {
     paddingVertical: spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: colors.borderLight,
+  },
+  chapterLocked: {
+    opacity: 0.55,
   },
   chapterRowTitle: {
     color: colors.textPrimary,

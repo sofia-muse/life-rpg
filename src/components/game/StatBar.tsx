@@ -13,6 +13,7 @@ interface Props {
 
 export function StatBar({ stat, level, currentXP, xpNeeded, progress }: Props) {
   const animatedWidth = useRef(new Animated.Value(0)).current;
+  const flash = useRef(new Animated.Value(0)).current;
   const statColor = STAT_COLORS[stat];
 
   useEffect(() => {
@@ -21,7 +22,9 @@ export function StatBar({ stat, level, currentXP, xpNeeded, progress }: Props) {
       duration: 800,
       useNativeDriver: false,
     }).start();
-  }, [progress]);
+    flash.setValue(0.7);
+    Animated.timing(flash, { toValue: 0, duration: 420, useNativeDriver: true }).start();
+  }, [animatedWidth, flash, progress]);
 
   const widthInterpolation = animatedWidth.interpolate({
     inputRange: [0, 1],
@@ -42,6 +45,7 @@ export function StatBar({ stat, level, currentXP, xpNeeded, progress }: Props) {
         <Animated.View
           style={[styles.barFill, { backgroundColor: statColor, width: widthInterpolation }]}
         />
+        <Animated.View pointerEvents="none" style={[styles.flash, { opacity: flash, backgroundColor: statColor }]} />
       </View>
 
       <Text style={styles.xpText}>
@@ -87,6 +91,9 @@ const styles = StyleSheet.create({
   barFill: {
     height: '100%',
     borderRadius: radius.full,
+  },
+  flash: {
+    ...StyleSheet.absoluteFillObject,
   },
   xpText: {
     color: colors.textMuted,

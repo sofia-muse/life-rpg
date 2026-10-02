@@ -12,8 +12,8 @@ import { Badge } from '../../src/components/layout/Badge';
 import { StatBar } from '../../src/components/game/StatBar';
 import { StreakBanner } from '../../src/components/game/StreakBanner';
 import { NiceAvatarCharacter } from '../../src/components/avatar/NiceAvatarCharacter';
-import { XPPopup } from '../../src/components/game/XPPopup';
 import { FadeIn } from '../../src/components/animated/FadeIn';
+import { SanctuaryEmbers, SanctuaryNpcs } from '../../src/components/game/SanctuaryHub';
 import { HeroShareCard } from '../../src/components/game/HeroShareCard';
 import { DailyRewardModal } from '../../src/components/game/DailyRewardModal';
 import { WeeklyCampaignPanel } from '../../src/components/game/WeeklyCampaignPanel';
@@ -52,9 +52,6 @@ export default function DashboardScreen() {
   const getQuestById = useQuestStore((s) => s.getQuestById);
   const getUnlockedSkillIds = useSkillStore((s) => s.getUnlockedSkillIds);
   const completeQuestFlow = useGameplayStore((s) => s.completeQuest);
-  const showXPPopup = useUIStore((s) => s.showXPPopup);
-  const xpPopupData = useUIStore((s) => s.xpPopupData);
-  const dismissXP = useUIStore((s) => s.dismissXP);
   const characterEvent = useUIStore((s) => s.characterEvent);
   const settings = useSettingsStore();
   const { quests } = useQuestStore();
@@ -164,10 +161,6 @@ export default function DashboardScreen() {
 
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-      {showXPPopup && xpPopupData && (
-        <XPPopup stat={xpPopupData.stat} amount={xpPopupData.amount} onDone={dismissXP} />
-      )}
-
       {dailyReward && (
         <DailyRewardModal
           visible={!!dailyReward}
@@ -197,6 +190,7 @@ export default function DashboardScreen() {
                 end={{ x: 1, y: 1 }}
                 style={StyleSheet.absoluteFillObject}
               />
+              <SanctuaryEmbers period={period} />
               <View pointerEvents="none" style={styles.heroPanelOrb} />
 
               <View style={styles.panelTopRow}>
@@ -302,6 +296,10 @@ export default function DashboardScreen() {
 
           <FadeIn delay={90} slideFrom="bottom">
             <MentorQuote dominantStat={hero.dominantStat} />
+          </FadeIn>
+
+          <FadeIn delay={95} slideFrom="bottom">
+            <SanctuaryNpcs />
           </FadeIn>
 
           <View style={[styles.contentGrid, useTwoColumns && styles.contentGridWide]}>

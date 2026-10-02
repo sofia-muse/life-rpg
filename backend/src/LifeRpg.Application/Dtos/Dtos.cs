@@ -150,13 +150,26 @@ public record ContributeRaidRequest(
     string ClientId,
     string? Note);
 
+public record RaidAvatarDto(
+    string Gender,
+    int SkinTone,
+    string HairStyle,
+    int HairColor,
+    string EyeStyle,
+    string MouthStyle,
+    string GlassesStyle,
+    string DominantStat,
+    int ClassTier);
+
 public record RaidMemberDto(
     Guid HeroId,
     string HeroName,
     string ClassName,
     RaidMemberRole Role,
     int PersonalTotal,
-    DateTimeOffset JoinedAt);
+    DateTimeOffset JoinedAt,
+    DateTimeOffset? LastSeenAt = null,
+    RaidAvatarDto? Avatar = null);
 
 public record RaidContributionDto(
     Guid Id,

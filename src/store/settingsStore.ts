@@ -9,6 +9,8 @@ import { scheduleQuestReminders, cancelQuestReminders } from '../utils/notificat
 interface SettingsState {
   notificationsEnabled: boolean;
   hapticEnabled: boolean;
+  /** Local-only UI tones. Not synced — the server settings object has no sound field. */
+  soundEnabled: boolean;
   reminderTime: string;
   aiSkillsEnabled: boolean;
   fantasyNames: boolean;
@@ -46,6 +48,7 @@ interface SettingsState {
   }) => void;
   toggleNotifications: () => void;
   toggleHaptic: () => void;
+  toggleSound: () => void;
   setReminderTime: (time: string) => void;
   toggleAiSkills: () => void;
   toggleFantasyNames: () => void;
@@ -113,6 +116,7 @@ export const useSettingsStore = create<SettingsState>()(
     (set, get) => ({
       notificationsEnabled: true,
       hapticEnabled: true,
+      soundEnabled: true,
       reminderTime: '09:00',
       aiSkillsEnabled: false,
       fantasyNames: false,
@@ -149,6 +153,8 @@ export const useSettingsStore = create<SettingsState>()(
           syncSettings(next);
           return { hapticEnabled: next.hapticEnabled };
         }),
+
+      toggleSound: () => set((state) => ({ soundEnabled: !state.soundEnabled })),
 
       setReminderTime: (time) =>
         set((state) => {

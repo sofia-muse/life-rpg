@@ -5,6 +5,9 @@ import { colors, spacing, fontSize, radius } from '../../config/theme';
 import { Card } from '../layout/Card';
 import { getQuestEvolutionState, getBossSagaState } from '../../engine/questProgression';
 import { getQuestDisplayTitle, getQuestDisplayDescription } from '../../config/questFlavor';
+import { TweenBar } from './TweenBar';
+import { useSettingsStore } from '../../store/settingsStore';
+import { playGameFeedback } from '../../utils/gameFeedback';
 
 interface Props {
   quest: Quest;
@@ -46,6 +49,7 @@ export function QuestCard({
 
   const handlePress = () => {
     if (quest.isCompleted) return;
+    void playGameFeedback('click', useSettingsStore.getState().hapticEnabled);
     Animated.sequence([
       Animated.timing(scaleAnim, { toValue: 1.05, duration: 100, useNativeDriver: true }),
       Animated.spring(scaleAnim, { toValue: 1, friction: 3, useNativeDriver: true }),
@@ -112,13 +116,18 @@ export function QuestCard({
             </View>
           </View>
 
-          {quest.type === 'boss' && quest.totalSteps && (
+          {quest.type === 'boss' && quest.totalSteps ? (
             <View style={styles.bossProgress}>
               <Text style={styles.bossText}>
                 {quest.completedSteps || 0}/{quest.totalSteps}
               </Text>
+              <TweenBar
+                progress={(quest.completedSteps || 0) / quest.totalSteps}
+                color={statColor}
+                height={6}
+              />
             </View>
-          )}
+          ) : null}
         </View>
 
         {!quest.isCompleted && (
@@ -252,11 +261,13 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
   },
   bossProgress: {
+    width: 72,
     backgroundColor: colors.bgInput,
     borderRadius: radius.sm,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     marginLeft: spacing.sm,
+    gap: 4,
   },
   bossText: {
     color: colors.textAccent,

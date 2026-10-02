@@ -1,12 +1,11 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ScreenWrapper } from '../../src/components/layout/ScreenWrapper';
 import { QuestCard } from '../../src/components/game/QuestCard';
 import { ContractHeader } from '../../src/components/game/ContractHeader';
 import { GuildmasterSuggestions } from '../../src/components/game/GuildmasterSuggestions';
 import { BossPlannerModal } from '../../src/components/game/BossPlannerModal';
-import { XPPopup } from '../../src/components/game/XPPopup';
 import { useQuestStore } from '../../src/store/questStore';
 import { useHeroStore } from '../../src/store/heroStore';
 import { useGameplayStore } from '../../src/store/gameplayStore';
@@ -14,7 +13,8 @@ import { useUIStore } from '../../src/store/uiStore';
 import { useSettingsStore } from '../../src/store/settingsStore';
 import { Card } from '../../src/components/layout/Card';
 import { colors, spacing, fontSize, radius } from '../../src/config/theme';
-import { STAT_COLORS, STAT_ICONS, DIFFICULTY_XP } from '../../src/types';
+import { STAT_COLORS, STAT_ICONS, STAT_NAMES, DIFFICULTY_XP, StatName } from '../../src/types';
+import { STAT_REGIONS } from '../../src/config/campaignChapters';
 import { getAllTemplates, QuestTemplate } from '../../src/config/questTemplates';
 import { getPrimaryContract } from '../../src/config/classContracts';
 import { isQuestContractAligned } from '../../src/config/achievements';
@@ -42,12 +42,11 @@ export default function QuestsScreen() {
   const completeQuestFlow = useGameplayStore((state) => state.completeQuest);
   const unlockedSkills = useSkillStore((s) => s.unlockedSkills);
   const unlockedSkillIds = unlockedSkills.map((s) => s.skillId);
-  const {
-    setQuestCreateModal,
-    showXPPopup,
-    xpPopupData,
-    dismissXP,
-  } = useUIStore();
+  const { setQuestCreateModal } = useUIStore();
+  const regionQuery = useLocalSearchParams<{ region?: string | string[] }>().region;
+  const regionParam = Array.isArray(regionQuery) ? regionQuery[0] : regionQuery;
+  const region = STAT_NAMES.includes(regionParam as StatName) ? (regionParam as StatName) : null;
+  const regionLabel = STAT_REGIONS.find((entry) => entry.stat === region)?.label;
 
   const tabQuests = {
     daily: getDailyQuests(),
@@ -107,14 +106,10 @@ export default function QuestsScreen() {
     [completeQuestFlow],
   );
 
-  const filteredQuests = tabQuests[activeTab];
+  const filteredQuests = tabQuests[activeTab].filter((quest) => !region || quest.stat === region);
 
   return (
     <ScreenWrapper showScrollIndicator>
-      {showXPPopup && xpPopupData && (
-        <XPPopup stat={xpPopupData.stat} amount={xpPopupData.amount} onDone={dismissXP} />
-      )}
-
       <BossPlannerModal
         visible={showBossPlanner}
         onClose={() => setShowBossPlanner(false)}
@@ -136,6 +131,13 @@ export default function QuestsScreen() {
 
       <Text style={styles.title}>Adventures</Text>
       <Text style={styles.subtitle}>Contracts, side ventures, and boss arcs</Text>
+      {region && regionLabel ? (
+        <TouchableOpacity style={styles.regionBanner} onPress={() => router.setParams({ region: '' })}>
+          <Text style={styles.regionBannerText}>
+            {regionLabel} — this region&apos;s quests. Tap to see the whole realm.
+          </Text>
+        </TouchableOpacity>
+      ) : null}
 
       <TouchableOpacity onPress={() => router.push('/raids')} accessibilityRole="button">
         <Card style={styles.raidCallout}>
@@ -270,6 +272,20 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     fontStyle: 'italic',
     marginBottom: spacing.md,
+  },
+  regionBanner: {
+    marginTop: -spacing.sm,
+    marginBottom: spacing.md,
+    padding: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.gold,
+    backgroundColor: colors.goldSoft,
+  },
+  regionBannerText: {
+    color: colors.gold,
+    fontSize: fontSize.sm,
+    fontWeight: '700',
   },
   raidCallout: {
     marginBottom: spacing.md,

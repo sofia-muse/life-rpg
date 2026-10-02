@@ -83,6 +83,7 @@ class SyncManager {
   async flush(): Promise<void> {
     if (env.demoMode || this.flushing || !this.online || this.queue.length === 0) return;
     this.flushing = true;
+    let synced = false;
     try {
       while (this.online && this.queue.length > 0) {
         const operations = this.queue.slice(0, 50);
@@ -98,7 +99,12 @@ class SyncManager {
         this.queue = this.queue.filter((op) => !settled.has(op.opId));
         this.lastSyncedAt = result.serverTime;
         this.applyServerChanges(result.serverChanges);
+        if (result.applied.length > 0) synced = true;
         await this.persist();
+      }
+      if (synced) {
+        const { useUIStore } = require('../store/uiStore') as typeof import('../store/uiStore');
+        useUIStore.getState().pushToast('Chronicle synced');
       }
     } catch {
       // Network/server error — bump retries; drop poison ops past the limit.
