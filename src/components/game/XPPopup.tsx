@@ -6,10 +6,11 @@ import { fontSize } from '../../config/theme';
 interface Props {
   stat: StatName;
   amount: number;
+  message?: string;
   onDone: () => void;
 }
 
-export function XPPopup({ stat, amount, onDone }: Props) {
+export function XPPopup({ stat, amount, message, onDone }: Props) {
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.5)).current;
@@ -39,7 +40,9 @@ export function XPPopup({ stat, amount, onDone }: Props) {
       ]}
       pointerEvents="none"
     >
-      <Text style={[styles.text, { color: STAT_COLORS[stat] }]}>+{amount} XP</Text>
+      <Text style={[message ? styles.notice : styles.text, { color: STAT_COLORS[stat] }]}>
+        {message ?? `+${amount} XP`}
+      </Text>
     </Animated.View>
   );
 }
@@ -54,6 +57,15 @@ const styles = StyleSheet.create({
   text: {
     fontSize: fontSize.hero,
     fontWeight: '900',
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 8,
+  },
+  notice: {
+    fontSize: fontSize.xl,
+    fontWeight: '800',
+    textAlign: 'center',
+    maxWidth: 280,
     textShadowColor: 'rgba(0,0,0,0.8)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 8,

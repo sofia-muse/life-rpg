@@ -112,7 +112,12 @@ export default function QuestsScreen() {
   return (
     <ScreenWrapper showScrollIndicator>
       {showXPPopup && xpPopupData && (
-        <XPPopup stat={xpPopupData.stat} amount={xpPopupData.amount} onDone={dismissXP} />
+        <XPPopup
+          stat={xpPopupData.stat}
+          amount={xpPopupData.amount}
+          message={xpPopupData.message}
+          onDone={dismissXP}
+        />
       )}
 
       <BossPlannerModal

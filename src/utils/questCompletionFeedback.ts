@@ -35,6 +35,8 @@ export function presentQuestCompletionFeedback(
 
   if (result.xpAwarded > 0) {
     showXP(result.quest.stat, result.xpAwarded);
+  } else if (result.bonusBudgetSpent) {
+    showXP(result.quest.stat, 0, "Day's bonus XP is spent");
   }
 
   if (result.stepAdvancedOnly) {

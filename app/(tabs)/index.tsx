@@ -165,7 +165,12 @@ export default function DashboardScreen() {
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
       {showXPPopup && xpPopupData && (
-        <XPPopup stat={xpPopupData.stat} amount={xpPopupData.amount} onDone={dismissXP} />
+        <XPPopup
+          stat={xpPopupData.stat}
+          amount={xpPopupData.amount}
+          message={xpPopupData.message}
+          onDone={dismissXP}
+        />
       )}
 
       {dailyReward && (

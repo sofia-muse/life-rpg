@@ -61,4 +61,7 @@ public sealed class HeroSettings
 
     /// <summary>Side and boss XP payouts already granted on <see cref="BonusPayoutDate"/>.</summary>
     public int BonusPayoutsUsed { get; set; }
+
+    /// <summary>Boss quests whose arc already opened a payout on <see cref="BonusPayoutDate"/>.</summary>
+    public List<string> OpenBossPayoutIds { get; set; } = new();
 }

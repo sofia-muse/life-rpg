@@ -153,11 +153,7 @@ public class HeroService
         };
 
         var statSet = stats.ToHashSet();
-        var completedMatches = hero.Quests.Count(q =>
-            q.IsCompleted
-            && statSet.Contains(q.Stat)
-            && q.CompletedAt is { } completedAt
-            && WeekKey(HeroCalendar.DateInTimeZone(completedAt, hero.Settings.TimeZone)) == hero.Settings.WeeklyPathWeekKey);
+        var completedMatches = await CountWeeklyCompletionsAsync(hero, statSet, ct);
 
         var bossProgress = Math.Min(20, (int)Math.Round(hero.Quests
             .Where(q => q.Type == QuestType.Boss && statSet.Contains(q.Stat) && q.TotalSteps is > 0)
@@ -254,6 +250,25 @@ public class HeroService
         hero.ClassName = ClassDefinitions.GetClassName(stat, hero.ClassTier);
         await _db.SaveChangesAsync(ct);
         return Result<HeroDto>.Success(hero.ToDto());
+    }
+
+    /// <summary>
+    /// Completions whose calendar date falls in the hero's week. A daily reset clears
+    /// <c>IsCompleted</c> the next morning, so the cup reads <see cref="QuestCompletion"/> rows.
+    /// </summary>
+    private async Task<int> CountWeeklyCompletionsAsync(Hero hero, HashSet<StatName> stats, CancellationToken ct)
+    {
+        if (!DateOnly.TryParse(hero.Settings.WeeklyPathWeekKey, out var weekStart))
+        {
+            return 0;
+        }
+
+        var weekEnd = weekStart.AddDays(7);
+        var completionStats = await _db.QuestCompletions
+            .Where(c => c.HeroId == hero.Id && c.CompletionDate >= weekStart && c.CompletionDate < weekEnd)
+            .Select(c => c.Stat)
+            .ToListAsync(ct);
+        return completionStats.Count(stat => stats.Contains(stat));
     }
 
     private static string WeekKey(DateOnly date)

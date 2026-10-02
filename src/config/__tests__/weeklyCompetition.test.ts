@@ -156,6 +156,51 @@ describe('weekly competition helpers', () => {
     });
   });
 
+  it('counts a daily from the completion log after the morning reset clears it', () => {
+    const hero = buildHero();
+    const { weekKey, currentWeekCompletedAt, priorWeekCompletedAt } = buildWeekDates();
+    const settings = buildSettings({
+      weeklyPath: 'power',
+      weeklyPathWeekKey: weekKey,
+      weeklyPathStartedAt: currentWeekCompletedAt,
+    });
+    const priorDate = priorWeekCompletedAt.slice(0, 10);
+
+    const contract = getWeeklyPathContract(
+      {
+        ...hero,
+        completionLog: [
+          { questId: 'daily-mon', date: weekKey, stat: 'strength' },
+          { questId: 'completed-vitality', date: weekKey, stat: 'vitality' },
+          { questId: 'daily-old', date: priorDate, stat: 'strength' },
+          { questId: 'other', date: weekKey, stat: 'charisma' },
+        ],
+      },
+      settings,
+      [
+        buildQuest({
+          id: 'daily-mon',
+          type: 'daily',
+          stat: 'strength',
+          isCompleted: false,
+          isActive: true,
+          daysCompleted: 4,
+        }),
+        buildQuest({
+          id: 'completed-vitality',
+          stat: 'vitality',
+          isCompleted: true,
+          isActive: false,
+          completedAt: currentWeekCompletedAt,
+          daysCompleted: 1,
+        }),
+      ],
+    );
+
+    expect(contract?.completedMatches).toBe(2);
+    expect(contract?.activeMatches).toBe(1);
+  });
+
   it('falls back to the class contract when the weekly path is stale', () => {
     const hero = buildHero({ dominantStat: 'strength', className: 'Warrior' });
     const contract = getPrimaryContract(

@@ -227,7 +227,96 @@ public class ApiFlowTests : IClassFixture<LifeRpgApiFactory>
 
         (await CompleteSide("One")).Should().Be(15);
         (await CompleteSide("Two")).Should().Be(15);
-        (await CompleteSide("Three")).Should().Be(0);
+        var third = await (await client.PostAsJsonAsync("/api/v1/quests",
+            new CreateQuestRequest("Three", "", Domain.Enums.QuestType.Side, Domain.Enums.QuestDifficulty.Easy,
+                Domain.Enums.StatName.Strength, null))).Content.ReadFromJsonAsync<QuestDto>(Json);
+        var denied = await (await client.PostAsync($"/api/v1/quests/{third!.Id}/complete", null))
+            .Content.ReadFromJsonAsync<CompleteQuestResult>(Json);
+        denied!.XpAwarded.Should().Be(0);
+        denied.BonusBudgetSpent.Should().BeTrue();
+        denied.Hero.TotalQuestsCompleted.Should().Be(3);
+    }
+
+    [Fact]
+    public async Task Boss_saga_consumes_one_daily_payout()
+    {
+        var client = await AuthedClientAsync("boss-budget@example.com");
+        await client.PostAsJsonAsync("/api/v1/heroes",
+            new CreateHeroRequest("Saga", "saga", new() { Domain.Enums.StatName.Strength }));
+
+        var boss = await (await client.PostAsJsonAsync("/api/v1/quests",
+            new CreateQuestRequest("Long climb", "", Domain.Enums.QuestType.Boss, Domain.Enums.QuestDifficulty.Easy,
+                Domain.Enums.StatName.Strength, 3))).Content.ReadFromJsonAsync<QuestDto>(Json);
+
+        var first = await (await client.PostAsync($"/api/v1/quests/{boss!.Id}/boss-step", null))
+            .Content.ReadFromJsonAsync<AdvanceBossQuestResult>(Json);
+        first!.Completion!.XpAwarded.Should().BeGreaterThan(0);
+        first.Completion.BonusBudgetSpent.Should().BeFalse();
+        first.Completion.Hero.Settings.BonusPayoutsUsed.Should().Be(1);
+
+        var second = await (await client.PostAsync($"/api/v1/quests/{boss.Id}/boss-step", null))
+            .Content.ReadFromJsonAsync<AdvanceBossQuestResult>(Json);
+        second!.Completion!.XpAwarded.Should().BeGreaterThan(0);
+        second.Completion.Hero.Settings.BonusPayoutsUsed.Should().Be(1);
+        second.Quest.IsCompleted.Should().BeFalse();
+
+        var side = await (await client.PostAsJsonAsync("/api/v1/quests",
+            new CreateQuestRequest("Cool down", "", Domain.Enums.QuestType.Side, Domain.Enums.QuestDifficulty.Easy,
+                Domain.Enums.StatName.Strength, null))).Content.ReadFromJsonAsync<QuestDto>(Json);
+        var sideResult = await (await client.PostAsync($"/api/v1/quests/{side!.Id}/complete", null))
+            .Content.ReadFromJsonAsync<CompleteQuestResult>(Json);
+        sideResult!.XpAwarded.Should().Be(15);
+        sideResult.BonusBudgetSpent.Should().BeFalse();
+
+        var extra = await (await client.PostAsJsonAsync("/api/v1/quests",
+            new CreateQuestRequest("One more", "", Domain.Enums.QuestType.Side, Domain.Enums.QuestDifficulty.Easy,
+                Domain.Enums.StatName.Strength, null))).Content.ReadFromJsonAsync<QuestDto>(Json);
+        var extraResult = await (await client.PostAsync($"/api/v1/quests/{extra!.Id}/complete", null))
+            .Content.ReadFromJsonAsync<CompleteQuestResult>(Json);
+        extraResult!.XpAwarded.Should().Be(0);
+        extraResult.BonusBudgetSpent.Should().BeTrue();
+        extraResult.Hero.TotalQuestsCompleted.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task Hero_upsert_ignores_client_xp_and_streak()
+    {
+        var client = await AuthedClientAsync("sync-xp@example.com");
+        await client.PostAsJsonAsync("/api/v1/heroes",
+            new CreateHeroRequest("Sync", "sync", new() { Domain.Enums.StatName.Strength }));
+
+        var quest = await (await client.PostAsJsonAsync("/api/v1/quests",
+            new CreateQuestRequest("Deadlift", "", Domain.Enums.QuestType.Side, Domain.Enums.QuestDifficulty.Hard,
+                Domain.Enums.StatName.Strength, null))).Content.ReadFromJsonAsync<QuestDto>(Json);
+        (await client.PostAsync($"/api/v1/quests/{quest!.Id}/complete", null)).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var syncRes = await client.PostAsJsonAsync("/api/v1/sync",
+            new SyncBatchRequest(null, new()
+            {
+                new SyncOperation(
+                    "sync-xp-1",
+                    "hero",
+                    "upsert",
+                    JsonSerializer.SerializeToElement(new
+                    {
+                        name = "Renamed",
+                        statXp = new { strength = 9999, vitality = 0, intelligence = 0, charisma = 0, dexterity = 0, willpower = 0 },
+                        currentStreak = 40,
+                        longestStreak = 80,
+                        lastActiveDate = "1999-01-01",
+                        lastStreakFreezeDate = "1999-01-02",
+                        updatedAt = DateTimeOffset.UtcNow.AddHours(1).ToString("O"),
+                    }))
+            }));
+        syncRes.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var persisted = await client.GetFromJsonAsync<HeroDto>("/api/v1/heroes/me", Json);
+        persisted!.Name.Should().Be("Renamed");
+        persisted.StatXp.Strength.Should().Be(100);
+        persisted.CurrentStreak.Should().Be(1);
+        persisted.LongestStreak.Should().Be(1);
+        persisted.LastActiveDate.Should().NotBe(new DateOnly(1999, 1, 1));
+        persisted.LastStreakFreezeDate.Should().BeNull();
     }
 
     [Fact]

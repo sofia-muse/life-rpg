@@ -113,6 +113,7 @@ function continueStreak(input: RestDayInput): {
     today: input.today,
     unlockedSkillIds: input.unlockedSkillIds,
     lastStreakFreezeDate: input.lastStreakFreezeDate,
+    brokenDayCounts: true,
   });
 
   return {

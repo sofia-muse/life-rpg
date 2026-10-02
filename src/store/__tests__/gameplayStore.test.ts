@@ -4,8 +4,11 @@ import { useJournalStore } from '../journalStore';
 import { useQuestStore } from '../questStore';
 import { useSettingsStore } from '../settingsStore';
 import { useSkillStore } from '../skillStore';
+import { useUIStore } from '../uiStore';
 import { useForgedSkillStore } from '../forgedSkillStore';
+import { getWeeklyPathContract } from '../../config/classContracts';
 import { getCurrentWeekKey } from '../../config/weeklyPaths';
+import { presentQuestCompletionFeedback } from '../../utils/questCompletionFeedback';
 import { registerForgedSkills } from '../../config/skills';
 import { getStatBlock } from '../../engine/statEngine';
 import { Quest, StatName } from '../../types';
@@ -162,6 +165,109 @@ describe('gameplayStore local quest flow', () => {
     expect(useQuestStore.getState().getQuestById('boss-1')?.completedSteps).toBe(2);
     expect(second).toMatchObject({ completed: true, stepAdvancedOnly: false });
     expect(second?.xpAwarded).toBeGreaterThan(0);
+    expect(useHeroStore.getState().hero?.bonusPayoutsUsed).toBe(1);
+    expect(useHeroStore.getState().hero?.openBossPayoutIds).toEqual(['boss-1']);
+  });
+
+  it('lets one boss arc and one side quest share the daily budget', async () => {
+    useQuestStore.setState({
+      quests: [
+        buildQuest({
+          id: 'boss-arc',
+          type: 'boss',
+          difficulty: 'easy',
+          totalSteps: 2,
+          completedSteps: 0,
+        }),
+        buildQuest({ id: 'side-after', type: 'side', difficulty: 'easy' }),
+        buildQuest({ id: 'side-over', type: 'side', difficulty: 'easy' }),
+      ],
+    });
+
+    const step = await useGameplayStore.getState().completeQuest('boss-arc');
+    const side = await useGameplayStore.getState().completeQuest('side-after');
+    const over = await useGameplayStore.getState().completeQuest('side-over');
+
+    expect(step?.xpAwarded).toBeGreaterThan(0);
+    expect(step?.bonusBudgetSpent).toBe(false);
+    expect(side?.xpAwarded).toBe(15);
+    expect(side?.bonusBudgetSpent).toBe(false);
+    expect(over).toMatchObject({ completed: true, xpAwarded: 0, bonusBudgetSpent: true });
+    expect(useQuestStore.getState().getQuestById('side-over')?.isCompleted).toBe(true);
+  });
+
+  it('records a daily completion that the weekly contract can still see', async () => {
+    const weekKey = getCurrentWeekKey();
+    useSettingsStore.setState({
+      weeklyPath: 'power',
+      weeklyPathWeekKey: weekKey,
+      weeklyPathStartedAt: new Date().toISOString(),
+    });
+    useQuestStore.setState({
+      quests: [buildQuest({ id: 'daily-log', type: 'daily', stat: 'strength', difficulty: 'easy' })],
+    });
+
+    await useGameplayStore.getState().completeQuest('daily-log');
+    const hero = useHeroStore.getState().hero;
+    expect(hero?.completionLog).toEqual([
+      expect.objectContaining({ questId: 'daily-log', stat: 'strength' }),
+    ]);
+
+    useQuestStore.setState({
+      quests: [
+        buildQuest({
+          id: 'daily-log',
+          type: 'daily',
+          stat: 'strength',
+          isCompleted: false,
+          isActive: true,
+          daysCompleted: 1,
+        }),
+      ],
+    });
+
+    const contract = getWeeklyPathContract(hero!, useSettingsStore.getState(), useQuestStore.getState().quests);
+    expect(contract?.completedMatches).toBe(1);
+  });
+
+  it('counts a broken hero streak as one on the return day', () => {
+    const hero = useHeroStore.getState().hero!;
+    useHeroStore.setState({
+      hero: {
+        ...hero,
+        currentStreak: 6,
+        longestStreak: 6,
+        lastActiveDate: '2020-01-01',
+      },
+    });
+
+    useHeroStore.getState().updateStreak([]);
+    expect(useHeroStore.getState().hero?.currentStreak).toBe(1);
+  });
+
+  it('tells the player when the daily bonus budget is spent', async () => {
+    useQuestStore.setState({
+      quests: [
+        buildQuest({ id: 'budget-a', type: 'side' }),
+        buildQuest({ id: 'budget-b', type: 'side' }),
+        buildQuest({ id: 'budget-c', type: 'side' }),
+      ],
+    });
+
+    await useGameplayStore.getState().completeQuest('budget-a');
+    await useGameplayStore.getState().completeQuest('budget-b');
+    const denied = await useGameplayStore.getState().completeQuest('budget-c');
+    expect(denied?.bonusBudgetSpent).toBe(true);
+
+    presentQuestCompletionFeedback(
+      useQuestStore.getState().getQuestById('budget-c'),
+      denied!,
+    );
+    expect(useUIStore.getState().xpPopupData).toEqual({
+      stat: 'strength',
+      amount: 0,
+      message: "Day's bonus XP is spent",
+    });
   });
 
   it('applies the weekly path bonus to aligned local quests', async () => {

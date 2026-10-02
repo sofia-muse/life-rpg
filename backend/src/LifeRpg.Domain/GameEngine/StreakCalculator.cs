@@ -75,7 +75,8 @@ public static class StreakCalculator
     /// <summary>
     /// Move a streak across calendar days. A one-day gap continues. A wider gap keeps the
     /// chain only with a freeze or a retention ratio. <paramref name="brokenDayCounts"/>
-    /// makes a broken quest completed today start at 1; the hero's return day can stay at 0.
+    /// makes the return day count as 1, for a quest and for the hero. A freeze still keeps
+    /// the old chain. Retention keeps its fraction, and the return day lifts a zero to 1.
     /// </summary>
     public static StreakAdvance Advance(
         int currentStreak,

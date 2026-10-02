@@ -251,9 +251,12 @@ public class QuestService
             reward = reward with { TotalXp = share };
         }
 
-        if (quest.Type != QuestType.Daily && !BonusPayouts.TryTake(hero.Settings, today))
+        var bonusBudgetSpent = false;
+        if (quest.Type != QuestType.Daily
+            && !BonusPayouts.TryTake(hero.Settings, today, quest.Id, quest.Type == QuestType.Boss))
         {
             reward = reward with { TotalXp = 0 };
+            bonusBudgetSpent = true;
         }
 
         var oldTier = hero.ClassTier;
@@ -330,7 +333,8 @@ public class QuestService
                 application.DidLevelUp,
                 tierUp,
                 newSkillDefs.Select(s => s.ToDto()).ToList(),
-                hero.ToDto()));
+                hero.ToDto(),
+                bonusBudgetSpent));
     }
 
     private static StreakCalculator.StreakAdvance AdvanceStreak(Hero hero, DateOnly today, IReadOnlyCollection<string> unlockedIds)
@@ -342,7 +346,8 @@ public class QuestService
             hero.LastStreakFreezeDate,
             SkillResolver.GetWeeklyStreakFreezeAllowance(unlockedIds),
             SkillResolver.GetStreakRetentionRatio(unlockedIds),
-            missingDateStartsAtOne: true);
+            missingDateStartsAtOne: true,
+            brokenDayCounts: true);
         hero.CurrentStreak = advance.Streak;
         hero.LongestStreak = Math.Max(hero.LongestStreak, advance.Streak);
         hero.LastActiveDate = today;
