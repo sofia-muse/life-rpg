@@ -9,6 +9,7 @@ import {
 import {
   WeeklyPathSettingsLike,
   getActiveWeeklyPath,
+  getCurrentWeekKey,
   getWeekKeyForIsoDate,
   getWeeklyPathDefinition,
 } from './weeklyPaths';
@@ -124,6 +125,34 @@ function countContractMatches(quests: Quest[], titles: Set<string>, completedOnl
   }).length;
 }
 
+/**
+ * Recommended titles finished this week. The log keeps a daily that the morning reset reopened.
+ * A quest that is still completed and not yet logged counts too.
+ */
+function countClassCompletions(hero: Hero, quests: Quest[], titles: Set<string>) {
+  const weekKey = getCurrentWeekKey(new Date(), hero.timeZone);
+  const questById = new Map(quests.map((quest) => [quest.id, quest]));
+  const keys = new Set<string>();
+
+  for (const entry of hero.completionLog ?? []) {
+    if (weekKeyForCalendarDate(entry.date) !== weekKey) continue;
+    const quest = questById.get(entry.questId);
+    if (!quest || !titles.has(quest.title)) continue;
+    keys.add(`${entry.questId}|${entry.date}`);
+  }
+
+  for (const quest of quests) {
+    if (!titles.has(quest.title) || !quest.isCompleted) continue;
+    if (quest.completedAt && getWeekKeyForIsoDate(quest.completedAt) !== weekKey) continue;
+    const date = calendarDateOfCompletion(quest.completedAt, hero.timeZone);
+    const key = date ? `${quest.id}|${date}` : quest.id;
+    if (!date && [...keys].some((existing) => existing.startsWith(`${quest.id}|`))) continue;
+    keys.add(key);
+  }
+
+  return keys.size;
+}
+
 function countActivePathMatches(quests: Quest[], stats: StatName[]) {
   const statSet = new Set(stats);
   return quests.filter((quest) => statSet.has(quest.stat) && quest.isActive && !quest.isCompleted).length;
@@ -205,7 +234,7 @@ export function getClassContract(hero: Hero, quests: Quest[] = []): ClassContrac
     summary: `${hero.className} heroes thrive when their week reinforces ${blueprint.focus}. ${blueprint.summary}`,
     requiredCount: 3,
     activeMatches: countContractMatches(quests, recommendedTitles, false),
-    completedMatches: countContractMatches(quests, recommendedTitles, true),
+    completedMatches: countClassCompletions(hero, quests, recommendedTitles),
     recommended,
   };
 }

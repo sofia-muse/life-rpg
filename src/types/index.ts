@@ -142,6 +142,9 @@ export interface Hero {
   bonusPayoutsUsed?: number;
   /** Boss quests that already opened one of today's side/boss payouts. */
   openBossPayoutIds?: string[];
+  /** Hero-calendar date of the last daily XP payout, and how many dailies were paid that day. */
+  dailyXpDate?: string;
+  dailyXpPayoutsUsed?: number;
   /**
    * Full completions in the recent calendar, including dailies the morning reset has reopened.
    * The weekly cup counts this. `daysCompleted` on the quest stays the lifetime total.

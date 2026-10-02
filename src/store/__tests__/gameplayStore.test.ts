@@ -159,14 +159,40 @@ describe('gameplayStore local quest flow', () => {
     });
 
     const first = await useGameplayStore.getState().completeQuest('boss-1');
-    const second = await useGameplayStore.getState().completeQuest('boss-1');
-
     expect(first).toMatchObject({ completed: false, stepAdvancedOnly: true, xpAwarded: 25 });
-    expect(useQuestStore.getState().getQuestById('boss-1')?.completedSteps).toBe(2);
+    expect(useHeroStore.getState().hero?.totalQuestsCompleted).toBe(0);
+    expect(useQuestStore.getState().getQuestById('boss-1')?.completedSteps).toBe(1);
+
+    const second = await useGameplayStore.getState().completeQuest('boss-1');
     expect(second).toMatchObject({ completed: true, stepAdvancedOnly: false });
     expect(second?.xpAwarded).toBeGreaterThan(0);
+    expect(useHeroStore.getState().hero?.totalQuestsCompleted).toBe(1);
+    expect(useQuestStore.getState().getQuestById('boss-1')?.completedSteps).toBe(2);
     expect(useHeroStore.getState().hero?.bonusPayoutsUsed).toBe(1);
     expect(useHeroStore.getState().hero?.openBossPayoutIds).toEqual(['boss-1']);
+  });
+
+  it('stops daily XP after the active slot count even when the quest is new', async () => {
+    useQuestStore.setState({
+      quests: [
+        buildQuest({ id: 'daily-1', type: 'daily' }),
+        buildQuest({ id: 'daily-2', type: 'daily' }),
+        buildQuest({ id: 'daily-3', type: 'daily' }),
+        buildQuest({ id: 'daily-4', type: 'daily' }),
+      ],
+    });
+
+    const first = await useGameplayStore.getState().completeQuest('daily-1');
+    const second = await useGameplayStore.getState().completeQuest('daily-2');
+    const third = await useGameplayStore.getState().completeQuest('daily-3');
+    const fourth = await useGameplayStore.getState().completeQuest('daily-4');
+
+    expect(first?.xpAwarded).toBeGreaterThan(0);
+    expect(second?.xpAwarded).toBeGreaterThan(0);
+    expect(third?.xpAwarded).toBeGreaterThan(0);
+    expect(fourth).toMatchObject({ completed: true, xpAwarded: 0, bonusBudgetSpent: true });
+    expect(useQuestStore.getState().getQuestById('daily-4')?.isCompleted).toBe(true);
+    expect(useHeroStore.getState().hero?.dailyXpPayoutsUsed).toBe(3);
   });
 
   it('lets one boss arc and one side quest share the daily budget', async () => {

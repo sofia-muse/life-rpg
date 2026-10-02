@@ -1,4 +1,5 @@
 import { getClassContract } from '../classContracts';
+import { getCurrentWeekKey } from '../weeklyPaths';
 import { Hero, Quest } from '../../types';
 
 function buildHero(): Hero {
@@ -88,5 +89,18 @@ describe('classContracts', () => {
     expect(contract.recommended.map((quest) => quest.title)).toEqual(
       expect.arrayContaining(['20 Push-ups', 'Run a 5K', 'Couch to 5K']),
     );
+  });
+
+  it('counts a reopened daily from this week’s completion log', () => {
+    const hero = {
+      ...buildHero(),
+      completionLog: [{ questId: 'push', date: getCurrentWeekKey(), stat: 'strength' as const }],
+    };
+    const contract = getClassContract(hero, [
+      buildQuest({ id: 'push', title: '20 Push-ups', isCompleted: false, isActive: true }),
+    ]);
+
+    expect(contract.completedMatches).toBe(1);
+    expect(contract.activeMatches).toBe(1);
   });
 });

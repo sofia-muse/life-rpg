@@ -73,30 +73,36 @@ export default function DashboardScreen() {
 
   const handleClaimWeeklyReward = (reward: { title: string; badge: string }) => {
     if (!hero) return;
-    settings.claimWeeklyReward(reward);
-    settings.incrementWeeklyContractsCompleted();
-    const contract = getPrimaryContract(
-      hero,
-      settings,
-      quests,
-      getWeeklyCapacityBonus(getUnlockedSkillIds()),
-    );
-    const payload = buildWeeklyChallengePayload(hero, settings, contract, quests);
-    if (payload && settings.weeklyPathWeekKey) {
-      addHallEntry(
-        buildHallOfFameEntry(
-          settings.weeklyPathWeekKey,
-          payload.heroName,
-          payload.className,
-          payload.pathLabel,
-          payload.cupScore,
-          payload.cupRank,
-          payload.contractTitle,
-        ),
+    void Promise.resolve(settings.claimWeeklyReward(reward)).then((claimed) => {
+      if (!claimed) return;
+      const currentHero = useHeroStore.getState().hero;
+      const currentSettings = useSettingsStore.getState();
+      const currentQuests = useQuestStore.getState().quests;
+      if (!currentHero) return;
+      currentSettings.incrementWeeklyContractsCompleted();
+      const contract = getPrimaryContract(
+        currentHero,
+        currentSettings,
+        currentQuests,
+        getWeeklyCapacityBonus(getUnlockedSkillIds()),
       );
-    }
-    useUIStore.getState().setCharacterEvent('contractComplete');
-    setTimeout(() => useUIStore.getState().setCharacterEvent('idle'), 2000);
+      const payload = buildWeeklyChallengePayload(currentHero, currentSettings, contract, currentQuests);
+      if (payload && currentSettings.weeklyPathWeekKey) {
+        addHallEntry(
+          buildHallOfFameEntry(
+            currentSettings.weeklyPathWeekKey,
+            payload.heroName,
+            payload.className,
+            payload.pathLabel,
+            payload.cupScore,
+            payload.cupRank,
+            payload.contractTitle,
+          ),
+        );
+      }
+      useUIStore.getState().setCharacterEvent('contractComplete');
+      setTimeout(() => useUIStore.getState().setCharacterEvent('idle'), 2000);
+    });
   };
 
   const [dailyReward, setDailyReward] = useState<{

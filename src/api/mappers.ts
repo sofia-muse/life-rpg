@@ -1,5 +1,5 @@
 import { ApiHero, ApiQuest } from './dto';
-import { Hero, JournalEntry, Quest, StatName } from '../types';
+import { Hero, JournalEntry, Quest, QuestCompletionLogEntry, StatName } from '../types';
 import { generateId } from '../utils/id';
 
 const STAT_NAMES: StatName[] = [
@@ -50,7 +50,21 @@ export function mapApiHero(hero: ApiHero): Hero {
     bonusPayoutDate: hero.settings.bonusPayoutDate ?? undefined,
     bonusPayoutsUsed: hero.settings.bonusPayoutsUsed ?? 0,
     openBossPayoutIds: hero.settings.openBossPayoutIds ?? [],
+    dailyXpDate: hero.settings.dailyXpDate ?? undefined,
+    dailyXpPayoutsUsed: hero.settings.dailyXpPayoutsUsed ?? 0,
+    completionLog: mapRecentCompletions(hero.recentCompletions),
   };
+}
+
+function mapRecentCompletions(
+  rows: ApiHero['recentCompletions'],
+): QuestCompletionLogEntry[] | undefined {
+  if (!rows?.length) return undefined;
+  return rows.map((row) => ({
+    questId: row.questId,
+    date: row.date,
+    stat: row.stat,
+  }));
 }
 
 export function mapApiQuest(quest: ApiQuest): Quest {

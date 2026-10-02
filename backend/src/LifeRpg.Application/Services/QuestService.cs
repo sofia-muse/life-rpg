@@ -252,8 +252,16 @@ public class QuestService
         }
 
         var bonusBudgetSpent = false;
-        if (quest.Type != QuestType.Daily
-            && !BonusPayouts.TryTake(hero.Settings, today, quest.Id, quest.Type == QuestType.Boss))
+        if (quest.Type == QuestType.Daily)
+        {
+            var slots = BaseActiveDailyLimit + SkillResolver.GetActiveDailyQuestCapacityBonus(unlockedIds);
+            if (!DailyXpBudget.TryTake(hero.Settings, today, slots))
+            {
+                reward = reward with { TotalXp = 0 };
+                bonusBudgetSpent = true;
+            }
+        }
+        else if (!BonusPayouts.TryTake(hero.Settings, today, quest.Id, quest.Type == QuestType.Boss))
         {
             reward = reward with { TotalXp = 0 };
             bonusBudgetSpent = true;

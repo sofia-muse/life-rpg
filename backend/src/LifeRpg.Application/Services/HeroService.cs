@@ -25,7 +25,13 @@ public class HeroService
     public async Task<Result<HeroDto>> GetMineAsync(CancellationToken ct = default)
     {
         var hero = await LoadAsync(ct);
-        return hero is null ? Result<HeroDto>.NotFound("Hero not found") : Result<HeroDto>.Success(hero.ToDto());
+        if (hero is null)
+        {
+            return Result<HeroDto>.NotFound("Hero not found");
+        }
+
+        var recent = await LoadWeekCompletionsAsync(hero, ct);
+        return Result<HeroDto>.Success(hero.ToDto(recent));
     }
 
     public async Task<Result<HeroDto>> CreateAsync(CreateHeroRequest req, CancellationToken ct = default)
@@ -131,6 +137,7 @@ public class HeroService
     {
         var hero = await _db.Heroes
             .Include(h => h.Quests)
+            .Include(h => h.UnlockedSkills)
             .FirstOrDefaultAsync(h => _user.UserId != null && h.UserId == _user.UserId, ct);
         if (hero is null)
         {
@@ -153,7 +160,9 @@ public class HeroService
         };
 
         var statSet = stats.ToHashSet();
-        var completedMatches = await CountWeeklyCompletionsAsync(hero, statSet, ct);
+        var weekCompletions = await LoadWeekCompletionsAsync(hero, ct);
+        var completedMatches = weekCompletions.Count(entry => statSet.Contains(entry.Stat));
+        requiredCount += SkillResolver.GetWeeklyCapacityBonus(hero.UnlockedSkills.Select(s => s.SkillId));
 
         var bossProgress = Math.Min(20, (int)Math.Round(hero.Quests
             .Where(q => q.Type == QuestType.Boss && statSet.Contains(q.Stat) && q.TotalSteps is > 0)
@@ -175,7 +184,54 @@ public class HeroService
             bossProgress,
             streakBoost,
             hero.Settings.WeeklyRewardTitle ?? rewardTitle,
-            hero.Settings.WeeklyRewardBadge ?? rewardBadge));
+            hero.Settings.WeeklyRewardBadge ?? rewardBadge,
+            weekCompletions));
+    }
+
+    public async Task<Result<HeroDto>> ClaimWeeklyRewardAsync(CancellationToken ct = default)
+    {
+        var hero = await _db.Heroes
+            .Include(h => h.UnlockedSkills)
+            .FirstOrDefaultAsync(h => _user.UserId != null && h.UserId == _user.UserId, ct);
+        if (hero is null)
+        {
+            return Result<HeroDto>.NotFound("Hero not found");
+        }
+
+        var today = HeroCalendar.Today(hero.Settings.TimeZone, _clock.UtcNow);
+        var path = hero.Settings.WeeklyPath?.Trim().ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(path) || hero.Settings.WeeklyPathWeekKey != WeekKey(today))
+        {
+            return Result<HeroDto>.Conflict("No weekly path is active");
+        }
+
+        if (hero.Settings.WeeklyRewardWeekKey == hero.Settings.WeeklyPathWeekKey)
+        {
+            return Result<HeroDto>.Success(hero.ToDto(await LoadWeekCompletionsAsync(hero, ct)));
+        }
+
+        var (stats, rewardTitle, rewardBadge, requiredCount) = path switch
+        {
+            "power" => (new[] { StatName.Strength, StatName.Vitality }, "Vanguard of Power", "Power Cup", 4),
+            "focus" => (new[] { StatName.Intelligence, StatName.Dexterity }, "Sage of Focus", "Focus Cup", 4),
+            "support" => (new[] { StatName.Charisma, StatName.Willpower }, "Warden of Support", "Support Cup", 4),
+            _ => (Array.Empty<StatName>(), "Weekly Reward", "Weekly Cup", 4),
+        };
+
+        var statSet = stats.ToHashSet();
+        var weekCompletions = await LoadWeekCompletionsAsync(hero, ct);
+        var completedMatches = weekCompletions.Count(entry => statSet.Contains(entry.Stat));
+        requiredCount += SkillResolver.GetWeeklyCapacityBonus(hero.UnlockedSkills.Select(s => s.SkillId));
+        if (completedMatches < requiredCount)
+        {
+            return Result<HeroDto>.Conflict("Weekly contract is not complete");
+        }
+
+        hero.Settings.WeeklyRewardWeekKey = hero.Settings.WeeklyPathWeekKey;
+        hero.Settings.WeeklyRewardTitle = rewardTitle;
+        hero.Settings.WeeklyRewardBadge = rewardBadge;
+        await _db.SaveChangesAsync(ct);
+        return Result<HeroDto>.Success(hero.ToDto(weekCompletions));
     }
 
     private Task<Hero?> LoadAsync(CancellationToken ct) =>
@@ -253,22 +309,25 @@ public class HeroService
     }
 
     /// <summary>
-    /// Completions whose calendar date falls in the hero's week. A daily reset clears
-    /// <c>IsCompleted</c> the next morning, so the cup reads <see cref="QuestCompletion"/> rows.
+    /// Completions whose calendar date falls in the hero's current week.
+    /// A daily reset clears <c>IsCompleted</c> the next morning, so the cup reads these rows.
     /// </summary>
-    private async Task<int> CountWeeklyCompletionsAsync(Hero hero, HashSet<StatName> stats, CancellationToken ct)
+    private async Task<List<CompletionLogDto>> LoadWeekCompletionsAsync(Hero hero, CancellationToken ct)
     {
-        if (!DateOnly.TryParse(hero.Settings.WeeklyPathWeekKey, out var weekStart))
+        var today = HeroCalendar.Today(hero.Settings.TimeZone, _clock.UtcNow);
+        if (!DateOnly.TryParse(WeekKey(today), out var weekStart))
         {
-            return 0;
+            return new List<CompletionLogDto>();
         }
 
         var weekEnd = weekStart.AddDays(7);
-        var completionStats = await _db.QuestCompletions
+        var rows = await _db.QuestCompletions
             .Where(c => c.HeroId == hero.Id && c.CompletionDate >= weekStart && c.CompletionDate < weekEnd)
-            .Select(c => c.Stat)
+            .Select(c => new { c.QuestId, c.CompletionDate, c.Stat })
             .ToListAsync(ct);
-        return completionStats.Count(stat => stats.Contains(stat));
+        return rows
+            .Select(c => new CompletionLogDto(c.QuestId, c.CompletionDate.ToString("yyyy-MM-dd"), c.Stat))
+            .ToList();
     }
 
     private static string WeekKey(DateOnly date)

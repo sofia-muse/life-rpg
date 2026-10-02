@@ -21,6 +21,7 @@ import { calculateHeroLevel, getStatBlock } from '../engine/statEngine';
 import { checkClassEvolution, respecClassIdentity } from '../engine/classEngine';
 import { getNewlyUnlockedSkills, getRestDayXpReward } from '../engine/skillEngine';
 import { getClassName } from '../config/classes';
+import { mergeCompletionLogs } from '../engine/completionLog';
 import { advanceTrackedStreak, isNewDay } from '../engine/streakEngine';
 import { resolveRestDay } from '../engine/restDay';
 import {
@@ -45,7 +46,7 @@ interface HeroState {
     charAppearance?: CharacterAppearance,
   ) => void;
   addXP: (stat: StatName, amount: number) => StatLevelUpResult | null;
-  applyQuestReward: (stat: StatName, amount: number, unlockedSkillIds: string[]) => {
+  applyQuestReward: (stat: StatName, amount: number, unlockedSkillIds: string[], countCompletion?: boolean) => {
     hero: Hero;
     levelResult: StatLevelUpResult | null;
   } | null;
@@ -88,11 +89,11 @@ function isAuthoritative(): boolean {
 
 function mergeCompletionLog(previous: Hero | null, next: Hero | null): Hero | null {
   if (!next) return null;
-  if (next.completionLog) return next;
-  if (previous?.id === next.id && previous.completionLog) {
-    return { ...next, completionLog: previous.completionLog };
-  }
-  return next;
+  if (previous?.id !== next.id) return next;
+  return {
+    ...next,
+    completionLog: mergeCompletionLogs(previous?.completionLog, next.completionLog),
+  };
 }
 
 function getDailyRewardForHero(hero: Hero): { xp: number; stat: StatName; bonusType: string } | null {
@@ -226,22 +227,23 @@ export const useHeroStore = create<HeroState>()(
         return levelResult;
       },
 
-      applyQuestReward: (stat, amount, unlockedSkillIds) => {
+      applyQuestReward: (stat, amount, unlockedSkillIds, countCompletion = true) => {
         const { hero } = get();
         if (!hero) return null;
 
         const { updatedHero, levelResult } = applyHeroXp(hero, stat, amount, unlockedSkillIds);
+        const totalQuestsCompleted = hero.totalQuestsCompleted + (countCompletion ? 1 : 0);
         set({
           hero: {
             ...updatedHero,
-            totalQuestsCompleted: hero.totalQuestsCompleted + 1,
+            totalQuestsCompleted,
           },
         });
 
         return {
           hero: {
             ...updatedHero,
-            totalQuestsCompleted: hero.totalQuestsCompleted + 1,
+            totalQuestsCompleted,
           },
           levelResult,
         };

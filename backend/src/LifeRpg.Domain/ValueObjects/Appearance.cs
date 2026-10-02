@@ -64,4 +64,10 @@ public sealed class HeroSettings
 
     /// <summary>Boss quests whose arc already opened a payout on <see cref="BonusPayoutDate"/>.</summary>
     public List<string> OpenBossPayoutIds { get; set; } = new();
+
+    /// <summary>Hero-calendar date of the last daily XP payout.</summary>
+    public string? DailyXpDate { get; set; }
+
+    /// <summary>Daily quests that already received XP on <see cref="DailyXpDate"/>.</summary>
+    public int DailyXpPayoutsUsed { get; set; }
 }

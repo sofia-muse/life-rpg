@@ -38,4 +38,8 @@ public class HeroesController : ApiControllerBase
     [HttpPost("me/respec")]
     public async Task<IActionResult> Respec(RespecRequest request) =>
         ToResponse(await _heroes.RespecAsync(request.Stat));
+
+    [HttpPost("me/weekly-reward")]
+    public async Task<IActionResult> ClaimWeeklyReward() =>
+        ToResponse(await _heroes.ClaimWeeklyRewardAsync());
 }
