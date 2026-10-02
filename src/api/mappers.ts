@@ -1,5 +1,26 @@
 import { ApiHero, ApiQuest } from './dto';
-import { Hero, Quest } from '../types';
+import { Hero, JournalEntry, Quest, StatName } from '../types';
+import { generateId } from '../utils/id';
+
+const STAT_NAMES: StatName[] = [
+  'strength',
+  'vitality',
+  'intelligence',
+  'charisma',
+  'dexterity',
+  'willpower',
+];
+
+function emptyXpGained(): Record<StatName, number> {
+  return {
+    strength: 0,
+    vitality: 0,
+    intelligence: 0,
+    charisma: 0,
+    dexterity: 0,
+    willpower: 0,
+  };
+}
 
 export function mapApiHero(hero: ApiHero): Hero {
   return {
@@ -46,5 +67,46 @@ export function mapApiQuest(quest: ApiQuest): Quest {
     daysCompleted: quest.daysCompleted,
     totalSteps: quest.totalSteps ?? undefined,
     completedSteps: quest.completedSteps ?? undefined,
+  };
+}
+
+/** Map a journal row from sync `serverChanges.journal` (server is authoritative per date). */
+export function mapApiJournalEntry(raw: Record<string, unknown>): JournalEntry | null {
+  const dateRaw = raw.date;
+  const date =
+    typeof dateRaw === 'string'
+      ? dateRaw.slice(0, 10)
+      : dateRaw != null
+        ? String(dateRaw).slice(0, 10)
+        : '';
+  if (!date) return null;
+
+  const xpGained = emptyXpGained();
+  const xpRaw = raw.xpGained;
+  if (xpRaw && typeof xpRaw === 'object') {
+    for (const stat of STAT_NAMES) {
+      const value = (xpRaw as Record<string, unknown>)[stat];
+      if (typeof value === 'number') xpGained[stat] = value;
+    }
+  }
+
+  return {
+    id: raw.id != null ? String(raw.id) : generateId(),
+    date,
+    narrative: typeof raw.narrative === 'string' ? raw.narrative : '',
+    questsCompleted: [],
+    xpGained,
+    levelsGained: Array.isArray(raw.levelsGained) ? (raw.levelsGained as StatName[]) : [],
+    skillsUnlocked: [],
+    milestones: Array.isArray(raw.milestones) ? (raw.milestones as string[]) : [],
+    tomorrowVow:
+      typeof raw.tomorrowVow === 'string' || raw.tomorrowVow === null
+        ? (raw.tomorrowVow as string | null)
+        : undefined,
+    tomorrowVowTemplateTitle:
+      typeof raw.tomorrowVowTemplateTitle === 'string' ||
+      raw.tomorrowVowTemplateTitle === null
+        ? (raw.tomorrowVowTemplateTitle as string | null)
+        : undefined,
   };
 }

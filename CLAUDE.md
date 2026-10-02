@@ -113,4 +113,4 @@ dotnet ef migrations add <Name> -p src/LifeRpg.Infrastructure -s src/LifeRpg.Inf
 - ✅ **Web demo** live on Vercel (demo mode), linked in README.
 - ✅ **AI forging** verified live against Gemini.
 - ⏳ **Azure backend**: fully coded (Bicep + pipeline + migration + published zip ready). **Blocked only by a new-subscription App Service quota of 0** — needs Pay-As-You-Go upgrade or a quota request. Target RG `rg-liferpg` in **northeurope** (West Europe blocks SQL server creation for this sub). After quota: `az deployment group create` the Bicep, apply migrations (`dotnet ef database update --connection`, open SQL firewall for client IP), `az webapp deploy` the zip, smoke-test `/health/ready` + forge.
-- TODO: make the repo public; deploy Azure once quota clears; optional EAS APK + demo GIF.
+- Repo is **public**; README uses `docs/demo.png` (web smoke capture). Deploy Azure once quota clears — see `docs/AZURE_DEPLOY.md`; optional EAS APK via `eas build -p android --profile preview`.

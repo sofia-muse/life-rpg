@@ -11,6 +11,8 @@ interface JournalState {
   getTodayEntry: () => JournalEntry | undefined;
   getEntriesByDate: (date: string) => JournalEntry[];
   updateTodayEntry: (updates: Partial<Omit<JournalEntry, 'id' | 'date'>>) => void;
+  /** Apply authoritative journal row from sync (matched by id, then date). */
+  applyServerJournalEntry: (serverEntry: JournalEntry) => void;
   clearEntries: () => void;
 }
 
@@ -99,6 +101,37 @@ export const useJournalStore = create<JournalState>()(
           set((state) => ({ entries: [newEntry, ...state.entries] }));
           syncManager.enqueue('journal', 'upsert', newEntry);
         }
+      },
+
+      applyServerJournalEntry: (serverEntry) => {
+        set((state) => {
+          const existing =
+            state.entries.find((e) => e.id === serverEntry.id) ??
+            state.entries.find((e) => e.date === serverEntry.date);
+
+          if (existing) {
+            const merged: JournalEntry = {
+              ...serverEntry,
+              id: existing.id,
+              tomorrowVow: serverEntry.tomorrowVow ?? existing.tomorrowVow,
+              tomorrowVowTemplateTitle:
+                serverEntry.tomorrowVowTemplateTitle ?? existing.tomorrowVowTemplateTitle,
+              questsCompleted:
+                serverEntry.questsCompleted.length > 0
+                  ? serverEntry.questsCompleted
+                  : existing.questsCompleted,
+              skillsUnlocked:
+                serverEntry.skillsUnlocked.length > 0
+                  ? serverEntry.skillsUnlocked
+                  : existing.skillsUnlocked,
+            };
+            return {
+              entries: state.entries.map((e) => (e.id === existing.id ? merged : e)),
+            };
+          }
+
+          return { entries: [serverEntry, ...state.entries] };
+        });
       },
 
       clearEntries: () => set({ entries: [] }),
