@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Card } from '../layout/Card';
 import { colors, spacing, fontSize, radius } from '../../config/theme';
 import { guidanceApi, QuestSuggestionPackDto } from '../../api/guidanceApi';
-import { STAT_COLORS, STAT_ICONS, DIFFICULTY_XP } from '../../types';
+import { STAT_COLORS, STAT_ICONS, DIFFICULTY_XP, StatName } from '../../types';
 import { env } from '../../config/env';
 import { useAuthStore } from '../../store/authStore';
 import { useSettingsStore } from '../../store/settingsStore';
+import { useHeroStore } from '../../store/heroStore';
 import { QuestTemplate } from '../../config/questTemplates';
+import { getDemoQuestSuggestionPack } from '../../config/demoGuidance';
 
 interface Props {
   onAddQuest: (template: QuestTemplate) => void;
@@ -15,20 +17,28 @@ interface Props {
 }
 
 export function GuildmasterSuggestions({ onAddQuest, existingTitles }: Props) {
-  const [pack, setPack] = useState<QuestSuggestionPackDto | null>(null);
+  const [livePack, setLivePack] = useState<QuestSuggestionPackDto | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(env.demoMode);
   const aiSkillsEnabled = useSettingsStore((s) => s.aiSkillsEnabled);
   const authenticated = useAuthStore((s) => s.status === 'authenticated');
+  const dominantStat = useHeroStore((s) => s.hero?.dominantStat ?? ('strength' as StatName));
   const canUseGuidance = aiSkillsEnabled && !env.demoMode && authenticated;
+
+  const demoPack = useMemo(
+    () => (env.demoMode ? getDemoQuestSuggestionPack(dominantStat) : null),
+    [dominantStat],
+  );
+
+  const pack = canUseGuidance ? livePack : demoPack;
 
   const loadSuggestions = () => {
     setLoading(true);
     setError(null);
     void guidanceApi
       .getQuestSuggestions()
-      .then(setPack)
+      .then(setLivePack)
       .catch((err) => setError(err instanceof Error ? err.message : 'Suggestions unavailable'))
       .finally(() => setLoading(false));
   };
@@ -36,12 +46,12 @@ export function GuildmasterSuggestions({ onAddQuest, existingTitles }: Props) {
   const toggleExpanded = () => {
     const next = !expanded;
     setExpanded(next);
-    if (next && canUseGuidance && !pack && !loading) {
+    if (next && canUseGuidance && !livePack && !loading) {
       loadSuggestions();
     }
   };
 
-  if (!canUseGuidance) {
+  if (!canUseGuidance && !env.demoMode) {
     return (
       <Card style={styles.card}>
         <Text style={styles.title}>The Guildmaster</Text>
@@ -55,9 +65,16 @@ export function GuildmasterSuggestions({ onAddQuest, existingTitles }: Props) {
   return (
     <Card style={styles.card}>
       <TouchableOpacity onPress={toggleExpanded} style={styles.header}>
-        <Text style={styles.title}>
-          {expanded ? '▼' : '▶'} The Guildmaster Recommends
-        </Text>
+        <View style={styles.titleRow}>
+          <Text style={styles.title}>
+            {expanded ? '▼' : '▶'} The Guildmaster Recommends
+          </Text>
+          {env.demoMode ? (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>Demo guidance</Text>
+            </View>
+          ) : null}
+        </View>
       </TouchableOpacity>
 
       {expanded && (
@@ -111,10 +128,28 @@ export function GuildmasterSuggestions({ onAddQuest, existingTitles }: Props) {
 const styles = StyleSheet.create({
   card: { marginBottom: spacing.md },
   header: { marginBottom: spacing.xs },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
   title: {
     color: colors.textAccent,
     fontSize: fontSize.sm,
     fontWeight: '700',
+  },
+  badge: {
+    backgroundColor: `${colors.gold}22`,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+  },
+  badgeText: {
+    color: colors.gold,
+    fontSize: fontSize.xs,
+    fontWeight: '700',
+    textTransform: 'uppercase',
   },
   offline: {
     color: colors.textMuted,

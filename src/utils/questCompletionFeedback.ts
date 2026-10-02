@@ -26,7 +26,7 @@ export function presentQuestCompletionFeedback(
     setAppearanceUnlock,
     setCharacterEvent,
     setEvolution,
-    setAchievementUnlock,
+    enqueueAchievements,
     setStreakMilestone,
   } = useUIStore.getState();
 
@@ -101,7 +101,7 @@ export function presentQuestCompletionFeedback(
     const newlyEarned = detectNewAchievements();
     if (newlyEarned.length > 0) {
       setTimeout(() => {
-        setAchievementUnlock(newlyEarned[0]);
+        enqueueAchievements(newlyEarned);
       }, 600);
     }
   }, result.levelResult ? 4500 : 2500);
