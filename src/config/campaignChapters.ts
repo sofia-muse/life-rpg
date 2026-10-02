@@ -6,6 +6,8 @@ export interface CampaignChapter {
   subtitle: string;
   dominantStats: StatName[];
   durationWeeks: number;
+  /** Other heroes must reach this level before the chapter opens. Your own dominant-stat chapter stays open. */
+  minHeroLevel: number;
   bossTemplateTitle: string;
   rewardTitle: string;
   narrative: string;
@@ -18,6 +20,7 @@ export const CAMPAIGN_CHAPTERS: CampaignChapter[] = [
     subtitle: 'Forge body and resolve',
     dominantStats: ['strength', 'willpower'],
     durationWeeks: 4,
+    minHeroLevel: 1,
     bossTemplateTitle: '30-Day Fitness Challenge',
     rewardTitle: 'Iron Awakened',
     narrative: 'Your campaign begins where sweat meets discipline. Train boldly, finish what you start.',
@@ -28,6 +31,7 @@ export const CAMPAIGN_CHAPTERS: CampaignChapter[] = [
     subtitle: 'Heal, nourish, and recover',
     dominantStats: ['vitality', 'willpower'],
     durationWeeks: 4,
+    minHeroLevel: 3,
     bossTemplateTitle: 'Build a Sleep Routine',
     rewardTitle: 'Sanctuary Restored',
     narrative: 'A long campaign needs a fortified sanctuary. Guard sleep, food, and calm.',
@@ -38,6 +42,7 @@ export const CAMPAIGN_CHAPTERS: CampaignChapter[] = [
     subtitle: 'Learn, reflect, and master',
     dominantStats: ['intelligence', 'dexterity'],
     durationWeeks: 6,
+    minHeroLevel: 5,
     bossTemplateTitle: 'Read 5 Books',
     rewardTitle: 'Pilgrim of Insight',
     narrative: 'Knowledge is the map. Precision is the compass. Walk both paths together.',
@@ -48,6 +53,7 @@ export const CAMPAIGN_CHAPTERS: CampaignChapter[] = [
     subtitle: 'Lead, connect, and inspire',
     dominantStats: ['charisma', 'vitality'],
     durationWeeks: 4,
+    minHeroLevel: 8,
     bossTemplateTitle: 'Expand Your Circle',
     rewardTitle: 'Banner Bearer',
     narrative: 'Heroes are remembered by who they lift. Build trust through steady action.',
@@ -58,6 +64,7 @@ export const CAMPAIGN_CHAPTERS: CampaignChapter[] = [
     subtitle: 'Ship, automate, and execute',
     dominantStats: ['dexterity', 'intelligence'],
     durationWeeks: 5,
+    minHeroLevel: 12,
     bossTemplateTitle: 'Ship a Project',
     rewardTitle: 'Master Builder',
     narrative: 'Turn intention into output. Clear friction, then strike with precision.',
@@ -68,6 +75,7 @@ export const CAMPAIGN_CHAPTERS: CampaignChapter[] = [
     subtitle: 'Discipline under pressure',
     dominantStats: ['willpower', 'strength'],
     durationWeeks: 4,
+    minHeroLevel: 15,
     bossTemplateTitle: '30-Day Meditation Streak',
     rewardTitle: 'Warden of Resolve',
     narrative: 'When motivation fades, identity holds the line. Finish with honor.',
@@ -93,4 +101,14 @@ export const STAT_REGIONS: StatRegion[] = [
 export function getChapterForHero(dominantStat: StatName): CampaignChapter {
   const match = CAMPAIGN_CHAPTERS.find((chapter) => chapter.dominantStats.includes(dominantStat));
   return match ?? CAMPAIGN_CHAPTERS[0];
+}
+
+/** A hero's own dominant-stat chapter is always open. The rest wait on hero level. */
+export function isChapterLocked(
+  chapter: CampaignChapter,
+  heroLevel: number,
+  dominantStat: StatName,
+): boolean {
+  if (chapter.dominantStats.includes(dominantStat)) return false;
+  return heroLevel < chapter.minHeroLevel;
 }

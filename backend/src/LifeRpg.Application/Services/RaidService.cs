@@ -436,13 +436,34 @@ public class RaidService
         var members = membersList
             .OrderBy(m => m.Role == RaidMemberRole.Leader ? 0 : 1)
             .ThenBy(m => m.JoinedAt)
-            .Select(m => new RaidMemberDto(
-                m.HeroId,
-                m.Hero?.Name ?? "Unknown",
-                m.Hero?.ClassName ?? "Adventurer",
-                m.Role,
-                contributions.Where(c => c.HeroId == m.HeroId).Sum(c => c.Amount),
-                m.JoinedAt))
+            .Select(m =>
+            {
+                var look = m.Hero?.CharacterAppearance;
+                var lastSeen = contributions
+                    .Where(c => c.HeroId == m.HeroId)
+                    .Select(c => (DateTimeOffset?)c.CreatedAt)
+                    .Max();
+                return new RaidMemberDto(
+                    m.HeroId,
+                    m.Hero?.Name ?? "Unknown",
+                    m.Hero?.ClassName ?? "Adventurer",
+                    m.Role,
+                    contributions.Where(c => c.HeroId == m.HeroId).Sum(c => c.Amount),
+                    m.JoinedAt,
+                    lastSeen ?? m.JoinedAt,
+                    look == null || m.Hero == null
+                        ? null
+                        : new RaidAvatarDto(
+                            look.Gender.ToString().ToLowerInvariant(),
+                            look.SkinTone,
+                            look.HairStyle,
+                            look.HairColor,
+                            look.EyeStyle,
+                            look.MouthStyle,
+                            look.GlassesStyle,
+                            m.Hero.DominantStat.ToString().ToLowerInvariant(),
+                            m.Hero.ClassTier));
+            })
             .ToList();
 
         var recent = contributions

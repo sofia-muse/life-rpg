@@ -6,7 +6,10 @@ import { Quest } from '../types';
 import { syncManager } from '../api/syncManager';
 import { getActiveDailyQuestCapacityBonus } from '../engine/skillEngine';
 import { applyQuestEvolution } from '../engine/questProgression';
+import { useSettingsStore } from './settingsStore';
 import { useSkillStore } from './skillStore';
+import { useUIStore } from './uiStore';
+import { playGameFeedback } from '../utils/gameFeedback';
 
 interface QuestState {
   quests: Quest[];
@@ -71,6 +74,8 @@ export const useQuestStore = create<QuestState>()(
         };
         set((state) => ({ quests: [...state.quests, quest] }));
         syncManager.enqueue('quest', 'upsert', quest);
+        useUIStore.getState().pushToast('Quest accepted');
+        void playGameFeedback('click', useSettingsStore.getState().hapticEnabled);
       },
 
       completeQuest: (questId) => {

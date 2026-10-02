@@ -15,11 +15,13 @@ export default function SettingsScreen() {
   const {
     notificationsEnabled,
     hapticEnabled,
+    soundEnabled,
     reminderTime,
     aiSkillsEnabled,
     fantasyNames,
     toggleNotifications,
     toggleHaptic,
+    toggleSound,
     setReminderTime,
     toggleAiSkills,
     toggleFantasyNames,
@@ -142,6 +144,19 @@ export default function SettingsScreen() {
             onValueChange={toggleHaptic}
             trackColor={{ false: colors.bgInput, true: `${colors.gold}60` }}
             thumbColor={hapticEnabled ? colors.gold : colors.textMuted}
+          />
+        </View>
+        <View style={styles.divider} />
+        <View style={styles.settingRow}>
+          <View style={styles.settingCopy}>
+            <Text style={styles.label}>UI Sounds</Text>
+            <Text style={styles.sublabel}>Clicks, victories, and raid horns. On the web this carries the hit.</Text>
+          </View>
+          <Switch
+            value={soundEnabled}
+            onValueChange={toggleSound}
+            trackColor={{ false: colors.bgInput, true: `${colors.gold}60` }}
+            thumbColor={soundEnabled ? colors.gold : colors.textMuted}
           />
         </View>
         <View style={styles.divider} />

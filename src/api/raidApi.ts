@@ -4,6 +4,18 @@ import { StatName } from '../types';
 
 export type RaidMemberRole = 'leader' | 'member';
 
+export interface RaidAvatarDto {
+  gender: 'male' | 'female';
+  skinTone: number;
+  hairStyle: string;
+  hairColor: number;
+  eyeStyle: string;
+  mouthStyle: string;
+  glassesStyle: string;
+  dominantStat: StatName;
+  classTier: number;
+}
+
 export interface RaidMemberDto {
   heroId: string;
   heroName: string;
@@ -11,6 +23,9 @@ export interface RaidMemberDto {
   role: RaidMemberRole;
   personalTotal: number;
   joinedAt: string;
+  /** Latest contribution, or join time. Absent on older payloads. */
+  lastSeenAt?: string | null;
+  avatar?: RaidAvatarDto | null;
 }
 
 export interface RaidContributionDto {

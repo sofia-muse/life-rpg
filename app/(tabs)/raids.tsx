@@ -20,6 +20,12 @@ import { colors, spacing, fontSize, radius, typography } from '../../src/config/
 import { StatName, STAT_COLORS, STAT_ICONS, STAT_NAMES } from '../../src/types';
 import { RaidDto } from '../../src/api/raidApi';
 import { guidanceApi } from '../../src/api/guidanceApi';
+import { TweenBar } from '../../src/components/game/TweenBar';
+import { BossEncounter } from '../../src/components/game/BossEncounter';
+import { PartyAvatar } from '../../src/components/game/PartyAvatar';
+import { formatLastSeen } from '../../src/utils/raidPresence';
+import { playGameFeedback } from '../../src/utils/gameFeedback';
+import { useSettingsStore } from '../../src/store/settingsStore';
 
 type FormMode = 'create' | 'join' | 'contribute' | null;
 
@@ -40,7 +46,10 @@ export default function RaidsScreen() {
     createRaid,
     joinRaid,
     contribute,
+    refreshRaid,
+    markContributionsSeen,
   } = useRaidStore();
+  const hapticEnabled = useSettingsStore((s) => s.hapticEnabled);
 
   const [formMode, setFormMode] = useState<FormMode>(null);
 
@@ -66,6 +75,21 @@ export default function RaidsScreen() {
     () => raids.find((r) => r.id === selectedRaidId) ?? raids[0] ?? null,
     [raids, selectedRaidId],
   );
+
+  const selectedId = selected?.id;
+  useEffect(() => {
+    if (!canUseRaids || !selectedId) return undefined;
+    void playGameFeedback('raidEnter', hapticEnabled);
+    const timer = setInterval(() => {
+      void refreshRaid(selectedId);
+    }, 10000);
+    return () => clearInterval(timer);
+  }, [canUseRaids, hapticEnabled, refreshRaid, selectedId]);
+
+  useEffect(() => {
+    if (!selected) return;
+    markContributionsSeen(selected.recentContributions.map((entry) => entry.id));
+  }, [markContributionsSeen, selected]);
 
   const resetForms = () => {
     setTitle('');
@@ -114,10 +138,11 @@ export default function RaidsScreen() {
   if (!canUseRaids) {
     return (
       <ScreenWrapper contentWidth="regular">
-        <ScreenHeader
-          eyebrow="Guild Endgame"
-          title="Party Raids"
-          subtitle="Pool a huge real-world goal with friends — invite codes only."
+        <BossEncounter
+          bossName="Iron Cohort"
+          progress={0.42}
+          meterLabel="210 / 500 push-ups"
+          color={STAT_COLORS.strength}
         />
         <Card style={styles.gateCard}>
           <Text style={styles.gateTitle}>Preview: Iron Cohort Raid</Text>
@@ -125,9 +150,6 @@ export default function RaidsScreen() {
             Sample party goal — 500 push-ups pooled across guildmates. Progress, invite codes, and
             clear rewards unlock when a backend API is live.
           </Text>
-          <View style={styles.previewMeter}>
-            <View style={[styles.previewFill, { width: '42%' }]} />
-          </View>
           <Text style={styles.previewMeta}>210 / 500 push-ups · 3 members · Relic: Iron Cohort</Text>
           {env.demoMode ? (
             <>
@@ -166,8 +188,30 @@ export default function RaidsScreen() {
     );
   }
 
+  const selectedProgress = selected
+    ? Math.min(1, selected.currentAmount / Math.max(1, selected.targetAmount))
+    : 0;
+  const selectedColor = selected ? STAT_COLORS[selected.stat] : colors.gold;
+
   return (
     <ScreenWrapper contentWidth="regular">
+      {selected ? (
+        <BossEncounter
+          bossName={selected.title}
+          progress={selectedProgress}
+          meterLabel={`${selected.currentAmount} / ${selected.targetAmount} ${selected.unitLabel}`}
+          color={selectedColor}
+          defeated={selected.isCompleted}
+        />
+      ) : (
+        <BossEncounter
+          bossName="The hall is empty"
+          progress={0}
+          meterLabel="Post a goal to summon a foe"
+          color="#6E7278"
+          dormant
+        />
+      )}
       <ScreenHeader
         eyebrow="Guild Endgame"
         title="Party Raids"
@@ -420,9 +464,7 @@ function RaidDetail({
           </Text>
           <Text style={styles.progressPct}>{Math.round(progress * 100)}%</Text>
         </View>
-        <View style={styles.barTrack}>
-          <View style={[styles.barFill, { width: `${progress * 100}%`, backgroundColor: statColor }]} />
-        </View>
+        <TweenBar progress={progress} color={statColor} height={10} />
         <Text style={styles.personalStrip}>
           You contributed {raid.yourContribution} · {Math.round(personalShare * 100)}% of the goal
         </Text>
@@ -439,12 +481,15 @@ function RaidDetail({
       <Text style={styles.sectionLabel}>Party</Text>
       {raid.members.map((m) => (
         <View key={m.heroId} style={styles.memberRow}>
+          <PartyAvatar member={m} />
           <View style={styles.memberInfo}>
             <Text style={styles.memberName}>
               {m.heroName}
               {m.role === 'leader' ? ' · leader' : ''}
             </Text>
-            <Text style={styles.memberClass}>{m.className}</Text>
+            <Text style={styles.memberClass}>
+              {m.className} · {formatLastSeen(m.lastSeenAt)}
+            </Text>
           </View>
           <Text style={styles.memberTotal}>
             {m.personalTotal} {raid.unitLabel}

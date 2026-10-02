@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { FlatList, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { JournalLedger } from '../../src/components/game/JournalLedger';
 import { Card } from '../../src/components/layout/Card';
 import { EmptyState } from '../../src/components/layout/EmptyState';
 import { ScreenWrapper } from '../../src/components/layout/ScreenWrapper';
@@ -101,8 +102,7 @@ export default function JournalScreen() {
 
   return (
     <ScreenWrapper scroll={false}>
-      <Text style={styles.title}>Chronicle</Text>
-      <Text style={styles.subtitle}>A living record of your campaign</Text>
+      <JournalLedger heroName={hero?.name} />
 
       {(chronicle || offlineEpilogue) && (
         <Card style={styles.chronicleCard}>
@@ -226,20 +226,6 @@ export default function JournalScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: {
-    color: colors.textPrimary,
-    fontSize: fontSize.title,
-    fontWeight: '900',
-    marginTop: spacing.md,
-    ...typography.heading,
-  },
-  subtitle: {
-    color: colors.textSecondary,
-    fontSize: fontSize.sm,
-    marginBottom: spacing.lg,
-    fontStyle: 'italic',
-    ...typography.journal,
-  },
   chronicleCard: { marginBottom: spacing.md },
   chronicleOverline: {
     color: colors.textMuted,

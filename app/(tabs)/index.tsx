@@ -1,19 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, useWindowDimensions } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter, Href } from 'expo-router';
 import { useHeroStore } from '../../src/store/heroStore';
 import { useQuestStore } from '../../src/store/questStore';
 import { useSkillStore } from '../../src/store/skillStore';
 import { useUIStore } from '../../src/store/uiStore';
 import { useSettingsStore } from '../../src/store/settingsStore';
 import { Card } from '../../src/components/layout/Card';
-import { Badge } from '../../src/components/layout/Badge';
 import { StatBar } from '../../src/components/game/StatBar';
 import { StreakBanner } from '../../src/components/game/StreakBanner';
-import { NiceAvatarCharacter } from '../../src/components/avatar/NiceAvatarCharacter';
-import { XPPopup } from '../../src/components/game/XPPopup';
 import { FadeIn } from '../../src/components/animated/FadeIn';
+import { TavernRoom } from '../../src/components/game/TavernRoom';
 import { HeroShareCard } from '../../src/components/game/HeroShareCard';
 import { DailyRewardModal } from '../../src/components/game/DailyRewardModal';
 import { WeeklyCampaignPanel } from '../../src/components/game/WeeklyCampaignPanel';
@@ -23,27 +19,22 @@ import { HallOfChampions } from '../../src/components/game/HallOfChampions';
 import { colors, spacing, fontSize, typography } from '../../src/config/theme';
 import { STAT_NAMES, STAT_COLORS, StatName } from '../../src/types';
 import { getStatDisplayProgress } from '../../src/engine/xpEngine';
-import { HeroCrest } from '../../src/components/avatar/HeroCrest';
-import { PulseGlow } from '../../src/components/animated/PulseGlow';
 import { getPrimaryContract } from '../../src/config/classContracts';
 import { buildWeeklyCupSummary, getActiveWeeklyPath } from '../../src/config/weeklyPaths';
 import { getWeeklyCapacityBonus } from '../../src/engine/skillEngine';
 import { buildWeeklyChallengePayload } from '../../src/config/weeklyCompetition';
 import { buildHallOfFameEntry, useHallOfFameStore } from '../../src/store/hallOfFameStore';
-import { EQUIPPABLE_TITLES } from '../../src/config/achievements';
 import { useForgedSkillStore } from '../../src/store/forgedSkillStore';
 import { useGameplayStore } from '../../src/store/gameplayStore';
-import { getTimeOfDayGreeting, PERIOD_GRADIENTS } from '../../src/utils/gameFeedback';
+import { getTimeOfDayGreeting } from '../../src/utils/gameFeedback';
 import { presentQuestCompletionFeedback } from '../../src/utils/questCompletionFeedback';
 import {
   getContentMaxWidth,
   getScreenHorizontalPadding,
   getScreenTopPadding,
-  getViewportSize,
 } from '../../src/config/responsive';
 
 export default function DashboardScreen() {
-  const router = useRouter();
   const { width } = useWindowDimensions();
   const hero = useHeroStore((s) => s.hero);
   const getDailyRewardPreview = useHeroStore((s) => s.getDailyRewardPreview);
@@ -52,9 +43,6 @@ export default function DashboardScreen() {
   const getQuestById = useQuestStore((s) => s.getQuestById);
   const getUnlockedSkillIds = useSkillStore((s) => s.getUnlockedSkillIds);
   const completeQuestFlow = useGameplayStore((s) => s.completeQuest);
-  const showXPPopup = useUIStore((s) => s.showXPPopup);
-  const xpPopupData = useUIStore((s) => s.xpPopupData);
-  const dismissXP = useUIStore((s) => s.dismissXP);
   const characterEvent = useUIStore((s) => s.characterEvent);
   const settings = useSettingsStore();
   const { quests } = useQuestStore();
@@ -62,10 +50,6 @@ export default function DashboardScreen() {
   const addHallEntry = useHallOfFameStore((s) => s.addEntry);
   const forged = useForgedSkillStore((s) => s.forged);
   const { greeting, period } = getTimeOfDayGreeting();
-  const equippedTitle =
-    settings.customTitleLabels[settings.equippedTitleId] ??
-    EQUIPPABLE_TITLES.find((t) => t.id === settings.equippedTitleId)?.label ??
-    'Humble Adventurer';
 
   useEffect(() => {
     settings.clearStaleWeeklyPath();
@@ -151,23 +135,13 @@ export default function DashboardScreen() {
         contract.requiredCount,
       )
     : null;
-  const viewport = getViewportSize(width);
   const useTwoColumns = width >= 980;
-  const stackHero = width < 820;
+  const compactRoom = width < 820;
   const shellPadding = getScreenHorizontalPadding(width);
   const topPadding = getScreenTopPadding(width, Platform.OS === 'web');
   const pageMaxWidth = getContentMaxWidth(width, 'wide');
-  const homeBlessing =
-    todayQuests.length > 0
-      ? `${todayQuests.length} small quest${todayQuests.length === 1 ? '' : 's'} await your light today.`
-      : 'The sanctuary is quiet. Choose one gentle quest when you are ready.';
-
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-      {showXPPopup && xpPopupData && (
-        <XPPopup stat={xpPopupData.stat} amount={xpPopupData.amount} onDone={dismissXP} />
-      )}
-
       {dailyReward && (
         <DailyRewardModal
           visible={!!dailyReward}
@@ -190,104 +164,13 @@ export default function DashboardScreen() {
       >
         <View style={[styles.pageShell, pageMaxWidth ? { maxWidth: pageMaxWidth } : null]}>
           <FadeIn delay={0} slideFrom="none" duration={650} scaleFrom={0.98}>
-            <View style={styles.heroPanel}>
-              <LinearGradient
-                colors={PERIOD_GRADIENTS[period] as [string, string]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={StyleSheet.absoluteFillObject}
-              />
-              <View pointerEvents="none" style={styles.heroPanelOrb} />
-
-              <View style={styles.panelTopRow}>
-                <View style={styles.panelTopCopy}>
-                  <Text style={styles.panelOverline}>Sanctuary Profile</Text>
-                  <Text style={styles.panelTitle}>Your Living Legend</Text>
-                </View>
-                <TouchableOpacity onPress={() => router.push('/modal')} style={styles.settingsBtn}>
-                  <Text style={styles.settingsIcon}>&#9881;</Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={[styles.header, stackHero && styles.headerStacked]}>
-                <PulseGlow
-                  color={STAT_COLORS[hero.dominantStat]}
-                  intensity="strong"
-                  style={styles.headerAvatarGlow}
-                >
-                  <TouchableOpacity onPress={() => router.push('/customize')} activeOpacity={0.86}>
-                    <NiceAvatarCharacter
-                      appearance={hero.characterAppearance}
-                      dominantStat={hero.dominantStat}
-                      classTier={hero.classTier}
-                      size={86}
-                      event={characterEvent}
-                    />
-                  </TouchableOpacity>
-                </PulseGlow>
-
-                <View style={[styles.headerInfo, stackHero && styles.headerInfoStacked]}>
-                  <Text style={styles.heroName}>{hero.name}</Text>
-                  <Text style={styles.heroTitle}>{equippedTitle}</Text>
-                  <Badge
-                    label={`${hero.className} • Tier ${hero.classTier}`}
-                    color={STAT_COLORS[hero.dominantStat]}
-                  />
-                  <Text style={styles.heroBlessing}>{greeting}</Text>
-                  <Text style={styles.heroSubBlessing}>{homeBlessing}</Text>
-                  <Text style={styles.heroLevel}>Hero Level {hero.heroLevel}</Text>
-                  <View style={styles.heroActions}>
-                    <TouchableOpacity
-                      onPress={() => router.push('/map' as Href)}
-                      style={styles.primaryAction}
-                      activeOpacity={0.85}
-                    >
-                      <Text style={styles.primaryActionText}>World Map</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => router.push('/customize')}
-                      style={styles.secondaryAction}
-                      activeOpacity={0.85}
-                    >
-                      <Text style={styles.secondaryActionText}>Atelier</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => router.push('/achievements' as Href)}
-                      style={styles.secondaryAction}
-                      activeOpacity={0.85}
-                    >
-                      <Text style={styles.secondaryActionText}>Trophies</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-
-                <View style={[styles.crestWrap, stackHero && styles.crestWrapStacked]}>
-                  <HeroCrest
-                    hero={hero}
-                    size={viewport === 'phone' ? 92 : 104}
-                    onPress={() => router.push('/customize')}
-                    variant="heroic"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.profileMetrics}>
-                <View style={styles.profileMetric}>
-                  <Text style={styles.profileMetricValue}>{hero.totalQuestsCompleted}</Text>
-                  <Text style={styles.profileMetricLabel}>Quests Honored</Text>
-                </View>
-                <View style={styles.profileMetricDivider} />
-                <View style={styles.profileMetric}>
-                  <Text style={styles.profileMetricValue}>{hero.currentStreak}</Text>
-                  <Text style={styles.profileMetricLabel}>Sacred Streak</Text>
-                </View>
-                <View style={styles.profileMetricDivider} />
-                <View style={styles.profileMetric}>
-                  <Text style={styles.profileMetricValue}>{unlockedSkillCount}</Text>
-                  <Text style={styles.profileMetricLabel}>Awakened Skills</Text>
-                </View>
-              </View>
-            </View>
+            <TavernRoom
+              hero={hero}
+              greeting={greeting}
+              period={period}
+              characterEvent={characterEvent}
+              compact={compactRoom}
+            />
           </FadeIn>
 
           <FadeIn delay={80} slideFrom="bottom">
@@ -442,187 +325,6 @@ const styles = StyleSheet.create({
     flex: 0.9,
     minWidth: 320,
     maxWidth: 420,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  headerStacked: {
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-  },
-  heroPanel: {
-    position: 'relative',
-    backgroundColor: colors.bgCard,
-    borderRadius: 28,
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
-    padding: spacing.lg,
-    marginBottom: spacing.lg,
-    overflow: 'hidden',
-    shadowColor: colors.gold,
-    shadowOpacity: 0.14,
-    shadowRadius: 26,
-    shadowOffset: { width: 0, height: 14 },
-    elevation: 5,
-  },
-  heroPanelOrb: {
-    position: 'absolute',
-    top: -30,
-    right: -22,
-    width: 136,
-    height: 136,
-    borderRadius: 68,
-    backgroundColor: colors.amethystGlow,
-  },
-  panelTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: spacing.md,
-  },
-  panelTopCopy: {
-    flex: 1,
-    minWidth: 0,
-  },
-  panelOverline: {
-    color: colors.textMuted,
-    fontSize: fontSize.xs,
-    textTransform: 'uppercase',
-    marginBottom: spacing.xs,
-    ...typography.headingWide,
-  },
-  panelTitle: {
-    color: colors.textPrimary,
-    fontSize: fontSize.xl,
-    fontWeight: '800',
-    ...typography.heading,
-  },
-  headerAvatarGlow: {
-    width: 112,
-    height: 112,
-  },
-  headerInfo: { flex: 1, minWidth: 0 },
-  headerInfoStacked: {
-    width: '100%',
-  },
-  crestWrap: {
-    alignItems: 'flex-end',
-  },
-  crestWrapStacked: {
-    width: '100%',
-    alignItems: 'flex-start',
-  },
-  heroName: {
-    color: colors.textPrimary,
-    fontSize: fontSize.hero,
-    fontWeight: '900',
-    marginBottom: 2,
-    ...typography.heading,
-  },
-  heroTitle: {
-    color: colors.gold,
-    fontSize: fontSize.sm,
-    fontStyle: 'italic',
-    marginBottom: spacing.xs,
-    ...typography.journal,
-  },
-  heroBlessing: {
-    color: colors.textAccent,
-    fontSize: fontSize.sm,
-    lineHeight: 18,
-    marginTop: spacing.sm,
-    ...typography.body,
-    fontWeight: '600',
-  },
-  heroSubBlessing: {
-    color: colors.textSecondary,
-    fontSize: fontSize.sm,
-    lineHeight: 18,
-    marginTop: spacing.xs,
-    ...typography.journal,
-  },
-  heroLevel: {
-    color: colors.textAccent,
-    fontSize: fontSize.sm,
-    marginTop: spacing.xs,
-    textTransform: 'uppercase',
-    ...typography.headingWide,
-  },
-  heroActions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginTop: spacing.md,
-  },
-  primaryAction: {
-    backgroundColor: colors.gold,
-    borderRadius: 999,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  primaryActionText: {
-    color: colors.bgPrimary,
-    fontSize: fontSize.sm,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    ...typography.headingWide,
-  },
-  secondaryAction: {
-    backgroundColor: 'rgba(15, 15, 26, 0.6)',
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  secondaryActionText: {
-    color: colors.textPrimary,
-    fontSize: fontSize.sm,
-    fontWeight: '600',
-    ...typography.headingWide,
-  },
-  settingsBtn: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    backgroundColor: 'rgba(15, 15, 26, 0.55)',
-  },
-  settingsIcon: { color: colors.textMuted, fontSize: 20 },
-  profileMetrics: {
-    flexDirection: 'row',
-    alignItems: 'stretch',
-    marginTop: spacing.md,
-    paddingTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.borderLight,
-  },
-  profileMetric: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  profileMetricDivider: {
-    width: 1,
-    backgroundColor: colors.border,
-    marginVertical: spacing.xs,
-  },
-  profileMetricValue: {
-    color: colors.goldBright,
-    fontSize: fontSize.xl,
-    fontWeight: '900',
-    ...typography.heading,
-  },
-  profileMetricLabel: {
-    color: colors.textMuted,
-    fontSize: fontSize.xs,
-    marginTop: 2,
-    textAlign: 'center',
-    ...typography.headingWide,
   },
   statsCard: {},
   sectionTitle: {
