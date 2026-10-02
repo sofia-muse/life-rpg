@@ -1,11 +1,18 @@
 import { XPThreshold } from '../types';
 
-// XP required per level follows: baseXP * level^1.5
-// Level 1: 100 XP, Level 2: 283, Level 3: 520, etc.
-const BASE_XP = 100;
+/**
+ * XP to finish a stat level: floor(14 * level^0.8).
+ * Tuned for 2–3 quests a day: a focused hero reaches hero level 5 in about two weeks,
+ * a balanced hero reaches level 15 in two to three months, and level 50 in about a year.
+ */
+const BASE_XP = 14;
+const XP_EXPONENT = 0.8;
+
+export const HERO_LEVEL_DOMINANT_WEIGHT = 0.6;
+export const HERO_LEVEL_OTHER_WEIGHT = 0.4;
 
 export function xpForLevel(level: number): number {
-  return Math.floor(BASE_XP * Math.pow(level, 1.5));
+  return Math.floor(BASE_XP * Math.pow(level, XP_EXPONENT));
 }
 
 export function totalXPForLevel(level: number): number {
@@ -28,10 +35,20 @@ export const XP_TABLE: XPThreshold[] = Array.from({ length: 100 }, (_, i) => {
 
 export const MAX_LEVEL = 100;
 
-// Hero level = average of all stat levels
+/**
+ * Hero level weights the highest stat at 60% and the mean of the others at 40%.
+ * A specialist still climbs; spreading XP across every stat still reaches a tier sooner.
+ */
 export function computeHeroLevel(statLevels: Record<string, number>): number {
   const levels = Object.values(statLevels);
-  return Math.floor(levels.reduce((a, b) => a + b, 0) / levels.length);
+  if (levels.length === 0) return 1;
+  const dominant = Math.max(...levels);
+  const othersMean =
+    levels.length > 1 ? (levels.reduce((sum, level) => sum + level, 0) - dominant) / (levels.length - 1) : 0;
+  return Math.max(
+    1,
+    Math.floor(HERO_LEVEL_DOMINANT_WEIGHT * dominant + HERO_LEVEL_OTHER_WEIGHT * othersMean),
+  );
 }
 
 // Get level from total XP

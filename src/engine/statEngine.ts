@@ -1,6 +1,9 @@
 import { StatBlock, StatName, STAT_NAMES, ClassTier } from '../types';
-import { levelFromXP } from '../config/xpTables';
+import { computeHeroLevel, levelFromXP } from '../config/xpTables';
 import { getTierForLevel, getClassName } from '../config/classes';
+
+/** A challenger becomes the class stat only after leading by a full level or 10% XP. */
+export const DOMINANT_STAT_XP_LEAD = 1.1;
 
 // Get levels for all stats from XP values
 export function getStatLevels(statXP: Record<StatName, number>): Record<StatName, number> {
@@ -11,11 +14,35 @@ export function getStatLevels(statXP: Record<StatName, number>): Record<StatName
   return levels as Record<StatName, number>;
 }
 
-// Calculate hero level as the average of all stat levels
+// Hero level blends the highest stat with the mean of the rest.
 export function calculateHeroLevel(statXP: Record<StatName, number>): number {
+  return computeHeroLevel(getStatLevels(statXP));
+}
+
+/**
+ * Class identity sticks until a challenger leads the anchored stat by a whole level
+ * or by at least 10% XP. Ties and small leads keep the current stat.
+ */
+export function resolveClassStat(
+  statXP: Record<StatName, number>,
+  currentStat: StatName,
+): StatName {
   const levels = getStatLevels(statXP);
-  const sum = Object.values(levels).reduce((a, b) => a + b, 0);
-  return Math.max(1, Math.floor(sum / STAT_NAMES.length));
+  const currentLevel = levels[currentStat];
+  const currentXp = statXP[currentStat];
+  const xpLead = Math.floor(currentXp * DOMINANT_STAT_XP_LEAD);
+  let resolved = currentStat;
+
+  for (const stat of STAT_NAMES) {
+    if (stat === currentStat) continue;
+    const leadsByLevel = levels[stat] >= currentLevel + 1;
+    const leadsByXp = statXP[stat] > currentXp && statXP[stat] >= xpLead;
+    if ((leadsByLevel || leadsByXp) && statXP[stat] > statXP[resolved]) {
+      resolved = stat;
+    }
+  }
+
+  return resolved;
 }
 
 // Determine the dominant stat (highest level, tiebreak by XP)

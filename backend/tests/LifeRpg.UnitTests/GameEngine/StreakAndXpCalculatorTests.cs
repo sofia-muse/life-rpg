@@ -48,13 +48,23 @@ public class XpCalculatorTests
     [Fact]
     public void CalculateXpReward_sums_base_streak_and_skill_bonus()
     {
-        // medium=25, streak x1.2 -> floor(25*0.2)=4, skill 5% -> floor(25*0.05)=1, total=30
-        var reward = XpCalculator.CalculateXpReward(QuestDifficulty.Medium, 1.2, 5);
+        // medium=25, hero x1.2 -> 5, quest x1.5 -> 12, skill 5% -> 1, total=43
+        var reward = XpCalculator.CalculateXpReward(QuestDifficulty.Medium, 1.2, 5, 1.5);
         reward.BaseXp.Should().Be(25);
-        reward.StreakBonus.Should().Be(4);
+        reward.HeroStreakBonus.Should().Be(5);
+        reward.QuestStreakBonus.Should().Be(12);
+        reward.StreakBonus.Should().Be(17);
         reward.SkillBonus.Should().Be(1);
-        reward.TotalXp.Should().Be(30);
+        reward.TotalXp.Should().Be(43);
     }
+
+    [Theory]
+    [InlineData(0, 1.0)]
+    [InlineData(3, 1.05)]
+    [InlineData(365, 1.5)]
+    [InlineData(400, 1.5)]
+    public void Hero_multiplier_caps_at_one_and_a_half(int days, double expected) =>
+        StreakCalculator.GetHeroMultiplier(days).Should().Be(expected);
 
     [Fact]
     public void CalculateXpReward_no_bonuses_is_base()
@@ -67,9 +77,9 @@ public class XpCalculatorTests
     [Fact]
     public void ApplyXp_detects_level_up_across_threshold()
     {
-        // 99 XP -> level 0; +1 -> 100 XP -> level 1.
-        var result = XpCalculator.ApplyXp(99, 1);
-        result.NewXp.Should().Be(100);
+        // 13 XP -> level 0; +1 -> 14 XP -> level 1.
+        var result = XpCalculator.ApplyXp(13, 1);
+        result.NewXp.Should().Be(14);
         result.OldLevel.Should().Be(0);
         result.NewLevel.Should().Be(1);
         result.DidLevelUp.Should().BeTrue();

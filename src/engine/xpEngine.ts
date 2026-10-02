@@ -3,23 +3,53 @@ import { levelFromXP, xpProgressInLevel } from '../config/xpTables';
 
 export interface XPReward {
   baseXP: number;
+  /** Hero-streak bonus plus quest-streak bonus. Both are computed from base XP. */
   streakBonus: number;
+  heroStreakBonus: number;
+  questStreakBonus: number;
   skillBonus: number;
   totalXP: number;
 }
 
-// Calculate XP reward for completing a quest
+/**
+ * Quest XP. Hero streak and quest streak each add a bonus from the base, and skill
+ * percent does too. They do not multiply each other.
+ */
 export function calculateXPReward(
   difficulty: QuestDifficulty,
-  streakMultiplier: number,
+  heroStreakMultiplier: number,
   skillBonusPercent: number = 0,
+  questStreakMultiplier: number = 1,
 ): XPReward {
   const baseXP = DIFFICULTY_XP[difficulty];
-  const streakBonus = Math.floor(baseXP * (streakMultiplier - 1));
+  const heroStreakBonus = bonusFromMultiplier(baseXP, heroStreakMultiplier);
+  const questStreakBonus = bonusFromMultiplier(baseXP, questStreakMultiplier);
+  const streakBonus = heroStreakBonus + questStreakBonus;
   const skillBonus = Math.floor(baseXP * (skillBonusPercent / 100));
   const totalXP = baseXP + streakBonus + skillBonus;
 
-  return { baseXP, streakBonus, skillBonus, totalXP };
+  return { baseXP, streakBonus, heroStreakBonus, questStreakBonus, skillBonus, totalXP };
+}
+
+/**
+ * Extra XP from a multiplier, taken from the base. `floor(base * multiplier) - base`
+ * avoids the binary error in `multiplier - 1` (1.2 - 1 is 0.1999…).
+ */
+function bonusFromMultiplier(baseXP: number, multiplier: number): number {
+  if (multiplier <= 1) return 0;
+  return Math.floor(baseXP * multiplier + 1e-9) - baseXP;
+}
+
+/** Slice of a full quest reward for one boss step. The last step keeps the remainder. */
+export function bossStepXpShare(totalXp: number, totalSteps: number, completedStep: number): number {
+  const steps = Math.max(1, totalSteps);
+  if (steps === 1) return totalXp;
+  const share = Math.floor(totalXp / steps);
+  const step = Math.min(Math.max(completedStep, 1), steps);
+  if (step === steps) {
+    return totalXp - share * (steps - 1);
+  }
+  return share;
 }
 
 // Apply XP to a stat and check for level up
@@ -56,7 +86,8 @@ export function getStatDisplayProgress(totalXP: number): {
   };
 }
 
-// Rest day XP reward
-export function getRestDayXP(hasSecondWindSkill: boolean): number {
-  return hasSecondWindSkill ? 15 : 10;
+/** Rest-day vitality XP. The skill sets the base; each vitality level adds 1. */
+export function getRestDayXP(hasSecondWindSkill: boolean, vitalityLevel = 0): number {
+  const base = hasSecondWindSkill ? 15 : 10;
+  return base + Math.max(0, Math.floor(vitalityLevel));
 }

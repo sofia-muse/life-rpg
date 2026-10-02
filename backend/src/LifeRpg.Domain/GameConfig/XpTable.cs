@@ -4,14 +4,17 @@ namespace LifeRpg.Domain.GameConfig;
 
 /// <summary>
 /// XP curve. Faithful port of the client's <c>src/config/xpTables.ts</c>.
-/// XP required for a level follows baseXP * level^1.5 (baseXP = 100).
+/// XP to finish a level is floor(14 * level^0.8), paced for a few real quests a day.
 /// </summary>
 public static class XpTable
 {
-    private const int BaseXp = 100;
+    private const int BaseXp = 14;
+    private const double XpExponent = 0.8;
     public const int MaxLevel = 100;
+    public const double HeroLevelDominantWeight = 0.6;
+    public const double HeroLevelOtherWeight = 0.4;
 
-    public static int XpForLevel(int level) => (int)Math.Floor(BaseXp * Math.Pow(level, 1.5));
+    public static int XpForLevel(int level) => (int)Math.Floor(BaseXp * Math.Pow(level, XpExponent));
 
     public static int TotalXpForLevel(int level)
     {
@@ -38,11 +41,16 @@ public static class XpTable
         return MaxLevel;
     }
 
-    /// <summary>Hero level = floor(average of stat levels), min 1 (matches client calculateHeroLevel).</summary>
+    /// <summary>
+    /// Hero level = floor(0.6 * highest stat level + 0.4 * mean of the other five), min 1.
+    /// </summary>
     public static int ComputeHeroLevel(StatBlock statLevels)
     {
-        var sum = statLevels.Values().Sum();
-        return Math.Max(1, sum / 6);
+        var values = statLevels.Values().ToArray();
+        var dominant = values.Max();
+        var othersMean = (values.Sum() - dominant) / 5d;
+        var blended = HeroLevelDominantWeight * dominant + HeroLevelOtherWeight * othersMean;
+        return Math.Max(1, (int)Math.Floor(blended));
     }
 
     public static (int CurrentLevelXp, int XpNeeded, double Progress) XpProgressInLevel(int totalXp)

@@ -10,6 +10,7 @@ import { buildTomorrowVow } from '../journalEngine';
 import { DEMO_FORGED_SKILLS, getDemoForgedSkills } from '../../config/demoForgedSkills';
 import { grantSagaOrChapterRewards } from '../../config/progressionRewards';
 import { SKILLS } from '../../config/skills';
+import { totalXPForLevel } from '../../config/xpTables';
 import { Quest, StatName } from '../../types';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useJournalStore } from '../../store/journalStore';
@@ -76,7 +77,7 @@ describe('post-L15 skill unlocks', () => {
   it('unlocks Mountain Breaker (str-4) at strength L25', () => {
     // Level 25 requires substantial XP — use a high value that crosses L25
     // xpForLevel = floor(100 * level^1.5); cumulative around L25 is large
-    const highXp = xp({ strength: 150_000 });
+    const highXp = xp({ strength: totalXPForLevel(25) });
     const unlocked = getNewlyUnlockedSkills(highXp, [
       'str-1',
       'str-2',
@@ -117,7 +118,8 @@ describe('quest evolution by path id', () => {
       daysCompleted: 3,
     });
     const evolved = applyQuestEvolution(quest);
-    expect(evolved.title).toBe('30 Push-ups');
+    expect(evolved.title).toBe('My Morning Push Set');
+    expect(evolved.description).toBe('A renamed daily');
     expect(evolved.evolutionPathId).toBe('pushups');
     expect(evolved.difficulty).toBe('medium');
   });

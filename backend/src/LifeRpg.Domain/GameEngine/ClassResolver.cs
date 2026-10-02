@@ -18,31 +18,18 @@ public static class ClassResolver
     public static ClassEvolution? CheckClassEvolution(
         StatBlock statXp,
         int currentTier,
-        string currentClassName)
+        string currentClassName,
+        StatName currentDominantStat)
     {
         var heroLevel = StatCalculator.CalculateHeroLevel(statXp);
-        var dominantStat = StatCalculator.GetDominantStat(statXp);
         var newTier = ClassDefinitions.GetTierForLevel(heroLevel);
 
-        // Tier up.
+        // Class changes automatically only when the tier rises. Same-tier shifts are a player respec.
         if (newTier > currentTier)
         {
+            var dominantStat = StatCalculator.ResolveClassStat(statXp, currentDominantStat);
             var classDef = ClassDefinitions.GetClassDefinition(dominantStat, newTier);
             return new ClassEvolution(currentClassName, classDef.Title, currentTier, newTier, dominantStat, classDef.Description);
-        }
-
-        // Dominant stat shift at the same tier (new class, same tier).
-        var newClassName = ClassDefinitions.GetClassName(dominantStat, currentTier);
-        if (newClassName != currentClassName)
-        {
-            var classDef = ClassDefinitions.GetClassDefinition(dominantStat, currentTier);
-            return new ClassEvolution(
-                currentClassName,
-                classDef.Title,
-                currentTier,
-                currentTier,
-                dominantStat,
-                $"Your focus has shifted — you are now a {classDef.Title}!");
         }
 
         return null;

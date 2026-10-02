@@ -10,6 +10,7 @@ import { getCurrentMilestone, daysUntilNextMilestone, isNewDay } from '../streak
 import { getSkillProgress } from '../skillEngine';
 import { getEvolutionNarrative } from '../classEngine';
 import { getSkillById } from '../../config/skills';
+import { totalXPForLevel } from '../../config/xpTables';
 
 const xp = (over: Partial<Record<StatName, number>> = {}): Record<StatName, number> => ({
   strength: 0,
@@ -70,15 +71,15 @@ describe('journalEngine', () => {
 
 describe('engine helpers', () => {
   it('getStatBlock returns per-stat levels', () => {
-    expect(getStatBlock(xp({ strength: 100 })).strength).toBe(1);
+    expect(getStatBlock(xp({ strength: totalXPForLevel(1) })).strength).toBe(1);
   });
 
   it('getTotalStatLevels sums levels', () => {
-    expect(getTotalStatLevels(xp({ strength: 100, vitality: 100 }))).toBe(2);
+    expect(getTotalStatLevels(xp({ strength: totalXPForLevel(1), vitality: totalXPForLevel(1) }))).toBe(2);
   });
 
   it('getStatDisplayProgress reports level and a 0..1 progress', () => {
-    const p = getStatDisplayProgress(150);
+    const p = getStatDisplayProgress(totalXPForLevel(1) + 10);
     expect(p.level).toBe(1);
     expect(p.progress).toBeGreaterThanOrEqual(0);
     expect(p.progress).toBeLessThanOrEqual(1);

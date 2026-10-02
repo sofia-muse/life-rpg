@@ -43,9 +43,34 @@ public static partial class SkillResolver
             && XpTable.LevelFromXp(statXp[stat]) >= skill.RequiredLevel;
     }
 
-    /// <summary>Total XP bonus percentage for a stat from AI-forged skills.</summary>
-    public static int GetForgedBonusForStat(StatName stat, IEnumerable<GeneratedSkill> forged) =>
-        forged.Where(s => s.Stat == stat).Sum(s => s.BonusPercent);
+    public const int ActiveForgedSkillSlots = 3;
+
+    /// <summary>
+    /// Forged skills that actually contribute. A null loadout equips the three newest.
+    /// An explicit list equips only those ids, still capped at three.
+    /// </summary>
+    public static IEnumerable<GeneratedSkill> SelectActiveForgedSkills(
+        IEnumerable<GeneratedSkill> forged,
+        IReadOnlyCollection<string>? activeIds)
+    {
+        var ordered = forged.OrderByDescending(s => s.CreatedAt).ThenBy(s => s.Id).ToList();
+        if (activeIds is null)
+        {
+            return ordered.Take(ActiveForgedSkillSlots);
+        }
+
+        var selected = new HashSet<string>(activeIds, StringComparer.OrdinalIgnoreCase);
+        return ordered
+            .Where(skill => selected.Contains(skill.Id.ToString()) || selected.Contains($"forged-{skill.Id}"))
+            .Take(ActiveForgedSkillSlots);
+    }
+
+    /// <summary>Total XP bonus percentage for a stat from the hero's equipped forged skills.</summary>
+    public static int GetForgedBonusForStat(
+        StatName stat,
+        IEnumerable<GeneratedSkill> forged,
+        IReadOnlyCollection<string>? activeIds = null) =>
+        SelectActiveForgedSkills(forged, activeIds).Where(s => s.Stat == stat).Sum(s => s.BonusPercent);
 
     private static IEnumerable<SkillEffectDefinition> GetEffectsForUnlockedSkills(IEnumerable<string> unlockedSkillIds) =>
         unlockedSkillIds.SelectMany(SkillDefinitions.GetEffects);
@@ -90,6 +115,16 @@ public static partial class SkillResolver
             .Select(effect => effect.Amount)
             .DefaultIfEmpty(10)
             .Max();
+
+    /// <summary>Rests per 7 days that keep the streak. Base is 1; recovery skills add more.</summary>
+    public static int GetRestDayAllowance(IEnumerable<string> unlockedSkillIds)
+    {
+        var restRites = GetEffectsForUnlockedSkills(unlockedSkillIds)
+            .OfType<SkillEffectDefinition.RestDayXp>()
+            .Count();
+        var freezes = GetWeeklyStreakFreezeAllowance(unlockedSkillIds);
+        return 1 + freezes + Math.Max(0, restRites - 1);
+    }
 
     public static double GetStreakRetentionRatio(IEnumerable<string> unlockedSkillIds) =>
         GetEffectsForUnlockedSkills(unlockedSkillIds)

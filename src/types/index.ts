@@ -128,6 +128,10 @@ export interface Hero {
   longestStreak: number;
   lastActiveDate: string;
   restDaysUsed: number;
+  /** IANA zone whose midnight starts the hero's day. Defaults to the device zone. */
+  timeZone?: string;
+  /** Calendar dates (YYYY-MM-DD) the hero spent as rest days, newest window only. */
+  recentRestDates?: string[];
   appearance: HeroAppearance;
   characterAppearance: CharacterAppearance;
   lastRewardDate: string;
@@ -239,7 +243,11 @@ export interface HeroStore {
   addXP: (stat: StatName, amount: number) => StatLevelUpResult | null;
   recordQuestCompletion: () => void;
   updateStreak: (unlockedSkillIds: string[]) => { usedStreakFreeze: boolean; rewardAvailable: boolean } | null;
-  takeRestDay: (unlockedSkillIds: string[]) => void;
+  takeRestDay: (
+    unlockedSkillIds: string[],
+  ) => { granted: boolean; preservedStreak: boolean; xp: number } | null;
+  respecClass: (stat: StatName) => void;
+  setTimeZone: (timeZone: string) => void;
   getStatProgress: (stat: StatName) => StatProgress;
 }
 

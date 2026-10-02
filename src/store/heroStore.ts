@@ -11,9 +11,10 @@ import {
   StatLevelUpResult,
   STAT_NAMES,
 } from '../types';
+import { calendarToday, daysBetween, deviceTimeZone } from '../engine/calendar';
 import { applyXP, getStatDisplayProgress } from '../engine/xpEngine';
-import { calculateHeroLevel, getDominantStat, getStatBlock } from '../engine/statEngine';
-import { checkClassEvolution } from '../engine/classEngine';
+import { calculateHeroLevel, getStatBlock } from '../engine/statEngine';
+import { checkClassEvolution, respecClassIdentity } from '../engine/classEngine';
 import {
   getNewlyUnlockedSkills,
   getRestDayXpReward,
@@ -22,6 +23,7 @@ import {
 } from '../engine/skillEngine';
 import { getClassName } from '../config/classes';
 import { shouldResetStreak, isNewDay, getStreakAfterBreak } from '../engine/streakEngine';
+import { resolveRestDay } from '../engine/restDay';
 import {
   getDefaultAppearance,
   getDefaultCharacterAppearance,
@@ -50,7 +52,11 @@ interface HeroState {
   } | null;
   recordQuestCompletion: () => void;
   updateStreak: (unlockedSkillIds: string[]) => { usedStreakFreeze: boolean; rewardAvailable: boolean } | null;
-  takeRestDay: (unlockedSkillIds: string[]) => void;
+  takeRestDay: (
+    unlockedSkillIds: string[],
+  ) => { granted: boolean; preservedStreak: boolean; xp: number } | null;
+  respecClass: (stat: StatName) => void;
+  setTimeZone: (timeZone: string) => void;
   getStatProgress: (stat: StatName) => StatProgress;
   updateAppearance: (
     patch: Partial<
@@ -75,7 +81,7 @@ const createEmptyStatXP = (): Record<StatName, number> => ({
   willpower: 0,
 });
 
-const today = () => new Date().toISOString().split('T')[0];
+const today = () => calendarToday(useHeroStore.getState().hero?.timeZone || deviceTimeZone());
 
 const freezeCooldownDays = 7;
 
@@ -112,12 +118,9 @@ function getDailyRewardForHero(hero: Hero): { xp: number; stat: StatName; bonusT
 
 function wasUsedRecently(lastUsedDate: string | undefined, days: number): boolean {
   if (!lastUsedDate) return false;
-
-  const last = new Date(lastUsedDate);
-  const now = new Date(today());
-  const diffMs = now.getTime() - last.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  return diffDays < days;
+  const gap = daysBetween(lastUsedDate, today());
+  if (gap === null) return false;
+  return gap >= 0 && gap < days;
 }
 
 function applyHeroXp(
@@ -128,7 +131,7 @@ function applyHeroXp(
 ): { updatedHero: Hero; levelResult: StatLevelUpResult | null } {
   const result = applyXP(hero.statXP[stat], amount);
   const newStatXP = { ...hero.statXP, [stat]: result.newXP };
-  const evolution = checkClassEvolution(newStatXP, hero.classTier, hero.className);
+  const evolution = checkClassEvolution(newStatXP, hero.classTier, hero.className, hero.dominantStat);
   const newSkills = getNewlyUnlockedSkills(newStatXP, unlockedSkillIds);
   const timestamp = new Date().toISOString();
 
@@ -137,7 +140,7 @@ function applyHeroXp(
     statXP: newStatXP,
     stats: getStatBlock(newStatXP),
     heroLevel: calculateHeroLevel(newStatXP),
-    dominantStat: getDominantStat(newStatXP),
+    dominantStat: evolution ? evolution.dominantStat : hero.dominantStat,
     className: evolution ? evolution.newClass : hero.className,
     classTier: evolution ? evolution.newTier : hero.classTier,
     lastActiveDate: today(),
@@ -200,6 +203,8 @@ export const useHeroStore = create<HeroState>()(
           longestStreak: 0,
           lastActiveDate: today(),
           restDaysUsed: 0,
+          timeZone: deviceTimeZone(),
+          recentRestDates: [],
           appearance: getDefaultAppearance(),
           characterAppearance: charAppearance || getDefaultCharacterAppearance(),
           lastRewardDate: '',
@@ -313,19 +318,65 @@ export const useHeroStore = create<HeroState>()(
 
       takeRestDay: (unlockedSkillIds) => {
         const { hero } = get();
-        if (!hero) return;
+        if (!hero) return null;
 
-        const restXP = getRestDayXpReward(unlockedSkillIds);
-        const { updatedHero } = applyHeroXp(hero, 'vitality', restXP, unlockedSkillIds);
+        const decision = resolveRestDay({
+          currentStreak: hero.currentStreak,
+          longestStreak: hero.longestStreak,
+          lastActiveDate: hero.lastActiveDate,
+          lastStreakFreezeDate: hero.lastStreakFreezeDate,
+          recentRestDates: hero.recentRestDates ?? [],
+          restDaysUsed: hero.restDaysUsed,
+          today: today(),
+          vitalityLevel: levelFromXP(hero.statXP.vitality),
+          unlockedSkillIds,
+          baseRestXp: getRestDayXpReward(unlockedSkillIds),
+        });
+        if (!decision.granted) {
+          return { granted: false, preservedStreak: false, xp: 0 };
+        }
+
+        const { updatedHero } = applyHeroXp(hero, 'vitality', decision.xp, unlockedSkillIds);
         const syncedHero: Hero = {
           ...updatedHero,
-          restDaysUsed: hero.restDaysUsed + 1,
+          currentStreak: decision.currentStreak,
+          longestStreak: decision.longestStreak,
+          lastActiveDate: decision.lastActiveDate,
+          lastStreakFreezeDate: decision.lastStreakFreezeDate,
+          recentRestDates: decision.recentRestDates,
+          restDaysUsed: decision.restDaysUsed,
         };
 
-        set({
-          hero: syncedHero,
-        });
+        set({ hero: syncedHero });
         syncHeroState(syncedHero);
+        return { granted: true, preservedStreak: decision.preservedStreak, xp: decision.xp };
+      },
+
+      respecClass: (stat) => {
+        const { hero } = get();
+        if (!hero) return;
+        const identity = respecClassIdentity(stat, hero.classTier);
+        const updatedHero: Hero = {
+          ...hero,
+          dominantStat: identity.dominantStat,
+          className: identity.className,
+          updatedAt: new Date().toISOString(),
+        };
+        set({ hero: updatedHero });
+        syncHeroState(updatedHero);
+      },
+
+      setTimeZone: (timeZone) => {
+        const { hero } = get();
+        const zone = timeZone.trim() || deviceTimeZone();
+        if (!hero) return;
+        const updatedHero: Hero = {
+          ...hero,
+          timeZone: zone,
+          updatedAt: new Date().toISOString(),
+        };
+        set({ hero: updatedHero });
+        syncHeroState(updatedHero);
       },
 
       getStatProgress: (stat) => {
@@ -451,6 +502,12 @@ export const useHeroStore = create<HeroState>()(
         if (state?.hero && state.hero.lastRewardDate === undefined) {
           state.hero.lastRewardDate = '';
           state.hero.totalLoginDays = 0;
+        }
+        if (state?.hero && !state.hero.timeZone) {
+          state.hero.timeZone = deviceTimeZone();
+        }
+        if (state?.hero && !state.hero.recentRestDates) {
+          state.hero.recentRestDates = [];
         }
         useHeroStore.setState({ _hasHydrated: true });
       },

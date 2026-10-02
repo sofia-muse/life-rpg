@@ -524,7 +524,11 @@ export const SKILLS: Skill[] = [
 
 // AI-forged skills are dynamic (per hero). They're registered here at runtime so the rest of the
 // skill system (lookup, XP-bonus resolution) treats them uniformly with the static catalog.
+export const ACTIVE_FORGED_SKILL_SLOTS = 3;
+
 let forgedSkills: Skill[] = [];
+/** Null means the first slots in registry order are active. An array is an explicit loadout. */
+let activeForgedSkillIds: string[] | null = null;
 
 function normalizeForgedSkill(skill: Skill): Skill {
   if (skill.effects?.length > 0) {
@@ -547,6 +551,48 @@ export function registerForgedSkills(skills: Skill[]): void {
 
 export function getForgedSkills(): Skill[] {
   return forgedSkills;
+}
+
+export function setActiveForgedSkillIds(ids: string[] | null): void {
+  activeForgedSkillIds = ids;
+}
+
+export function getActiveForgedSkillIds(): string[] | null {
+  return activeForgedSkillIds;
+}
+
+export function selectActiveForgedSkills<T extends { id: string }>(
+  skills: T[],
+  activeIds: string[] | null,
+): T[] {
+  if (activeIds === null) {
+    return skills.slice(0, ACTIVE_FORGED_SKILL_SLOTS);
+  }
+  const selected = new Set(activeIds);
+  return skills.filter((skill) => selected.has(skill.id)).slice(0, ACTIVE_FORGED_SKILL_SLOTS);
+}
+
+/** Returns an explicit loadout after toggling one skill. A full loadout ignores extra picks. */
+export function toggleActiveForgedSkill(
+  activeIds: string[] | null,
+  allIds: string[],
+  skillId: string,
+): string[] {
+  const current = selectActiveForgedSkills(
+    allIds.map((id) => ({ id })),
+    activeIds,
+  ).map((skill) => skill.id);
+  if (current.includes(skillId)) {
+    return current.filter((id) => id !== skillId);
+  }
+  if (current.length >= ACTIVE_FORGED_SKILL_SLOTS) {
+    return current;
+  }
+  return [...current, skillId];
+}
+
+export function getActiveForgedSkills(): Skill[] {
+  return selectActiveForgedSkills(forgedSkills, activeForgedSkillIds);
 }
 
 export function getSkillsByCategory(category: string): Skill[] {

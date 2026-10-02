@@ -158,7 +158,7 @@ describe('gameplayStore local quest flow', () => {
     const first = await useGameplayStore.getState().completeQuest('boss-1');
     const second = await useGameplayStore.getState().completeQuest('boss-1');
 
-    expect(first).toMatchObject({ completed: false, stepAdvancedOnly: true, xpAwarded: 0 });
+    expect(first).toMatchObject({ completed: false, stepAdvancedOnly: true, xpAwarded: 25 });
     expect(useQuestStore.getState().getQuestById('boss-1')?.completedSteps).toBe(2);
     expect(second).toMatchObject({ completed: true, stepAdvancedOnly: false });
     expect(second?.xpAwarded).toBeGreaterThan(0);

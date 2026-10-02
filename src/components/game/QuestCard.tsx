@@ -4,6 +4,7 @@ import { Quest, STAT_COLORS, STAT_ICONS } from '../../types';
 import { colors, spacing, fontSize, radius } from '../../config/theme';
 import { Card } from '../layout/Card';
 import { getQuestEvolutionState, getBossSagaState } from '../../engine/questProgression';
+import { useSkillStore } from '../../store/skillStore';
 import { getQuestDisplayTitle, getQuestDisplayDescription } from '../../config/questFlavor';
 
 interface Props {
@@ -23,7 +24,11 @@ export function QuestCard({
 }: Props) {
   const statColor = STAT_COLORS[quest.stat];
   const scaleAnim = useRef(new Animated.Value(1)).current;
-  const evolution = getQuestEvolutionState(quest);
+  const unlockedSkills = useSkillStore((s) => s.unlockedSkills);
+  const evolution = getQuestEvolutionState(
+    quest,
+    unlockedSkills.map((skill) => skill.skillId),
+  );
   const saga = getBossSagaState(quest);
   const displayTitle = getQuestDisplayTitle(quest, useFantasyNames);
   const displayDescription = getQuestDisplayDescription(quest, useFantasyNames);

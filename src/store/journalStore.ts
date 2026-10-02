@@ -4,6 +4,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { generateId } from '../utils/id';
 import { JournalEntry } from '../types';
 import { syncManager } from '../api/syncManager';
+import { calendarToday, deviceTimeZone } from '../engine/calendar';
+import { useHeroStore } from './heroStore';
 
 interface JournalState {
   entries: JournalEntry[];
@@ -16,7 +18,7 @@ interface JournalState {
   clearEntries: () => void;
 }
 
-const today = () => new Date().toISOString().split('T')[0];
+const today = () => calendarToday(useHeroStore.getState().hero?.timeZone || deviceTimeZone());
 
 const emptyXpGained = () => ({
   strength: 0,

@@ -1,5 +1,6 @@
 using FluentAssertions;
 using LifeRpg.Domain.Enums;
+using LifeRpg.Domain.GameConfig;
 using LifeRpg.Domain.GameEngine;
 using LifeRpg.Domain.ValueObjects;
 using Xunit;
@@ -25,7 +26,7 @@ public class StatCalculatorTests
     [Fact]
     public void GetStatLevels_maps_each_stat_xp_to_level()
     {
-        var levels = StatCalculator.GetStatLevels(new StatBlock { Strength = 100, Vitality = 0 });
+        var levels = StatCalculator.GetStatLevels(new StatBlock { Strength = XpTable.TotalXpForLevel(1), Vitality = 0 });
         levels.Strength.Should().Be(1);
         levels.Vitality.Should().Be(0);
     }
@@ -36,8 +37,7 @@ public class SkillResolverTests
     [Fact]
     public void GetNewlyUnlockedSkills_unlocks_first_strength_skill_at_level_3()
     {
-        // 901 total XP -> strength level 3 -> unlocks str-1 (req 3) but not str-2 (req 7).
-        var statXp = new StatBlock { Strength = 901 };
+        var statXp = new StatBlock { Strength = XpTable.TotalXpForLevel(3) };
         var unlocked = SkillResolver.GetNewlyUnlockedSkills(statXp, new HashSet<string>());
         unlocked.Select(s => s.Id).Should().Contain("str-1");
         unlocked.Select(s => s.Id).Should().NotContain(new[] { "str-2", "str-3" });
@@ -46,7 +46,7 @@ public class SkillResolverTests
     [Fact]
     public void GetNewlyUnlockedSkills_skips_already_unlocked()
     {
-        var statXp = new StatBlock { Strength = 901 };
+        var statXp = new StatBlock { Strength = XpTable.TotalXpForLevel(3) };
         var unlocked = SkillResolver.GetNewlyUnlockedSkills(statXp, new HashSet<string> { "str-1" });
         unlocked.Select(s => s.Id).Should().NotContain("str-1");
     }
@@ -55,11 +55,11 @@ public class SkillResolverTests
     public void CrossStat_skill_requires_both_stats()
     {
         // Battle Mage (cross-1): strength>=5 AND intelligence>=5.
-        var onlyStrength = new StatBlock { Strength = 2819 }; // level 5
+        var onlyStrength = new StatBlock { Strength = XpTable.TotalXpForLevel(5) };
         SkillResolver.GetNewlyUnlockedSkills(onlyStrength, new HashSet<string>())
             .Select(s => s.Id).Should().NotContain("cross-1");
 
-        var both = new StatBlock { Strength = 2819, Intelligence = 2819 };
+        var both = new StatBlock { Strength = XpTable.TotalXpForLevel(5), Intelligence = XpTable.TotalXpForLevel(5) };
         SkillResolver.GetNewlyUnlockedSkills(both, new HashSet<string>())
             .Select(s => s.Id).Should().Contain("cross-1");
     }
@@ -139,9 +139,8 @@ public class ClassResolverTests
     [Fact]
     public void TierUp_when_hero_level_crosses_threshold()
     {
-        // All stats level 5 -> hero level 5 -> tier 2.
-        var statXp = new StatBlock(2819);
-        var evo = ClassResolver.CheckClassEvolution(statXp, currentTier: 1, "Apprentice Warrior");
+        var statXp = new StatBlock(XpTable.TotalXpForLevel(5));
+        var evo = ClassResolver.CheckClassEvolution(statXp, currentTier: 1, "Apprentice Warrior", StatName.Strength);
         evo.Should().NotBeNull();
         evo!.NewTier.Should().Be(2);
         evo.OldTier.Should().Be(1);
@@ -149,15 +148,24 @@ public class ClassResolverTests
     }
 
     [Fact]
-    public void DominantStat_shift_changes_class_at_same_tier()
+    public void Same_tier_stat_shift_does_not_change_class()
     {
-        // Low levels (tier 1) but intelligence dominant -> Apprentice Scholar.
         var statXp = new StatBlock { Intelligence = 200 };
-        var evo = ClassResolver.CheckClassEvolution(statXp, currentTier: 1, "Apprentice Warrior");
+        ClassResolver.CheckClassEvolution(statXp, currentTier: 1, "Apprentice Warrior", StatName.Strength)
+            .Should().BeNull();
+    }
+
+    [Fact]
+    public void Tier_up_follows_a_stat_that_leads_by_a_level()
+    {
+        var statXp = new StatBlock(XpTable.TotalXpForLevel(5))
+        {
+            Intelligence = XpTable.TotalXpForLevel(6),
+        };
+        var evo = ClassResolver.CheckClassEvolution(statXp, currentTier: 1, "Apprentice Warrior", StatName.Strength);
         evo.Should().NotBeNull();
-        evo!.NewTier.Should().Be(1);
-        evo.OldTier.Should().Be(1);
-        evo.NewClass.Should().Be("Apprentice Scholar");
+        evo!.NewTier.Should().Be(2);
+        evo.NewClass.Should().Be("Scholar");
         evo.DominantStat.Should().Be(StatName.Intelligence);
     }
 
@@ -165,7 +173,7 @@ public class ClassResolverTests
     public void No_evolution_when_tier_and_class_unchanged()
     {
         var statXp = new StatBlock { Strength = 200 };
-        ClassResolver.CheckClassEvolution(statXp, currentTier: 1, "Apprentice Warrior")
+        ClassResolver.CheckClassEvolution(statXp, currentTier: 1, "Apprentice Warrior", StatName.Strength)
             .Should().BeNull();
     }
 }

@@ -22,12 +22,20 @@ function buildQuest(overrides: Partial<Quest>): Quest {
 }
 
 describe('questProgression', () => {
-  it('upgrades supported daily quests when they hit the next completion threshold', () => {
+  it('raises difficulty without rewriting the player title', () => {
     const evolved = applyQuestEvolution(buildQuest({ daysCompleted: 3 }));
 
-    expect(evolved.title).toBe('30 Push-ups');
+    expect(evolved.title).toBe('20 Push-ups');
+    expect(evolved.description).toBe('Complete 20 push-ups to build upper body strength.');
     expect(evolved.difficulty).toBe('medium');
     expect(evolved.xpReward).toBe(25);
+    expect(evolved.evolutionPathId).toBe('pushups');
+  });
+
+  it('holds the rank when the next difficulty is still locked', () => {
+    const evolved = applyQuestEvolution(buildQuest({ daysCompleted: 14 }));
+    expect(evolved.difficulty).toBe('medium');
+    expect(evolved.title).toBe('20 Push-ups');
   });
 
   it('reports the next evolution stage for supported daily quests', () => {

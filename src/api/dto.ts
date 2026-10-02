@@ -44,6 +44,9 @@ export interface ApiHero {
     weeklyRewardWeekKey: string | null;
     weeklyRewardTitle: string | null;
     weeklyRewardBadge: string | null;
+    timeZone?: string | null;
+    activeForgedSkillIds?: string[] | null;
+    recentRestDates?: string[];
   };
 }
 
@@ -65,4 +68,5 @@ export interface ApiQuest {
   daysCompleted: number;
   totalSteps: number | null;
   completedSteps: number | null;
+  evolutionPathId?: string | null;
 }

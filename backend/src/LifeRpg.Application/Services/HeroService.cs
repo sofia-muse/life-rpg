@@ -60,6 +60,13 @@ public class HeroService
             hero.StatXp[stat] = 50;
         }
 
+        if (req.FocusStats.Count > 0)
+        {
+            hero.DominantStat = req.FocusStats[0];
+            hero.ClassTier = 1;
+            hero.ClassName = ClassDefinitions.GetClassName(hero.DominantStat, hero.ClassTier);
+        }
+
         RecomputeProgression(hero);
         // LastActiveDate stays null so the first quest completion starts the streak at 1.
 
@@ -181,14 +188,22 @@ public class HeroService
                 .FirstOrDefaultAsync(h => h.UserId == userId, ct)
             : Task.FromResult<Hero?>(null);
 
-    /// <summary>Recomputes derived progression (levels, hero level, dominant stat, class) from stat XP.</summary>
+    /// <summary>
+    /// Recomputes levels and hero level from stat XP. The class stays put until the tier rises,
+    /// and then it follows the stat that actually leads the current class stat.
+    /// </summary>
     internal static void RecomputeProgression(Hero hero)
     {
         hero.Stats = StatCalculator.GetStatBlock(hero.StatXp);
         hero.HeroLevel = StatCalculator.CalculateHeroLevel(hero.StatXp);
-        hero.DominantStat = StatCalculator.GetDominantStat(hero.StatXp);
-        hero.ClassTier = ClassDefinitions.GetTierForLevel(hero.HeroLevel);
-        hero.ClassName = ClassDefinitions.GetClassName(hero.DominantStat, hero.ClassTier);
+        var newTier = ClassDefinitions.GetTierForLevel(hero.HeroLevel);
+        if (newTier > hero.ClassTier)
+        {
+            var classStat = StatCalculator.ResolveClassStat(hero.StatXp, hero.DominantStat);
+            hero.DominantStat = classStat;
+            hero.ClassTier = newTier;
+            hero.ClassName = ClassDefinitions.GetClassName(classStat, newTier);
+        }
     }
 
     private static string WeekKey(DateOnly date)

@@ -65,7 +65,8 @@ public record CreateQuestRequest(
     QuestType Type,
     QuestDifficulty Difficulty,
     StatName Stat,
-    int? TotalSteps);
+    int? TotalSteps,
+    string? EvolutionPathId = null);
 
 public record QuestDto(
     Guid Id,
@@ -84,7 +85,8 @@ public record QuestDto(
     int BestStreak,
     int DaysCompleted,
     int? TotalSteps,
-    int? CompletedSteps);
+    int? CompletedSteps,
+    string? EvolutionPathId = null);
 
 // ─── Quest completion result (mirrors the client's StatLevelUpResult + XPReward) ───
 public record SkillDto(string Id, string Name, string Description, string Category, string Icon, string Effect);
