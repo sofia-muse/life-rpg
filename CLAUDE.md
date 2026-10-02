@@ -85,7 +85,7 @@ dotnet test                        # 59 tests (unit + WebApplicationFactory inte
 ASPNETCORE_ENVIRONMENT=Development dotnet run --project src/LifeRpg.Api   # Swagger at /swagger; SQLite locally
 dotnet ef migrations add <Name> -p src/LifeRpg.Infrastructure -s src/LifeRpg.Infrastructure -o Persistence/Migrations
 ```
-**Total: 119 tests** (60 frontend + 59 backend), all green.
+**Total: 182 tests** (110 frontend + 72 backend), all green.
 
 ## Conventions
 

@@ -48,3 +48,6 @@ coverage/
 # generated native folders
 /ios
 /android
+
+# Local smoke captures (use docs/demo.png in README)
+/artifacts/
