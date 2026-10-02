@@ -12,7 +12,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
 import { apiFetch } from './client';
 import { ApiHero, ApiQuest } from './dto';
-import { mapApiHero, mapApiQuest } from './mappers';
+import { mapApiHero, mapApiJournalEntry, mapApiQuest } from './mappers';
 import { env } from '../config/env';
 import { generateId } from '../utils/id';
 
@@ -153,14 +153,11 @@ class SyncManager {
 
     if (Array.isArray(changes.journal) && changes.journal.length > 0) {
       const { useJournalStore } = require('../store/journalStore') as typeof import('../store/journalStore');
-      // Server journal is authoritative for matching dates — merge by id/date
       for (const raw of changes.journal as Array<Record<string, unknown>>) {
-        const date = String(raw.date ?? '');
-        if (!date) continue;
-        useJournalStore.getState().updateTodayEntry({
-          narrative: typeof raw.narrative === 'string' ? raw.narrative : undefined,
-          milestones: Array.isArray(raw.milestones) ? (raw.milestones as string[]) : undefined,
-        });
+        const entry = mapApiJournalEntry(raw);
+        if (entry) {
+          useJournalStore.getState().applyServerJournalEntry(entry);
+        }
       }
     }
   }
