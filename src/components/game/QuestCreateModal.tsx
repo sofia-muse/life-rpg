@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -28,6 +28,14 @@ import { env } from '../../config/env';
 import { useSkillStore } from '../../store/skillStore';
 import { isDifficultyAllowed } from '../../engine/skillEngine';
 
+function clampDifficulty(
+  next: QuestDifficulty,
+  nextStat: StatName,
+  unlockedSkillIds: string[],
+): QuestDifficulty {
+  return isDifficultyAllowed(next, nextStat, unlockedSkillIds) ? next : 'medium';
+}
+
 export function QuestCreateModal() {
   const { showQuestCreateModal, setQuestCreateModal } = useUIStore();
   const { addQuest } = useQuestStore();
@@ -51,13 +59,10 @@ export function QuestCreateModal() {
   const [bossPlanError, setBossPlanError] = useState<string | null>(null);
   const canUseBossPlanner = aiSkillsEnabled && !env.demoMode && authenticated;
 
-  useEffect(() => {
-    if (!isDifficultyAllowed(difficulty, stat, unlockedSkillIds)) {
-      setDifficulty('medium');
-    }
-    // unlockedSkills is the stable store reference; ids derived above.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- ids content tracked via unlockedSkills
-  }, [stat, difficulty, unlockedSkills]);
+  const selectStat = (nextStat: StatName) => {
+    setStat(nextStat);
+    setDifficulty((current) => clampDifficulty(current, nextStat, unlockedSkillIds));
+  };
 
   const reset = () => {
     setTitle('');
@@ -119,8 +124,8 @@ export function QuestCreateModal() {
       const plan = await guidanceApi.planBossQuest(goal, stat);
       setTitle(plan.title);
       setDescription(plan.description);
-      setDifficulty(plan.difficulty);
       setStat(plan.stat);
+      setDifficulty(clampDifficulty(plan.difficulty, plan.stat, unlockedSkillIds));
       setTotalSteps(String(plan.totalSteps));
       setBossSteps(plan.steps);
       setBossSagaTitle(plan.sagaTitle);
@@ -244,7 +249,7 @@ export function QuestCreateModal() {
                       backgroundColor: `${STAT_COLORS[s]}20`,
                     },
                   ]}
-                  onPress={() => setStat(s)}
+                  onPress={() => selectStat(s)}
                 >
                   <Text style={styles.chipIcon}>{STAT_ICONS[s]}</Text>
                   <Text style={[styles.chipText, stat === s && { color: STAT_COLORS[s] }]}>

@@ -66,7 +66,8 @@ export default function QuestsScreen() {
 
   const handleAddFromTemplate = useCallback(
     (template: QuestTemplate) => {
-      if (!isDifficultyAllowed(template.difficulty, template.stat, unlockedSkillIds)) {
+      const skillIds = unlockedSkills.map((skill) => skill.skillId);
+      if (!isDifficultyAllowed(template.difficulty, template.stat, skillIds)) {
         return;
       }
       addQuest({
@@ -84,7 +85,7 @@ export default function QuestsScreen() {
           : {}),
       });
     },
-    [addQuest, unlockedSkillIds],
+    [addQuest, unlockedSkills],
   );
 
   const handleComplete = useCallback(
