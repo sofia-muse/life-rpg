@@ -30,7 +30,6 @@ export function useCharacterAnimations({
   const breathScale = useRef(new Animated.Value(1)).current;
   const sway = useRef(new Animated.Value(0)).current;
   const glanceShift = useRef(new Animated.Value(0)).current;
-  const blinkSquash = useRef(new Animated.Value(1)).current;
   const bounceY = useRef(new Animated.Value(0)).current;
   const shakeX = useRef(new Animated.Value(0)).current;
   const reactionTilt = useRef(new Animated.Value(0)).current;
@@ -137,29 +136,16 @@ export function useCharacterAnimations({
 
     const blink = () => {
       if (cancelled) return;
-      Animated.sequence([
-        Animated.timing(blinkSquash, {
-          toValue: 0.68,
-          duration: 90,
-          useNativeDriver: true,
-        }),
-        Animated.delay(520),
-        Animated.timing(blinkSquash, {
-          toValue: 1,
-          duration: 180,
-          useNativeDriver: true,
-        }),
-      ]).start();
       onBlinkRef.current?.();
-      blinkTimer = setTimeout(blink, 1200 + Math.random() * 700);
+      blinkTimer = setTimeout(blink, 2200 + Math.random() * 1800);
     };
 
-    blinkTimer = setTimeout(blink, 280 + Math.random() * 400);
+    blinkTimer = setTimeout(blink, 600 + Math.random() * 800);
     return () => {
       cancelled = true;
       if (blinkTimer) clearTimeout(blinkTimer);
     };
-  }, [blinkSquash, reduceMotion]);
+  }, [reduceMotion]);
 
   useEffect(() => {
     if (reduceMotion || event === 'idle') {
@@ -211,7 +197,6 @@ export function useCharacterAnimations({
   return {
     breathY,
     breathScale,
-    blinkSquash,
     bounceY,
     shakeX,
     punchScale,

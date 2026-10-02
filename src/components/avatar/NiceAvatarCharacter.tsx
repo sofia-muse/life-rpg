@@ -38,7 +38,7 @@ export function NiceAvatarCharacter({
   const onBlink = useCallback(() => {
     setBlinking(true);
     if (blinkTimer.current) clearTimeout(blinkTimer.current);
-    blinkTimer.current = setTimeout(() => setBlinking(false), 700);
+    blinkTimer.current = setTimeout(() => setBlinking(false), 160);
   }, []);
 
   const anims = useCharacterAnimations({
@@ -187,7 +187,6 @@ export function NiceAvatarCharacter({
               { rotate: anims.bodyRotate },
               { rotate: anims.reactionRotate },
               { scale: anims.breathScale },
-              { scaleY: anims.blinkSquash },
               { scale: anims.punchScale },
             ],
           }}
