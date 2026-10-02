@@ -1,7 +1,8 @@
 import { StatName } from '../../types';
-import { calculateHeroLevel, getDominantStat, getStatLevels, checkTierUp } from '../statEngine';
+import { calculateHeroLevel, getDominantStat, getStatLevels, checkTierUp, resolveClassStat } from '../statEngine';
 import {
   getStreakMultiplier,
+  getHeroStreakMultiplier,
   shouldResetStreak,
   getStreakAfterBreak,
   getNextMilestone,
@@ -16,7 +17,8 @@ import {
   getWeeklyStreakFreezeAllowance,
   isSkillUnlockable,
 } from '../skillEngine';
-import { checkClassEvolution } from '../classEngine';
+import { checkClassEvolution, respecClassIdentity } from '../classEngine';
+import { totalXPForLevel } from '../../config/xpTables';
 import { getSkillById } from '../../config/skills';
 
 const xp = (over: Partial<Record<StatName, number>> = {}): Record<StatName, number> => ({
@@ -40,9 +42,16 @@ describe('statEngine', () => {
   });
 
   it('getStatLevels maps XP to per-stat levels', () => {
-    const levels = getStatLevels(xp({ strength: 100 }));
+    const levels = getStatLevels(xp({ strength: totalXPForLevel(1) }));
     expect(levels.strength).toBe(1);
     expect(levels.vitality).toBe(0);
+  });
+
+  it('resolveClassStat keeps a small lead and yields to a full level', () => {
+    expect(resolveClassStat(xp({ strength: 200, intelligence: 210 }), 'strength')).toBe('strength');
+    expect(resolveClassStat(xp({ strength: totalXPForLevel(5), intelligence: totalXPForLevel(6) }), 'strength')).toBe(
+      'intelligence',
+    );
   });
 
   it('checkTierUp returns a tier when hero level crosses a threshold', () => {
@@ -64,6 +73,13 @@ describe('streakEngine', () => {
     expect(getStreakMultiplier(days)).toBe(mult);
   });
 
+  it('hero streak multiplier caps at 1.5', () => {
+    expect(getHeroStreakMultiplier(0)).toBe(1);
+    expect(getHeroStreakMultiplier(3)).toBe(1.05);
+    expect(getHeroStreakMultiplier(365)).toBe(1.5);
+    expect(getHeroStreakMultiplier(400)).toBe(1.5);
+  });
+
   it('shouldResetStreak is true only when more than one day is missed', () => {
     expect(shouldResetStreak('2026-06-04', '2026-06-04')).toBe(false);
     expect(shouldResetStreak('2026-06-03', '2026-06-04')).toBe(false);
@@ -83,23 +99,23 @@ describe('streakEngine', () => {
 
 describe('skillEngine', () => {
   it('unlocks the first strength skill at level 3', () => {
-    const unlocked = getNewlyUnlockedSkills(xp({ strength: 901 }), []);
+    const unlocked = getNewlyUnlockedSkills(xp({ strength: totalXPForLevel(3) }), []);
     const ids = unlocked.map((s) => s.id);
     expect(ids).toContain('str-1');
     expect(ids).not.toContain('str-2');
   });
 
   it('skips already-unlocked skills', () => {
-    const unlocked = getNewlyUnlockedSkills(xp({ strength: 901 }), ['str-1']);
+    const unlocked = getNewlyUnlockedSkills(xp({ strength: totalXPForLevel(3) }), ['str-1']);
     expect(unlocked.map((s) => s.id)).not.toContain('str-1');
   });
 
   it('cross-stat skill requires both stats', () => {
-    expect(getNewlyUnlockedSkills(xp({ strength: 2819 }), []).map((s) => s.id)).not.toContain(
+    expect(getNewlyUnlockedSkills(xp({ strength: totalXPForLevel(5) }), []).map((s) => s.id)).not.toContain(
       'cross-1',
     );
     expect(
-      getNewlyUnlockedSkills(xp({ strength: 2819, intelligence: 2819 }), []).map((s) => s.id),
+      getNewlyUnlockedSkills(xp({ strength: totalXPForLevel(5), intelligence: totalXPForLevel(5) }), []).map((s) => s.id),
     ).toContain('cross-1');
   });
 
@@ -130,38 +146,55 @@ describe('skillEngine', () => {
 
   it('isSkillUnlockable matches the unlock list', () => {
     const ironGrip = getSkillById('str-1')!;
-    expect(isSkillUnlockable(ironGrip, xp({ strength: 901 }))).toBe(true);
-    expect(isSkillUnlockable(ironGrip, xp({ strength: 100 }))).toBe(false);
+    expect(isSkillUnlockable(ironGrip, xp({ strength: totalXPForLevel(3) }))).toBe(true);
+    expect(isSkillUnlockable(ironGrip, xp({ strength: totalXPForLevel(2) }))).toBe(false);
   });
 });
 
 describe('classEngine', () => {
   it('tiers up when hero level crosses a threshold', () => {
+    const levelFive = totalXPForLevel(5);
     const evo = checkClassEvolution(
       xp({
-        strength: 2819,
-        vitality: 2819,
-        intelligence: 2819,
-        charisma: 2819,
-        dexterity: 2819,
-        willpower: 2819,
+        strength: levelFive,
+        vitality: levelFive,
+        intelligence: levelFive,
+        charisma: levelFive,
+        dexterity: levelFive,
+        willpower: levelFive,
       }),
       1,
       'Apprentice Warrior',
+      'strength',
     );
-    expect(evo).toMatchObject({ newTier: 2, newClass: 'Warrior' });
+    expect(evo).toMatchObject({ newTier: 2, newClass: 'Warrior', dominantStat: 'strength' });
   });
 
-  it('changes class on dominant-stat shift at the same tier', () => {
-    const evo = checkClassEvolution(xp({ intelligence: 200 }), 1, 'Apprentice Warrior');
-    expect(evo).toMatchObject({
-      newTier: 1,
-      newClass: 'Apprentice Scholar',
+  it('keeps the class at the same tier when another stat pulls ahead', () => {
+    expect(checkClassEvolution(xp({ intelligence: 200 }), 1, 'Apprentice Warrior', 'strength')).toBeNull();
+  });
+
+  it('switches class on tier-up only after the new stat leads by a level', () => {
+    const evo = checkClassEvolution(
+      xp({
+        strength: totalXPForLevel(5),
+        vitality: totalXPForLevel(5),
+        intelligence: totalXPForLevel(6),
+        charisma: totalXPForLevel(5),
+        dexterity: totalXPForLevel(5),
+        willpower: totalXPForLevel(5),
+      }),
+      1,
+      'Apprentice Warrior',
+      'strength',
+    );
+    expect(evo).toMatchObject({ newTier: 2, newClass: 'Scholar', dominantStat: 'intelligence' });
+  });
+
+  it('respecs to a chosen stat without waiting for a tier', () => {
+    expect(respecClassIdentity('intelligence', 1)).toEqual({
       dominantStat: 'intelligence',
+      className: 'Apprentice Scholar',
     });
-  });
-
-  it('returns null when tier and class are unchanged', () => {
-    expect(checkClassEvolution(xp({ strength: 200 }), 1, 'Apprentice Warrior')).toBeNull();
   });
 });

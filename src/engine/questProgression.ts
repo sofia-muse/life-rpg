@@ -1,4 +1,5 @@
 import { DIFFICULTY_XP, Quest, QuestDifficulty } from '../types';
+import { isDifficultyAllowed } from './skillEngine';
 
 interface EvolutionStage {
   unlockAt: number;
@@ -290,27 +291,31 @@ function getEvolutionPath(quest: Quest): EvolutionPath | null {
   );
 }
 
-function getCurrentStageIndex(path: EvolutionPath, quest: Quest): number {
-  const byTitle = path.stages.findIndex((stage) => stage.title === quest.title);
-  if (byTitle !== -1) return byTitle;
-
-  // Custom/renamed titles: infer the highest stage the hero has already unlocked by completions.
+/**
+ * Highest stage the completion count has opened whose difficulty the hero may use.
+ * A locked difficulty stops the climb; later completions catch up once the skill opens it.
+ */
+function getEffectiveStageIndex(path: EvolutionPath, quest: Quest, unlockedSkillIds: string[]): number {
   let index = 0;
   for (let i = 0; i < path.stages.length; i++) {
-    if (quest.daysCompleted >= path.stages[i].unlockAt) {
-      index = i;
-    }
+    const stage = path.stages[i];
+    if (quest.daysCompleted < stage.unlockAt) break;
+    if (!isDifficultyAllowed(stage.difficulty, quest.stat, unlockedSkillIds)) break;
+    index = i;
   }
   return index;
 }
 
-export function getQuestEvolutionState(quest: Quest): QuestEvolutionState | null {
+export function getQuestEvolutionState(
+  quest: Quest,
+  unlockedSkillIds: string[] = [],
+): QuestEvolutionState | null {
   if (quest.type !== 'daily') return null;
 
   const path = getEvolutionPath(quest);
   if (!path) return null;
 
-  const currentStageIndex = getCurrentStageIndex(path, quest);
+  const currentStageIndex = getEffectiveStageIndex(path, quest, unlockedSkillIds);
   const currentStage = path.stages[currentStageIndex];
   const nextStage = path.stages[currentStageIndex + 1];
 
@@ -324,46 +329,20 @@ export function getQuestEvolutionState(quest: Quest): QuestEvolutionState | null
   };
 }
 
-export function applyQuestEvolution(quest: Quest): Quest {
+/**
+ * Raise difficulty and XP along the path. The player's title and description stay put.
+ * A stage whose difficulty is still skill-locked is skipped until a later completion.
+ */
+export function applyQuestEvolution(quest: Quest, unlockedSkillIds: string[] = []): Quest {
   const path = getEvolutionPath(quest);
   if (!path) return quest;
 
-  const titleIndex = path.stages.findIndex((stage) => stage.title === quest.title);
-
-  // Renamed dailies: jump to the stage unlocked by daysCompleted (not "next from inferred").
-  if (titleIndex === -1) {
-    let targetIndex = 0;
-    for (let i = 0; i < path.stages.length; i++) {
-      if (quest.daysCompleted >= path.stages[i].unlockAt) {
-        targetIndex = i;
-      }
-    }
-    const target = path.stages[targetIndex];
-    return {
-      ...quest,
-      evolutionPathId: path.id,
-      title: target.title,
-      description: target.description,
-      difficulty: target.difficulty,
-      xpReward: DIFFICULTY_XP[target.difficulty],
-    };
-  }
-
-  const nextStage = path.stages[titleIndex + 1];
-  if (!nextStage || quest.daysCompleted < nextStage.unlockAt) {
-    return {
-      ...quest,
-      evolutionPathId: quest.evolutionPathId ?? path.id,
-    };
-  }
-
+  const stage = path.stages[getEffectiveStageIndex(path, quest, unlockedSkillIds)];
   return {
     ...quest,
     evolutionPathId: path.id,
-    title: nextStage.title,
-    description: nextStage.description,
-    difficulty: nextStage.difficulty,
-    xpReward: DIFFICULTY_XP[nextStage.difficulty],
+    difficulty: stage.difficulty,
+    xpReward: DIFFICULTY_XP[stage.difficulty],
   };
 }
 
@@ -395,7 +374,7 @@ export function getBossSagaState(quest: Quest): BossSagaState | null {
 export function getLeadingEvolutionQuest(quests: Quest[]): Quest | null {
   const evolving = quests
     .filter((quest) => !quest.isCompleted && quest.isActive)
-    .map((quest) => ({ quest, evolution: getQuestEvolutionState(quest) }))
+    .map((quest) => ({ quest, evolution: getQuestEvolutionState(quest, []) }))
     .filter(
       (
         entry,

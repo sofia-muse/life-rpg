@@ -5,6 +5,7 @@ import { syncManager } from '../api/syncManager';
 import { WeeklyPath } from '../types';
 import { getCurrentWeekKey, getWeeklyPathDefinition } from '../config/weeklyPaths';
 import { scheduleQuestReminders, cancelQuestReminders } from '../utils/notifications';
+import { setActiveForgedSkillIds as registerActiveForgedSkillIds } from '../config/skills';
 
 interface SettingsState {
   notificationsEnabled: boolean;
@@ -26,6 +27,8 @@ interface SettingsState {
   weeklyRewardWeekKey: string | null;
   weeklyRewardTitle: string | null;
   weeklyRewardBadge: string | null;
+  /** Null keeps the first three forged skills equipped. An array is an explicit loadout. */
+  activeForgedSkillIds: string[] | null;
   replaceSettings: (settings: {
     notificationsEnabled: boolean;
     hapticEnabled: boolean;
@@ -43,6 +46,7 @@ interface SettingsState {
     weeklyRewardWeekKey: string | null;
     weeklyRewardTitle: string | null;
     weeklyRewardBadge: string | null;
+    activeForgedSkillIds?: string[] | null;
   }) => void;
   toggleNotifications: () => void;
   toggleHaptic: () => void;
@@ -56,6 +60,7 @@ interface SettingsState {
   chooseWeeklyPath: (path: WeeklyPath) => void;
   claimWeeklyReward: (reward: { title: string; badge: string }) => void;
   clearStaleWeeklyPath: () => void;
+  setActiveForgedSkillIds: (ids: string[] | null) => void;
 }
 
 function syncSettings(state: Pick<
@@ -76,6 +81,7 @@ function syncSettings(state: Pick<
   | 'weeklyRewardWeekKey'
   | 'weeklyRewardTitle'
   | 'weeklyRewardBadge'
+  | 'activeForgedSkillIds'
 >) {
   syncManager.enqueue('hero', 'upsert', {
     settings: {
@@ -95,6 +101,7 @@ function syncSettings(state: Pick<
       weeklyRewardWeekKey: state.weeklyRewardWeekKey,
       weeklyRewardTitle: state.weeklyRewardTitle,
       weeklyRewardBadge: state.weeklyRewardBadge,
+      activeForgedSkillIds: state.activeForgedSkillIds,
     },
     updatedAt: new Date().toISOString(),
   });
@@ -127,13 +134,21 @@ export const useSettingsStore = create<SettingsState>()(
       weeklyRewardWeekKey: null,
       weeklyRewardTitle: null,
       weeklyRewardBadge: null,
-      replaceSettings: (settings) =>
+      activeForgedSkillIds: null,
+      replaceSettings: (settings) => {
+        const activeForgedSkillIds =
+          settings.activeForgedSkillIds === undefined
+            ? get().activeForgedSkillIds
+            : settings.activeForgedSkillIds;
+        registerActiveForgedSkillIds(activeForgedSkillIds);
         set({
           ...settings,
+          activeForgedSkillIds,
           unlockedTitleIds: settings.unlockedTitleIds ?? get().unlockedTitleIds,
           customTitleLabels: settings.customTitleLabels ?? get().customTitleLabels,
           seenAchievementIds: settings.seenAchievementIds ?? get().seenAchievementIds,
-        }),
+        });
+      },
 
       toggleNotifications: () =>
         set((state) => {
@@ -288,6 +303,14 @@ export const useSettingsStore = create<SettingsState>()(
           };
         }),
 
+      setActiveForgedSkillIds: (ids) =>
+        set((state) => {
+          registerActiveForgedSkillIds(ids);
+          const next = { ...state, activeForgedSkillIds: ids };
+          syncSettings(next);
+          return { activeForgedSkillIds: ids };
+        }),
+
       clearStaleWeeklyPath: () => {
         const state = get();
         if (!state.weeklyPathWeekKey || state.weeklyPathWeekKey === getCurrentWeekKey()) {
@@ -325,6 +348,7 @@ export const useSettingsStore = create<SettingsState>()(
         if (state?.notificationsEnabled) {
           void scheduleQuestReminders(state.reminderTime);
         }
+        registerActiveForgedSkillIds(state?.activeForgedSkillIds ?? null);
       },
     },
   ),

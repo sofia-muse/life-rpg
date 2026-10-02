@@ -10,7 +10,7 @@ import { useSettingsStore } from '../../src/store/settingsStore';
 import { useAuthStore } from '../../src/store/authStore';
 import { useForgedSkillStore } from '../../src/store/forgedSkillStore';
 import { useUIStore } from '../../src/store/uiStore';
-import { getSkillsByCategory } from '../../src/config/skills';
+import { getSkillsByCategory, selectActiveForgedSkills, toggleActiveForgedSkill } from '../../src/config/skills';
 import { getSkillProgress } from '../../src/engine/skillEngine';
 import { env } from '../../src/config/env';
 import { colors, spacing, fontSize, radius } from '../../src/config/theme';
@@ -20,6 +20,8 @@ export default function SkillsScreen() {
   const { hero } = useHeroStore();
   const { isSkillUnlocked } = useSkillStore();
   const aiSkillsEnabled = useSettingsStore((s) => s.aiSkillsEnabled);
+  const activeForgedSkillIds = useSettingsStore((s) => s.activeForgedSkillIds);
+  const setActiveForgedSkillIds = useSettingsStore((s) => s.setActiveForgedSkillIds);
   const authenticated = useAuthStore((s) => s.status === 'authenticated');
   const { forged, loading: forging, load: loadForged, forge } = useForgedSkillStore();
   const setSkillUnlock = useUIStore((s) => s.setSkillUnlock);
@@ -35,6 +37,13 @@ export default function SkillsScreen() {
   const handleForge = async () => {
     const skill = await forge();
     if (skill) setSkillUnlock(skill);
+  };
+
+  const activeForged = selectActiveForgedSkills(forged, activeForgedSkillIds);
+  const activeForgedIds = new Set(activeForged.map((skill) => skill.id));
+
+  const handleToggleForged = (skillId: string) => {
+    setActiveForgedSkillIds(toggleActiveForgedSkill(activeForgedSkillIds, forged.map((skill) => skill.id), skillId));
   };
 
   if (!hero) return null;
@@ -139,6 +148,20 @@ export default function SkillsScreen() {
                 <Text style={styles.modalDesc}>{selectedSkill.description}</Text>
                 <View style={styles.modalDivider} />
                 <Text style={styles.modalEffect}>{selectedSkill.effect}</Text>
+                {forged.some((skill) => skill.id === selectedSkill.id) && (
+                  <TouchableOpacity
+                    style={styles.forgeButton}
+                    onPress={() => handleToggleForged(selectedSkill.id)}
+                  >
+                    <Text style={styles.modalStatusText}>
+                      {activeForgedIds.has(selectedSkill.id)
+                        ? 'Equipped · tap to bench'
+                        : activeForged.length >= 3
+                          ? 'Loadout full (3)'
+                          : 'Equip in loadout'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
                 <View style={styles.modalReq}>
                   <Text style={styles.modalReqLabel}>Requires:</Text>
                   <Text style={styles.modalReqText}>

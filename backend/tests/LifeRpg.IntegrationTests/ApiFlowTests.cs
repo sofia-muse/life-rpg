@@ -136,16 +136,22 @@ public class ApiFlowTests : IClassFixture<LifeRpgApiFactory>
 
         var firstStep = await (await client.PostAsync($"/api/v1/quests/{quest.Id}/boss-step", null))
             .Content.ReadFromJsonAsync<AdvanceBossQuestResult>(Json);
-        firstStep!.Completion.Should().BeNull();
+        firstStep!.Completion.Should().NotBeNull();
+        firstStep.Completion!.XpAwarded.Should().Be(25);
         firstStep.Quest.CompletedSteps.Should().Be(1);
         firstStep.Quest.IsCompleted.Should().BeFalse();
+        firstStep.Completion.Hero.TotalQuestsCompleted.Should().Be(0);
 
         var secondStep = await (await client.PostAsync($"/api/v1/quests/{quest.Id}/boss-step", null))
             .Content.ReadFromJsonAsync<AdvanceBossQuestResult>(Json);
         secondStep!.Completion.Should().NotBeNull();
+        // Step 1 crosses charisma into level 3 and unlocks Silver Tongue (+5% of 50 = 2).
+        // The closing step keeps the remainder of that 52 XP reward: 52 - 26 = 26.
+        secondStep.Completion!.XpAwarded.Should().Be(26);
         secondStep.Quest.CompletedSteps.Should().Be(2);
         secondStep.Quest.IsCompleted.Should().BeTrue();
         secondStep.Completion!.Hero.TotalQuestsCompleted.Should().Be(1);
+        secondStep.Completion.Hero.StatXp.Charisma.Should().Be(101);
     }
 
     [Fact]

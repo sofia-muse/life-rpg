@@ -7,8 +7,8 @@ import { getSkillById } from '../config/skills';
 import { env } from '../config/env';
 import { generateQuestNarrative, buildTomorrowVow } from '../engine/journalEngine';
 import { getQuestSkillBonus, getBossStepXpBonus, getWeeklyCapacityBonus } from '../engine/skillEngine';
-import { getStreakMultiplier } from '../engine/streakEngine';
-import { calculateXPReward } from '../engine/xpEngine';
+import { getHeroStreakMultiplier, getStreakMultiplier } from '../engine/streakEngine';
+import { bossStepXpShare, calculateXPReward } from '../engine/xpEngine';
 import { getWeeklyPathQuestBonus } from '../config/weeklyPaths';
 import { getPrimaryContract } from '../config/classContracts';
 import { useAuthStore } from './authStore';
@@ -125,9 +125,9 @@ async function completeAuthoritativeQuest(quest: Quest): Promise<QuestCompletion
   if (quest.type === 'boss') {
     const stepResult = await questApi.advanceBossStep(quest.id);
     const latestQuest = mapApiQuest(stepResult.quest);
+    useQuestStore.getState().upsertQuest(latestQuest);
 
     if (!stepResult.completion) {
-      useQuestStore.getState().upsertQuest(latestQuest);
       return {
         quest: latestQuest,
         completed: false,
@@ -146,6 +146,31 @@ async function completeAuthoritativeQuest(quest: Quest): Promise<QuestCompletion
       newLevel: stepResult.completion.newLevel,
       tierUp: stepResult.completion.tierUp,
     };
+
+    if (!latestQuest.isCompleted) {
+      const steppedHero = mapApiHero(stepResult.completion.hero);
+      const steppedSkills = stepResult.completion.newSkills
+        .map((skill) => getSkillById(skill.id))
+        .filter((skill): skill is Skill => !!skill);
+      useHeroStore.getState().setHero(steppedHero, { isOnboarded: true });
+      const levelResult = mapLevelResult(
+        completion.stat,
+        completion.oldLevel,
+        completion.newLevel,
+        completion.tierUp,
+        steppedSkills,
+      );
+      applyJournalEntry(latestQuest, completion.xpAwarded, levelResult, steppedSkills);
+      return {
+        quest: latestQuest,
+        completed: false,
+        xpAwarded: completion.xpAwarded,
+        levelResult,
+        newSkills: steppedSkills,
+        appearanceUnlock: useHeroStore.getState().checkAppearanceUnlocks(),
+        stepAdvancedOnly: true,
+      };
+    }
   } else {
     const result = await questApi.complete(quest.id);
     completion = {
@@ -223,18 +248,6 @@ function completeLocalQuest(questId: string): QuestCompletionFlowResult | null {
     return null;
   }
 
-  if (!updatedQuest.isCompleted) {
-    return {
-      quest: updatedQuest,
-      completed: false,
-      xpAwarded: 0,
-      levelResult: null,
-      newSkills: [],
-      appearanceUnlock: null,
-      stepAdvancedOnly: true,
-    };
-  }
-
   const streakUpdate = heroState.updateStreak(unlockedSkillIds);
   if (streakUpdate?.usedStreakFreeze) {
     console.info('[GameplayStore] Preserved the current streak with a freeze during quest completion.', {
@@ -242,7 +255,10 @@ function completeLocalQuest(questId: string): QuestCompletionFlowResult | null {
     });
   }
 
-  const streakMult = getStreakMultiplier(useHeroStore.getState().hero?.currentStreak ?? hero.currentStreak);
+  const heroStreak = useHeroStore.getState().hero?.currentStreak ?? hero.currentStreak;
+  const heroStreakMult = getHeroStreakMultiplier(heroStreak);
+  const questStreakMult =
+    updatedQuest.type === 'daily' ? getStreakMultiplier(updatedQuest.streak) : 1;
   const skillBonus = getQuestSkillBonus(
     { stat: updatedQuest.stat, type: updatedQuest.type },
     unlockedSkillIds,
@@ -255,32 +271,40 @@ function completeLocalQuest(questId: string): QuestCompletionFlowResult | null {
     updatedQuest.type === 'boss' ? getBossStepXpBonus(unlockedSkillIds) : 0;
   const xpReward = calculateXPReward(
     updatedQuest.difficulty,
-    streakMult,
+    heroStreakMult,
     skillBonus + weeklyPathBonus + bossBonus,
+    questStreakMult,
   );
-  const progression = heroState.applyQuestReward(updatedQuest.stat, xpReward.totalXP, unlockedSkillIds);
+  const stepCount = updatedQuest.totalSteps ?? 1;
+  const stepIndex = updatedQuest.type === 'boss' ? updatedQuest.completedSteps || stepCount : stepCount;
+  const awardedXp =
+    updatedQuest.type === 'boss'
+      ? bossStepXpShare(xpReward.totalXP, stepCount, stepIndex)
+      : xpReward.totalXP;
+  const progression = heroState.applyQuestReward(updatedQuest.stat, awardedXp, unlockedSkillIds);
   if (!progression) {
     console.error('[GameplayStore] Failed to apply the local quest reward.', {
       questId,
       questType: updatedQuest.type,
       stat: updatedQuest.stat,
-      xpAwarded: xpReward.totalXP,
+      xpAwarded: awardedXp,
     });
     return null;
   }
 
   const newSkills = skillState.checkAndUnlockSkills(progression.hero.statXP);
   const appearanceUnlock = heroState.checkAppearanceUnlocks();
-  applyJournalEntry(updatedQuest, xpReward.totalXP, progression.levelResult, newSkills);
+  applyJournalEntry(updatedQuest, awardedXp, progression.levelResult, newSkills);
 
+  const fullyCompleted = updatedQuest.isCompleted;
   return {
     quest: updatedQuest,
-    completed: true,
-    xpAwarded: xpReward.totalXP,
+    completed: fullyCompleted,
+    xpAwarded: awardedXp,
     levelResult: progression.levelResult,
     newSkills,
     appearanceUnlock,
-    stepAdvancedOnly: false,
+    stepAdvancedOnly: updatedQuest.type === 'boss' && !fullyCompleted,
   };
 }
 

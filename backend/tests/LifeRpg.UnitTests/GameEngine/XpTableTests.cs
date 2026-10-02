@@ -7,37 +7,37 @@ namespace LifeRpg.UnitTests.GameEngine;
 
 /// <summary>
 /// Golden-value tests proving the C# XP curve matches the client's xpTables.ts exactly
-/// (baseXP * level^1.5, floored). If these drift, client and server disagree on progression.
+/// (floor(14 * level^0.8)). If these drift, client and server disagree on progression.
 /// </summary>
 public class XpTableTests
 {
     [Theory]
-    [InlineData(1, 100)]
-    [InlineData(2, 282)]
-    [InlineData(3, 519)]
-    [InlineData(5, 1118)]
-    [InlineData(10, 3162)]
-    [InlineData(50, 35355)]
-    [InlineData(100, 100000)]
+    [InlineData(1, 14)]
+    [InlineData(2, 24)]
+    [InlineData(3, 33)]
+    [InlineData(5, 50)]
+    [InlineData(10, 88)]
+    [InlineData(50, 320)]
+    [InlineData(100, 557)]
     public void XpForLevel_matches_client_formula(int level, int expected) =>
         XpTable.XpForLevel(level).Should().Be(expected);
 
     [Theory]
     [InlineData(0, 0)]
-    [InlineData(50, 0)]
-    [InlineData(99, 0)]
-    [InlineData(100, 1)]
-    [InlineData(382, 2)]
-    [InlineData(1000, 3)]
-    [InlineData(5000, 6)]
+    [InlineData(13, 0)]
+    [InlineData(14, 1)]
+    [InlineData(37, 1)]
+    [InlineData(38, 2)]
+    [InlineData(70, 2)]
+    [InlineData(71, 3)]
     public void LevelFromXp_matches_client(int totalXp, int expectedLevel) =>
         XpTable.LevelFromXp(totalXp).Should().Be(expectedLevel);
 
     [Theory]
-    [InlineData(1, 100)]
-    [InlineData(2, 382)]
-    [InlineData(3, 901)]
-    [InlineData(5, 2819)]
+    [InlineData(1, 14)]
+    [InlineData(2, 38)]
+    [InlineData(3, 71)]
+    [InlineData(5, 163)]
     public void TotalXpForLevel_matches_client(int level, int expected) =>
         XpTable.TotalXpForLevel(level).Should().Be(expected);
 
@@ -56,14 +56,17 @@ public class XpTableTests
     }
 
     [Fact]
-    public void ComputeHeroLevel_is_floored_average_min_one()
+    public void ComputeHeroLevel_weights_dominant_stat()
     {
         XpTable.ComputeHeroLevel(new StatBlock(0)).Should().Be(1, "min hero level is 1");
-        // Levels summing to 18 across 6 stats -> floor(18/6) = 3.
+        // Dominant 5, others mean 2.6 -> floor(0.6*5 + 0.4*2.6) = 4.
         var levels = new StatBlock
         {
             Strength = 5, Vitality = 4, Intelligence = 3, Charisma = 3, Dexterity = 2, Willpower = 1,
         };
-        XpTable.ComputeHeroLevel(levels).Should().Be(3);
+        XpTable.ComputeHeroLevel(levels).Should().Be(4);
+
+        var specialist = new StatBlock(4) { Strength = 20 };
+        XpTable.ComputeHeroLevel(specialist).Should().Be(13);
     }
 }

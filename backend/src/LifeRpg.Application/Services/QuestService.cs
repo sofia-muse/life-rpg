@@ -30,7 +30,7 @@ public class QuestService
             return Result<List<QuestDto>>.NotFound("Hero not found");
         }
 
-        await ResetExpiredDailyQuestsAsync(hero.Id, ct);
+        await ResetExpiredDailyQuestsAsync(hero, ct);
 
         var query = _db.Quests.Where(q => q.HeroId == hero.Id);
         if (type is { } t)
@@ -79,6 +79,7 @@ public class QuestService
             IsActive = req.Type != QuestType.Daily || await CanActivateDailyQuestAsync(hero, null, ct),
             TotalSteps = req.Type == QuestType.Boss ? req.TotalSteps ?? 3 : null,
             CompletedSteps = req.Type == QuestType.Boss ? 0 : null,
+            EvolutionPathId = string.IsNullOrWhiteSpace(req.EvolutionPathId) ? null : req.EvolutionPathId.Trim(),
         };
 
         _db.Quests.Add(quest);
@@ -123,7 +124,7 @@ public class QuestService
             return Result<CompleteQuestResult>.NotFound("Quest not found");
         }
 
-        await ResetExpiredDailyQuestsAsync(hero.Id, ct);
+        await ResetExpiredDailyQuestsAsync(hero, ct);
         return await CompleteLoadedQuestAsync(hero, quest, ct, requireBossSteps: true);
     }
 
@@ -141,7 +142,7 @@ public class QuestService
             return Result<AdvanceBossQuestResult>.NotFound("Quest not found");
         }
 
-        await ResetExpiredDailyQuestsAsync(hero.Id, ct);
+        await ResetExpiredDailyQuestsAsync(hero, ct);
         if (quest.Type != QuestType.Boss || quest.TotalSteps is null)
         {
             return Result<AdvanceBossQuestResult>.Conflict("Quest does not use boss-step progression");
@@ -159,8 +160,10 @@ public class QuestService
         quest.CompletedSteps = Math.Min((quest.CompletedSteps ?? 0) + 1, quest.TotalSteps.Value);
         if (quest.CompletedSteps < quest.TotalSteps.Value)
         {
-            await _db.SaveChangesAsync(ct);
-            return Result<AdvanceBossQuestResult>.Success(new AdvanceBossQuestResult(quest.ToDto(), null));
+            var step = await CompleteLoadedQuestAsync(hero, quest, ct, requireBossSteps: false, markComplete: false);
+            return step.Succeeded
+                ? Result<AdvanceBossQuestResult>.Success(new AdvanceBossQuestResult(quest.ToDto(), step.Value))
+                : Result<AdvanceBossQuestResult>.Failure(step.ErrorType, step.Error ?? "Boss step failed");
         }
 
         var completion = await CompleteLoadedQuestAsync(hero, quest, ct, requireBossSteps: false);
@@ -173,7 +176,8 @@ public class QuestService
         Hero hero,
         Quest quest,
         CancellationToken ct,
-        bool requireBossSteps)
+        bool requireBossSteps,
+        bool markComplete = true)
     {
         if (!quest.IsActive)
         {
@@ -191,7 +195,7 @@ public class QuestService
             return Result<CompleteQuestResult>.Conflict("Boss quest requires step progression");
         }
 
-        var today = _clock.Today;
+        var today = TodayFor(hero);
 
         if (quest.Type == QuestType.Daily)
         {
@@ -204,11 +208,24 @@ public class QuestService
         }
 
         var unlockedIds = hero.UnlockedSkills.Select(s => s.SkillId).ToList();
-        var streakMultiplier = StreakCalculator.GetMultiplier(hero.CurrentStreak);
+        AdvanceStreak(hero, today);
+        var heroStreakMultiplier = StreakCalculator.GetHeroMultiplier(hero.CurrentStreak);
+        var questStreakMultiplier = quest.Type == QuestType.Daily
+            ? StreakCalculator.GetMultiplier(quest.Streak + 1)
+            : 1d;
         var skillBonus = SkillResolver.GetSkillBonusForQuest(quest.Type, quest.Stat, unlockedIds)
-            + SkillResolver.GetForgedBonusForStat(quest.Stat, hero.GeneratedSkills)
+            + SkillResolver.GetForgedBonusForStat(quest.Stat, hero.GeneratedSkills, hero.Settings.ActiveForgedSkillIds)
             + GetWeeklyPathBonus(hero, quest, today);
-        var reward = XpCalculator.CalculateXpReward(quest.Difficulty, streakMultiplier, skillBonus);
+        if (quest.Type == QuestType.Boss)
+        {
+            skillBonus += SkillResolver.GetBossStepXpBonus(unlockedIds);
+        }
+        var reward = XpCalculator.CalculateXpReward(quest.Difficulty, heroStreakMultiplier, skillBonus, questStreakMultiplier);
+        if (quest.Type == QuestType.Boss && quest.TotalSteps is > 0)
+        {
+            var share = XpCalculator.BossStepShare(reward.TotalXp, quest.TotalSteps.Value, quest.CompletedSteps ?? quest.TotalSteps.Value);
+            reward = reward with { TotalXp = share };
+        }
 
         var oldTier = hero.ClassTier;
         var application = XpCalculator.ApplyXp(hero.StatXp[quest.Stat], reward.TotalXp);
@@ -226,29 +243,30 @@ public class QuestService
             });
         }
 
-        AdvanceStreak(hero, today);
-
-        quest.IsCompleted = true;
-        quest.CompletedAt = _clock.UtcNow;
-        if (quest.Type == QuestType.Boss && quest.TotalSteps is { } bossSteps)
+        if (markComplete)
         {
-            quest.CompletedSteps = bossSteps;
+            quest.IsCompleted = true;
+            quest.CompletedAt = _clock.UtcNow;
+            if (quest.Type == QuestType.Boss && quest.TotalSteps is { } bossSteps)
+            {
+                quest.CompletedSteps = bossSteps;
+            }
+            quest.Streak += 1;
+            quest.BestStreak = Math.Max(quest.BestStreak, quest.Streak);
+            quest.DaysCompleted += 1;
+            QuestEvolutionResolver.Apply(quest, unlockedIds);
+            hero.TotalQuestsCompleted += 1;
+
+            _db.QuestCompletions.Add(new QuestCompletion
+            {
+                HeroId = hero.Id,
+                QuestId = quest.Id,
+                Stat = quest.Stat,
+                CompletionDate = today,
+                XpAwarded = reward.TotalXp,
+                CompletedAt = _clock.UtcNow,
+            });
         }
-        quest.Streak += 1;
-        quest.BestStreak = Math.Max(quest.BestStreak, quest.Streak);
-        quest.DaysCompleted += 1;
-        QuestEvolutionResolver.Apply(quest);
-        hero.TotalQuestsCompleted += 1;
-
-        _db.QuestCompletions.Add(new QuestCompletion
-        {
-            HeroId = hero.Id,
-            QuestId = quest.Id,
-            Stat = quest.Stat,
-            CompletionDate = today,
-            XpAwarded = reward.TotalXp,
-            CompletedAt = _clock.UtcNow,
-        });
 
         try
         {
@@ -309,17 +327,20 @@ public class QuestService
             .Include(h => h.GeneratedSkills)
             .FirstOrDefaultAsync(h => _user.UserId != null && h.UserId == _user.UserId, ct);
 
-    private async Task ResetExpiredDailyQuestsAsync(Guid heroId, CancellationToken ct)
+    private DateOnly TodayFor(Hero hero) => HeroCalendar.Today(hero.Settings.TimeZone, _clock.UtcNow);
+
+    private async Task ResetExpiredDailyQuestsAsync(Hero hero, CancellationToken ct)
     {
-        var today = _clock.Today;
+        var today = TodayFor(hero);
         var dailyQuests = await _db.Quests
-            .Where(q => q.HeroId == heroId && q.Type == QuestType.Daily && q.IsCompleted)
+            .Where(q => q.HeroId == hero.Id && q.Type == QuestType.Daily && q.IsCompleted)
             .ToListAsync(ct);
 
         var changed = false;
         foreach (var quest in dailyQuests)
         {
-            if (quest.CompletedAt is { } completedAt && DateOnly.FromDateTime(completedAt.UtcDateTime) == today)
+            if (quest.CompletedAt is { } completedAt
+                && HeroCalendar.DateInTimeZone(completedAt, hero.Settings.TimeZone) == today)
             {
                 continue;
             }

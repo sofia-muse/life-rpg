@@ -46,4 +46,13 @@ public sealed class HeroSettings
     public string? WeeklyRewardWeekKey { get; set; }
     public string? WeeklyRewardTitle { get; set; }
     public string? WeeklyRewardBadge { get; set; }
+
+    /// <summary>IANA zone for the hero's calendar day. Null means UTC.</summary>
+    public string? TimeZone { get; set; }
+
+    /// <summary>Null equips the three newest forged skills. An empty list equips none.</summary>
+    public List<string>? ActiveForgedSkillIds { get; set; }
+
+    /// <summary>Recent rest dates (YYYY-MM-DD) inside the hero's calendar.</summary>
+    public List<string> RecentRestDates { get; set; } = new();
 }

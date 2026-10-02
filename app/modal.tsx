@@ -9,6 +9,7 @@ import { useSettingsStore } from '../src/store/settingsStore';
 import { useHeroStore } from '../src/store/heroStore';
 import { useGameplayStore } from '../src/store/gameplayStore';
 import { colors, spacing, fontSize, radius, typography } from '../src/config/theme';
+import { deviceTimeZone } from '../src/engine/calendar';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -25,9 +26,12 @@ export default function SettingsScreen() {
     toggleFantasyNames,
   } = useSettingsStore();
   const hero = useHeroStore((s) => s.hero);
+  const setTimeZone = useHeroStore((s) => s.setTimeZone);
 
   const [editingTime, setEditingTime] = useState(false);
   const [tempTime, setTempTime] = useState(reminderTime);
+  const [editingZone, setEditingZone] = useState(false);
+  const [tempZone, setTempZone] = useState(hero?.timeZone || deviceTimeZone());
 
   const handleResetHero = () => {
     Alert.alert('Begin Again?', 'This will release your current hero and all progress. This cannot be undone.', [
@@ -125,6 +129,44 @@ export default function SettingsScreen() {
           ) : (
             <TouchableOpacity onPress={() => setEditingTime(true)} style={styles.timePill}>
               <Text style={styles.timeValue}>{reminderTime}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+        <View style={styles.divider} />
+        <View style={styles.settingRow}>
+          <View style={styles.settingCopy}>
+            <Text style={styles.label}>Hero Time Zone</Text>
+            <Text style={styles.sublabel}>The day rolls over at midnight in this zone.</Text>
+          </View>
+          {editingZone ? (
+            <View style={styles.timeEdit}>
+              <TextInput
+                style={styles.timeInput}
+                value={tempZone}
+                onChangeText={setTempZone}
+                placeholder="Area/City"
+                placeholderTextColor={colors.textMuted}
+                autoCapitalize="none"
+              />
+              <TouchableOpacity
+                onPress={() => {
+                  setTimeZone(tempZone);
+                  setEditingZone(false);
+                }}
+                style={styles.inlineButton}
+              >
+                <Text style={styles.inlineButtonText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
+              onPress={() => {
+                setTempZone(hero?.timeZone || deviceTimeZone());
+                setEditingZone(true);
+              }}
+              style={styles.timePill}
+            >
+              <Text style={styles.timeValue}>{hero?.timeZone || deviceTimeZone()}</Text>
             </TouchableOpacity>
           )}
         </View>

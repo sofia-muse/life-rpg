@@ -1,12 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Card } from '../layout/Card';
 import { colors, spacing, fontSize, typography } from '../../config/theme';
-import { Hero, STAT_COLORS, STAT_ICONS } from '../../types';
-import { getStreakMultiplier } from '../../engine/streakEngine';
+import { Hero, Quest, StatName, STAT_COLORS, STAT_ICONS, STAT_NAMES } from '../../types';
+import { getHeroStreakMultiplier } from '../../engine/streakEngine';
 import { getWeeklyPathQuestBonus, WeeklyPathSettingsLike } from '../../config/weeklyPaths';
 import { getQuestSkillBonus } from '../../engine/skillEngine';
-import { Quest } from '../../types';
 
 interface Props {
   hero: Hero;
@@ -14,6 +13,7 @@ interface Props {
   unlockedSkillIds: string[];
   forgedSkillCount: number;
   sampleQuest?: Quest;
+  onRespec?: (stat: StatName) => void;
 }
 
 export function BuildSummaryCard({
@@ -22,8 +22,9 @@ export function BuildSummaryCard({
   unlockedSkillIds,
   forgedSkillCount,
   sampleQuest,
+  onRespec,
 }: Props) {
-  const streakMult = getStreakMultiplier(hero.currentStreak);
+  const streakMult = getHeroStreakMultiplier(hero.currentStreak);
   const skillBonus = sampleQuest
     ? getQuestSkillBonus(sampleQuest, unlockedSkillIds)
     : 0;
@@ -61,7 +62,28 @@ export function BuildSummaryCard({
       </View>
 
       {forgedSkillCount > 0 && (
-        <Text style={styles.forged}>✨ {forgedSkillCount} forged skill{forgedSkillCount > 1 ? 's' : ''} active</Text>
+        <Text style={styles.forged}>
+          ✨ {forgedSkillCount} forged skill{forgedSkillCount > 1 ? 's' : ''} · 3 can be equipped
+        </Text>
+      )}
+
+      {onRespec && (
+        <View style={styles.respecRow}>
+          {STAT_NAMES.map((stat) => {
+            const selected = stat === hero.dominantStat;
+            return (
+              <TouchableOpacity
+                key={stat}
+                onPress={() => onRespec(stat)}
+                style={[styles.respecChip, selected && { borderColor: STAT_COLORS[stat] }]}
+              >
+                <Text style={[styles.respecText, { color: STAT_COLORS[stat] }]}>
+                  {STAT_ICONS[stat]}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
       )}
     </Card>
   );
@@ -117,5 +139,21 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     marginTop: spacing.md,
     fontStyle: 'italic',
+  },
+  respecRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+    marginTop: spacing.md,
+  },
+  respecChip: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  respecText: {
+    fontSize: fontSize.md,
   },
 });

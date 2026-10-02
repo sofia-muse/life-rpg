@@ -45,6 +45,8 @@ export function mapApiHero(hero: ApiHero): Hero {
     lastRewardDate: hero.lastRewardDate ?? '',
     totalLoginDays: hero.totalLoginDays,
     lastStreakFreezeDate: hero.lastStreakFreezeDate ?? undefined,
+    timeZone: hero.settings.timeZone ?? undefined,
+    recentRestDates: hero.settings.recentRestDates ?? [],
   };
 }
 
@@ -67,6 +69,7 @@ export function mapApiQuest(quest: ApiQuest): Quest {
     daysCompleted: quest.daysCompleted,
     totalSteps: quest.totalSteps ?? undefined,
     completedSteps: quest.completedSteps ?? undefined,
+    evolutionPathId: quest.evolutionPathId ?? undefined,
   };
 }
 

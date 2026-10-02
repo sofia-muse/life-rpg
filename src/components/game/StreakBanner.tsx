@@ -2,9 +2,10 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, TouchableOpacity } from 'react-native';
 import { colors, spacing, fontSize, radius } from '../../config/theme';
 import {
-  getStreakMultiplier,
+  getHeroStreakMultiplier,
   getCurrentMilestone,
   daysUntilNextMilestone,
+  HERO_STREAK_MILESTONES,
 } from '../../engine/streakEngine';
 import { useHeroStore } from '../../store/heroStore';
 import { useSkillStore } from '../../store/skillStore';
@@ -17,12 +18,13 @@ interface Props {
 }
 
 export function StreakBanner({ streakDays }: Props) {
-  const multiplier = getStreakMultiplier(streakDays);
-  const currentMilestone = getCurrentMilestone(streakDays);
-  const daysToNext = daysUntilNextMilestone(streakDays);
+  const multiplier = getHeroStreakMultiplier(streakDays);
+  const currentMilestone = getCurrentMilestone(streakDays, HERO_STREAK_MILESTONES);
+  const daysToNext = daysUntilNextMilestone(streakDays, HERO_STREAK_MILESTONES);
   const takeRestDay = useHeroStore((s) => s.takeRestDay);
   const getUnlockedSkillIds = useSkillStore((s) => s.getUnlockedSkillIds);
   const setCharacterEvent = useUIStore((s) => s.setCharacterEvent);
+  const showXP = useUIStore((s) => s.showXP);
   const hapticEnabled = useSettingsStore((s) => s.hapticEnabled);
 
   const fireScale = useRef(new Animated.Value(1)).current;
@@ -40,7 +42,9 @@ export function StreakBanner({ streakDays }: Props) {
   }, [streakDays, fireScale]);
 
   const handleRestDay = () => {
-    takeRestDay(getUnlockedSkillIds());
+    const result = takeRestDay(getUnlockedSkillIds());
+    if (!result?.granted) return;
+    if (result.xp > 0) showXP('vitality', result.xp);
     void playGameFeedback('questComplete', hapticEnabled);
     setCharacterEvent('rest');
     setTimeout(() => setCharacterEvent('idle'), 1500);
@@ -77,6 +81,7 @@ export function StreakBanner({ streakDays }: Props) {
           {daysToNext} day{daysToNext !== 1 ? 's' : ''} to next milestone
         </Text>
       )}
+      <Text style={styles.next}>Daily habits keep their own streak bonus.</Text>
       <TouchableOpacity style={styles.restBtn} onPress={handleRestDay} activeOpacity={0.85}>
         <Text style={styles.restBtnText}>Rest Day · Second Wind XP</Text>
       </TouchableOpacity>

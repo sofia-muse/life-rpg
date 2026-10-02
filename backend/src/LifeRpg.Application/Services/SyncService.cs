@@ -139,6 +139,7 @@ public class SyncService
                 IsActive = dto.IsActive && (dto.Type != QuestType.Daily || CanActivateDailyQuest(hero, null)),
                 TotalSteps = dto.TotalSteps,
                 CompletedSteps = dto.CompletedSteps,
+                EvolutionPathId = dto.EvolutionPathId,
                 IsCompleted = dto.IsCompleted,
                 CompletedAt = dto.CompletedAt,
                 CreatedAt = dto.CreatedAt == default ? _clock.UtcNow : dto.CreatedAt,
@@ -161,6 +162,7 @@ public class SyncService
             && (dto.Type != QuestType.Daily || CanActivateDailyQuest(hero, existing.Id));
         existing.TotalSteps = dto.TotalSteps;
         existing.CompletedSteps = dto.CompletedSteps;
+        existing.EvolutionPathId = dto.EvolutionPathId ?? existing.EvolutionPathId;
         existing.XpReward = DifficultyXp.For(dto.Difficulty);
         existing.UpdatedAt = dto.UpdatedAt;
         return null;
@@ -258,8 +260,36 @@ public class SyncService
             var parsed = settings.Deserialize<Domain.ValueObjects.HeroSettings>(Json);
             if (parsed is not null)
             {
+                var previous = hero.Settings;
+                if (!settings.TryGetProperty("timeZone", out _) && !settings.TryGetProperty("TimeZone", out _))
+                {
+                    parsed.TimeZone = previous.TimeZone;
+                }
+                if (!settings.TryGetProperty("recentRestDates", out _) && !settings.TryGetProperty("RecentRestDates", out _))
+                {
+                    parsed.RecentRestDates = previous.RecentRestDates;
+                }
+                if (!settings.TryGetProperty("activeForgedSkillIds", out _) && !settings.TryGetProperty("ActiveForgedSkillIds", out _))
+                {
+                    parsed.ActiveForgedSkillIds = previous.ActiveForgedSkillIds;
+                }
                 hero.Settings = parsed;
             }
+        }
+        if (op.Payload.TryGetProperty("timeZone", out var timeZone) && timeZone.ValueKind == JsonValueKind.String)
+        {
+            hero.Settings.TimeZone = timeZone.GetString();
+        }
+        if (op.Payload.TryGetProperty("recentRestDates", out var recentRestDates) && recentRestDates.ValueKind == JsonValueKind.Array)
+        {
+            hero.Settings.RecentRestDates = recentRestDates.Deserialize<List<string>>(Json) ?? new List<string>();
+        }
+        if (op.Payload.TryGetProperty("dominantStat", out var dominantStat)
+            && dominantStat.ValueKind == JsonValueKind.String
+            && Enum.TryParse<StatName>(dominantStat.GetString(), ignoreCase: true, out var parsedDominant))
+        {
+            hero.DominantStat = parsedDominant;
+            hero.ClassName = ClassDefinitions.GetClassName(parsedDominant, hero.ClassTier);
         }
         if (op.Payload.TryGetProperty("updatedAt", out updatedAtProp)
             && updatedAtProp.ValueKind == JsonValueKind.String

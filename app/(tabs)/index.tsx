@@ -317,6 +317,7 @@ export default function DashboardScreen() {
                   unlockedSkillIds={unlockedSkillIds}
                   forgedSkillCount={forged.length}
                   sampleQuest={todayQuests[0]}
+                  onRespec={(stat) => useHeroStore.getState().respecClass(stat)}
                 />
               </FadeIn>
 

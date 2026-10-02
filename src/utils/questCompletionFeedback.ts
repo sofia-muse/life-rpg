@@ -6,6 +6,7 @@ import { detectNewAchievements } from '../config/achievementTracker';
 import { grantSagaOrChapterRewards } from '../config/progressionRewards';
 import { useHeroStore } from '../store/heroStore';
 import { useSettingsStore } from '../store/settingsStore';
+import { useSkillStore } from '../store/skillStore';
 import { useUIStore } from '../store/uiStore';
 import { playGameFeedback } from './gameFeedback';
 
@@ -30,28 +31,41 @@ export function presentQuestCompletionFeedback(
     setStreakMilestone,
   } = useUIStore.getState();
 
+  const unlockedSkillIds = useSkillStore.getState().getUnlockedSkillIds();
+
+  if (result.xpAwarded > 0) {
+    showXP(result.quest.stat, result.xpAwarded);
+  }
+
   if (result.stepAdvancedOnly) {
     void playGameFeedback('bossPhase', haptic);
     setCharacterEvent('bossPhase');
     setTimeout(() => setCharacterEvent('idle'), 1500);
+    if (result.levelResult) {
+      setTimeout(() => setLevelUp(result.levelResult!.stat, result.levelResult!.newLevel), 700);
+    }
     return;
   }
 
   if (!result.completed) return;
 
-  const priorEvolution = priorQuest ? getQuestEvolutionState(priorQuest) : null;
+  const priorEvolution = priorQuest ? getQuestEvolutionState(priorQuest, unlockedSkillIds) : null;
+  const nextEvolution = getQuestEvolutionState(result.quest, unlockedSkillIds);
 
   void playGameFeedback('questComplete', haptic);
-  showXP(result.quest.stat, result.xpAwarded);
   setCharacterEvent('questComplete');
   setTimeout(() => setCharacterEvent('idle'), 1500);
 
   grantSagaOrChapterRewards(result.quest);
 
-  if (priorQuest && priorQuest.title !== result.quest.title && priorEvolution?.nextRankName) {
+  if (
+    priorEvolution &&
+    nextEvolution &&
+    priorEvolution.rankName !== nextEvolution.rankName
+  ) {
     setTimeout(() => {
       void playGameFeedback('evolution', haptic);
-      setEvolution(priorEvolution.nextRankName!, result.quest.title);
+      setEvolution(nextEvolution.rankName, result.quest.title);
       setCharacterEvent('evolution');
       setTimeout(() => setCharacterEvent('idle'), 2000);
     }, 800);

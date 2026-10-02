@@ -23,6 +23,9 @@ public class Quest : Entity
     public int BestStreak { get; set; }
     public int DaysCompleted { get; set; }
 
+    /// <summary>Stable evolution path id. Survives a player renaming the quest.</summary>
+    public string? EvolutionPathId { get; set; }
+
     // Boss quests only.
     public int? TotalSteps { get; set; }
     public int? CompletedSteps { get; set; }

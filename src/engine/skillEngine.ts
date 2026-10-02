@@ -1,5 +1,5 @@
 import { QuestDifficulty, QuestType, Skill, SkillEffect, StatName } from '../types';
-import { SKILLS, getSkillById, getForgedSkills } from '../config/skills';
+import { SKILLS, getSkillById, getActiveForgedSkills } from '../config/skills';
 import { levelFromXP } from '../config/xpTables';
 
 function normalizeUnlockedSkillIds(unlockedSkillIds: unknown, context: string): string[] {
@@ -65,7 +65,7 @@ function getResolvedSkills(unlockedSkillIds: string[]): Skill[] {
   const normalizedSkillIds = normalizeUnlockedSkillIds(unlockedSkillIds, 'getResolvedSkills');
   return [
     ...normalizedSkillIds.map((id) => getSkillById(id)).filter((s): s is Skill => !!s),
-    ...getForgedSkills(),
+    ...getActiveForgedSkills(),
   ];
 }
 
@@ -125,6 +125,13 @@ export function getRestDayXpReward(unlockedSkillIds: string[]): number {
     (effect) => effect.stat === 'vitality',
   );
   return bonuses.reduce((max, effect) => Math.max(max, effect.amount), 10);
+}
+
+/** Rests that keep the hero streak inside a 7-day window. Base is 1; recovery skills add more. */
+export function getRestDayAllowance(unlockedSkillIds: string[]): number {
+  const restRites = findSkillEffects(unlockedSkillIds, 'restDayXp').length;
+  const freezes = getWeeklyStreakFreezeAllowance(unlockedSkillIds);
+  return 1 + freezes + Math.max(0, restRites - 1);
 }
 
 export function getStreakRetentionRatio(unlockedSkillIds: string[]): number {

@@ -4,8 +4,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { generateId } from '../utils/id';
 import { Quest } from '../types';
 import { syncManager } from '../api/syncManager';
+import { calendarDateInZone, calendarToday, deviceTimeZone } from '../engine/calendar';
 import { getActiveDailyQuestCapacityBonus } from '../engine/skillEngine';
 import { applyQuestEvolution } from '../engine/questProgression';
+import { useHeroStore } from './heroStore';
 import { useSkillStore } from './skillStore';
 
 interface QuestState {
@@ -38,7 +40,11 @@ interface QuestState {
   clearQuests: () => void;
 }
 
-const today = () => new Date().toISOString().split('T')[0];
+function heroTimeZone(): string {
+  return useHeroStore.getState().hero?.timeZone || deviceTimeZone();
+}
+
+const today = () => calendarToday(heroTimeZone());
 const BASE_ACTIVE_DAILY_LIMIT = 3;
 
 function canActivateDailyQuest(quests: Quest[]): boolean {
@@ -79,15 +85,18 @@ export const useQuestStore = create<QuestState>()(
 
         const timestamp = new Date().toISOString();
 
-        const updated = applyQuestEvolution({
-          ...quest,
-          isCompleted: true,
-          updatedAt: timestamp,
-          completedAt: timestamp,
-          streak: quest.streak + 1,
-          bestStreak: Math.max(quest.bestStreak, quest.streak + 1),
-          daysCompleted: quest.daysCompleted + 1,
-        });
+        const updated = applyQuestEvolution(
+          {
+            ...quest,
+            isCompleted: true,
+            updatedAt: timestamp,
+            completedAt: timestamp,
+            streak: quest.streak + 1,
+            bestStreak: Math.max(quest.bestStreak, quest.streak + 1),
+            daysCompleted: quest.daysCompleted + 1,
+          },
+          useSkillStore.getState().getUnlockedSkillIds(),
+        );
 
         set((state) => ({
           quests: state.quests.map((q) => (q.id === questId ? updated : q)),
@@ -161,7 +170,9 @@ export const useQuestStore = create<QuestState>()(
         set((state) => ({
           quests: state.quests.map((q) => {
             if (q.type === 'daily' && q.isCompleted) {
-              const completedDate = q.completedAt?.split('T')[0];
+              const completedDate = q.completedAt
+                ? calendarDateInZone(new Date(q.completedAt), heroTimeZone())
+                : undefined;
               if (completedDate !== today()) {
                 return {
                   ...q,
