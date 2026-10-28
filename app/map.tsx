@@ -4,12 +4,13 @@ import { useRouter } from 'expo-router';
 import { ScreenWrapper } from '../src/components/layout/ScreenWrapper';
 import { ScreenHeader } from '../src/components/layout/ScreenHeader';
 import { Card } from '../src/components/layout/Card';
+import { FantasyIcon } from '../src/components/game/FantasyIcon';
 import { Button } from '../src/components/layout/Button';
 import { useHeroStore } from '../src/store/heroStore';
 import { useQuestStore } from '../src/store/questStore';
 import { CAMPAIGN_CHAPTERS, STAT_REGIONS, getChapterForHero } from '../src/config/campaignChapters';
 import { colors, spacing, fontSize, radius, typography } from '../src/config/theme';
-import { STAT_COLORS, STAT_ICONS, DIFFICULTY_XP } from '../src/types';
+import { STAT_COLORS, DIFFICULTY_XP } from '../src/types';
 
 export default function MapScreen() {
   const router = useRouter();
@@ -22,7 +23,14 @@ export default function MapScreen() {
   const activeChapter = getChapterForHero(hero.dominantStat);
   const bossQuests = quests.filter((q) => q.type === 'boss' && !q.isCompleted);
 
+  const chapterInProgress = bossQuests.some(
+    (quest) => quest.campaignChapterId === activeChapter.id,
+  );
   const handleStartChapter = () => {
+    if (chapterInProgress) {
+      router.push('/quests');
+      return;
+    }
     const chapter = CAMPAIGN_CHAPTERS.find((c) => c.id === activeChapter.id) ?? activeChapter;
     addQuest({
       title: chapter.bossTemplateTitle,
@@ -46,7 +54,12 @@ export default function MapScreen() {
         title="World Map"
         subtitle="Six regions of growth. Boss arcs mark the dungeons of your real life."
         action={
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <TouchableOpacity
+            onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
+            accessibilityRole="button"
+            accessibilityLabel="Return to previous screen"
+            style={styles.backBtn}
+          >
             <Text style={styles.backText}>Return</Text>
           </TouchableOpacity>
         }
@@ -58,7 +71,11 @@ export default function MapScreen() {
         <Text style={styles.chapterSubtitle}>{activeChapter.subtitle}</Text>
         <Text style={styles.chapterNarrative}>{activeChapter.narrative}</Text>
         <Text style={styles.chapterReward}>Reward: {activeChapter.rewardTitle}</Text>
-        <Button title="Begin Chapter Boss" onPress={handleStartChapter} style={styles.chapterBtn} />
+        <Button
+          title={chapterInProgress ? 'Continue Chapter Boss' : 'Begin Chapter Boss'}
+          onPress={handleStartChapter}
+          style={styles.chapterBtn}
+        />
       </Card>
 
       <Text style={styles.sectionTitle}>The Six Regions</Text>
@@ -72,6 +89,9 @@ export default function MapScreen() {
           return (
             <TouchableOpacity
               key={region.stat}
+              accessibilityRole="button"
+              accessibilityLabel={region.label}
+              accessibilityState={{ selected: isSelected }}
               style={[
                 styles.regionCard,
                 { borderColor: STAT_COLORS[region.stat], opacity: 0.5 + brightness * 0.5 },
@@ -80,7 +100,7 @@ export default function MapScreen() {
               onPress={() => setSelectedRegion(isSelected ? null : region.stat)}
               activeOpacity={0.85}
             >
-              <Text style={styles.regionIcon}>{region.icon}</Text>
+              <FantasyIcon stat={region.stat} size={44} />
               <Text style={styles.regionLabel}>{region.label}</Text>
               <Text style={[styles.regionLevel, { color: STAT_COLORS[region.stat] }]}>
                 Lv.{level}
@@ -102,7 +122,7 @@ export default function MapScreen() {
             return (
               <>
                 <Text style={styles.regionDetailTitle}>
-                  {STAT_ICONS[region.stat]} {region.label}
+                  {region.label}
                 </Text>
                 <Text style={styles.regionDetailDesc}>{region.description}</Text>
                 <Button

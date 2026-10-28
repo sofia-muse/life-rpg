@@ -16,6 +16,8 @@ public sealed class HeroAppearance
 /// <summary>Avatar/character appearance. Persisted as a JSON column. Mirrors the client's CharacterAppearance.</summary>
 public sealed class CharacterAppearance
 {
+    public string? PortraitStyle { get; set; }
+    public string? PortraitId { get; set; }
     public Gender Gender { get; set; } = Gender.Male;
     public int SkinTone { get; set; }
     public string HairStyle { get; set; } = "short";

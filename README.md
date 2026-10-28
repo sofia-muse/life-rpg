@@ -108,7 +108,7 @@ Runs against a local SQLite database out of the box; configured for SQL Server /
 npm run typecheck && npm run lint && npm run test:coverage   # frontend
 cd backend && dotnet test                                    # backend
 ```
-- **Frontend:** 110 tests (Jest + jest-expo), engine coverage gated at 80%.
+- **Frontend:** 115 tests (Jest + jest-expo), engine coverage gated at 80%.
 - **Backend:** 72 tests — domain golden-value tests + WebApplicationFactory integration tests (auth, full quest flow, anti-cheat, sync idempotency).
 
 ### Android preview build (EAS)
@@ -126,7 +126,9 @@ See [docs/AZURE_DEPLOY.md](docs/AZURE_DEPLOY.md) for infrastructure and env vars
 
 ### Enchanted forest interface
 
-The interface uses illustrated forest chapter headers, quiet evergreen reading surfaces, warm parchment task rows, and larger supporting text. Artwork stays out of task content. The home screen puts daily quests first and keeps the share card behind an explicit toggle. Hero portraits are scalable SVG illustrations with saved skin, hair, expression, and glasses choices; they remain still between game events. The forest scene is an AI-generated project asset in `assets/storybook/`.
+The interface uses illustrated forest chapter headers, quiet evergreen reading surfaces, warm parchment task rows, and larger supporting text. Artwork stays out of task content. The home screen puts daily quests first and keeps the share card behind an explicit toggle. Heroes can choose two detailed painted fantasy portraits, or switch to the customizable SVG illustration with saved skin, hair, expression, and glasses choices. Painted portraits, six illustrated attribute medallions, and the forest scene are AI-generated project assets in `assets/storybook/`. Evergreen panels use restrained gold botanical corners, while parchment quest rows retain clear text.
+
+The character editor uses a single vertical scroll on small screens. Web sharing offers an explicit text preview and copy fallback. Native-only reminders and haptics are explained and disabled in the browser. Campaign chapters resume existing bosses instead of duplicating them.
 
 - **Offline-first, server-validated.** The client applies XP optimistically for snappy UX; the server recomputes from the same engine and is the source of truth. Shared constants keep them identical (verified by tests).
 - **Idempotent sync.** Each queued operation carries a stable `opId` logged server-side, so replaying a batch after a flaky connection is a no-op.

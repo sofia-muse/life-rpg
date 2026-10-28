@@ -53,10 +53,7 @@ export default function AchievementsScreen() {
     );
   }, [hero, quests, unlockedSkillIds.length, forged.length, settings, raidPersonal]);
 
-  const earned = useMemo(
-    () => (ctx ? getEarnedAchievements(ctx) : []),
-    [ctx],
-  );
+  const earned = useMemo(() => (ctx ? getEarnedAchievements(ctx) : []), [ctx]);
   const earnedIds = new Set(earned.map((a) => a.id));
   const unlockedTitleIds = (() => {
     const fromAchievements = ctx ? getUnlockedTitleIds(ctx) : ['adventurer'];
@@ -72,7 +69,12 @@ export default function AchievementsScreen() {
         title="Trophy Hall"
         subtitle={`${earned.length} of ${ACHIEVEMENT_DEFINITIONS.length} achievements earned`}
         action={
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <TouchableOpacity
+            onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
+            accessibilityRole="button"
+            accessibilityLabel="Return to previous screen"
+            style={styles.backBtn}
+          >
             <Text style={styles.backText}>Return</Text>
           </TouchableOpacity>
         }
@@ -142,15 +144,8 @@ export default function AchievementsScreen() {
                 </Text>
                 <Text style={styles.achievementDesc}>{def.description}</Text>
               </View>
-              <View
-                style={[
-                  styles.tierBadge,
-                  { backgroundColor: `${TIER_COLORS[def.tier]}30` },
-                ]}
-              >
-                <Text style={[styles.tierText, { color: TIER_COLORS[def.tier] }]}>
-                  {def.tier}
-                </Text>
+              <View style={[styles.tierBadge, { backgroundColor: `${TIER_COLORS[def.tier]}30` }]}>
+                <Text style={[styles.tierText, { color: TIER_COLORS[def.tier] }]}>{def.tier}</Text>
               </View>
             </View>
           </Card>

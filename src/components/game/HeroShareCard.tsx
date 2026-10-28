@@ -1,5 +1,6 @@
+import { SharePreview } from './SharePreview';
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Share } from 'react-native';
+import { View, Text, StyleSheet, Share, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Hero, STAT_NAMES, STAT_COLORS, STAT_ICONS } from '../../types';
 import { colors, spacing, fontSize, radius, typography } from '../../config/theme';
@@ -23,6 +24,14 @@ interface Props {
 }
 
 export function HeroShareCard({ hero }: Props) {
+  const [sharePreview, setSharePreview] = useState<string | null>(null);
+  const shareContent = async (content: { message: string; title?: string }) => {
+    if (Platform.OS === 'web') {
+      setSharePreview(content.message);
+      return;
+    }
+    await Share.share(content);
+  };
   const [sharingChronicle, setSharingChronicle] = useState(false);
   const [chronicleError, setChronicleError] = useState<string | null>(null);
   const aiSkillsEnabled = useSettingsStore((s) => s.aiSkillsEnabled);
@@ -35,14 +44,14 @@ export function HeroShareCard({ hero }: Props) {
     const contract = getPrimaryContract(hero, settings, quests);
     const payload = buildWeeklyChallengePayload(hero, settings, contract, quests);
     if (!payload) {
-      await Share.share({
+      await shareContent({
         message: `${hero.name} is on a Life RPG campaign. Choose a weekly path on the sanctuary to begin!`,
         title: 'Life RPG Weekly Challenge',
       });
       return;
     }
     try {
-      await Share.share({
+      await shareContent({
         message: formatWeeklySnapshot(payload),
         title: 'Life RPG Weekly Snapshot',
       });
@@ -68,7 +77,7 @@ export function HeroShareCard({ hero }: Props) {
       `Build your class through action.`;
 
     try {
-      await Share.share({
+      await shareContent({
         message,
         title: `${hero.name}'s Hero Card`,
       });
@@ -88,7 +97,7 @@ export function HeroShareCard({ hero }: Props) {
         highlights ? `\n\nHighlights:\n${highlights}` : ''
       }`;
 
-      await Share.share({
+      await shareContent({
         message,
         title: chronicle.title,
       });
@@ -101,6 +110,7 @@ export function HeroShareCard({ hero }: Props) {
 
   return (
     <View style={styles.card}>
+      <SharePreview message={sharePreview} onClose={() => setSharePreview(null)} />
       <View style={styles.cardInner}>
         <LinearGradient
           colors={['rgba(255,255,255,0.08)', 'rgba(124,92,252,0.06)', 'rgba(196,169,98,0.04)']}
@@ -313,7 +323,12 @@ const styles = StyleSheet.create({
   },
   statIcon: { fontSize: 18, marginBottom: 2 },
   statLevel: { fontSize: fontSize.md, fontWeight: '800', ...typography.headingWide },
-  statName: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: 2, ...typography.headingWide },
+  statName: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    marginTop: 2,
+    ...typography.headingWide,
+  },
   cardFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',

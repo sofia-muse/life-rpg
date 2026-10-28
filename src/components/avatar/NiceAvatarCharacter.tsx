@@ -1,9 +1,10 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
 import { CharacterAppearance, ClassTier, StatName } from '../../types';
 import { FairytalePortrait } from './FairytalePortrait';
 import { CharacterEvent } from './anime/useExpressionState';
 import { colors } from '../../config/theme';
+import { getPaintedPortrait } from '../../config/paintedPortraits';
 
 interface Props {
   appearance: CharacterAppearance;
@@ -31,12 +32,21 @@ export function NiceAvatarCharacter({
         },
       ]}
     >
-      <FairytalePortrait
-        size={size}
-        appearance={appearance}
-        dominantStat={dominantStat}
-        classTier={classTier}
-      />
+      {appearance.portraitStyle !== 'illustrated' ? (
+        <Image
+          source={getPaintedPortrait(appearance).source}
+          accessibilityLabel={`${getPaintedPortrait(appearance).name}, painted fantasy portrait`}
+          resizeMode="cover"
+          style={{ width: size, height: size, borderRadius: 16 }}
+        />
+      ) : (
+        <FairytalePortrait
+          size={size}
+          appearance={appearance}
+          dominantStat={dominantStat}
+          classTier={classTier}
+        />
+      )}
     </View>
   );
 }

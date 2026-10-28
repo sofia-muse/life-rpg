@@ -10,6 +10,29 @@ namespace LifeRpg.IntegrationTests;
 
 public class ApiFlowTests : IClassFixture<LifeRpgApiFactory>
 {
+    [Fact]
+    public async Task Painted_portrait_survives_create_update_and_reload()
+    {
+        var client = await AuthedClientAsync("portrait-roundtrip@example.com");
+        var appearance = new Domain.ValueObjects.CharacterAppearance
+        {
+            PortraitStyle = "painted", PortraitId = "moonweaver", HairColor = 3
+        };
+        var created = await client.PostAsJsonAsync("/api/v1/heroes",
+            new CreateHeroRequest("Elara", "portrait", new() { Domain.Enums.StatName.Intelligence }, appearance));
+        created.StatusCode.Should().Be(HttpStatusCode.OK);
+        var first = await client.GetFromJsonAsync<HeroDto>("/api/v1/heroes/me", Json);
+        first!.CharacterAppearance.PortraitId.Should().Be("moonweaver");
+        appearance.PortraitId = "wildwood";
+        var updated = await client.PutAsJsonAsync("/api/v1/heroes/me/appearance",
+            new UpdateAppearanceRequest(null, appearance));
+        updated.StatusCode.Should().Be(HttpStatusCode.OK);
+        var reloaded = await client.GetFromJsonAsync<HeroDto>("/api/v1/heroes/me", Json);
+        reloaded!.CharacterAppearance.PortraitStyle.Should().Be("painted");
+        reloaded.CharacterAppearance.PortraitId.Should().Be("wildwood");
+        reloaded.CharacterAppearance.HairColor.Should().Be(3);
+    }
+
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
     {
         Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter(System.Text.Json.JsonNamingPolicy.CamelCase) },

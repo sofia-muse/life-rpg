@@ -41,6 +41,7 @@ export function ScreenWrapper({
       style={[
         styles.container,
         {
+          paddingBottom: Platform.OS === 'web' && width >= 768 ? 128 : 32,
           paddingHorizontal: horizontalPadding,
           paddingTop: topPadding,
         },

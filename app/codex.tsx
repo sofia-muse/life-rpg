@@ -20,12 +20,36 @@ import { colors, spacing, fontSize, radius, typography } from '../src/config/the
 import { STAT_ICONS, STAT_NAMES, ClassTier, CrestShape, SigilStyle } from '../src/types';
 
 const KNOWN_BOSS_RELICS = [
-  { bossTitle: 'Couch to 5K', sagaTitle: 'The Five-Kilometer Rite', rewardTitle: "Trailblazer's Crest" },
-  { bossTitle: '30-Day Fitness Challenge', sagaTitle: 'The Thirty-Day Crucible', rewardTitle: 'Champion of Momentum' },
-  { bossTitle: 'Build a Sleep Routine', sagaTitle: 'The Moonlit Accord', rewardTitle: 'Keeper of Recovery' },
-  { bossTitle: 'Read 5 Books', sagaTitle: "The Scholar's Pilgrimage", rewardTitle: 'Bearer of Five Tomes' },
-  { bossTitle: 'Ship a Project', sagaTitle: 'The Launch Campaign', rewardTitle: 'Builder of Finished Things' },
-  { bossTitle: '30-Day Meditation Streak', sagaTitle: 'The Stillness Trial', rewardTitle: 'Warden of Resolve' },
+  {
+    bossTitle: 'Couch to 5K',
+    sagaTitle: 'The Five-Kilometer Rite',
+    rewardTitle: "Trailblazer's Crest",
+  },
+  {
+    bossTitle: '30-Day Fitness Challenge',
+    sagaTitle: 'The Thirty-Day Crucible',
+    rewardTitle: 'Champion of Momentum',
+  },
+  {
+    bossTitle: 'Build a Sleep Routine',
+    sagaTitle: 'The Moonlit Accord',
+    rewardTitle: 'Keeper of Recovery',
+  },
+  {
+    bossTitle: 'Read 5 Books',
+    sagaTitle: "The Scholar's Pilgrimage",
+    rewardTitle: 'Bearer of Five Tomes',
+  },
+  {
+    bossTitle: 'Ship a Project',
+    sagaTitle: 'The Launch Campaign',
+    rewardTitle: 'Builder of Finished Things',
+  },
+  {
+    bossTitle: '30-Day Meditation Streak',
+    sagaTitle: 'The Stillness Trial',
+    rewardTitle: 'Warden of Resolve',
+  },
 ];
 
 export default function CodexScreen() {
@@ -53,7 +77,12 @@ export default function CodexScreen() {
         title="The Codex"
         subtitle="A quiet guide to how your journey grows, rewards you, and stays easy to read."
         action={
-          <TouchableOpacity onPress={() => router.back()} style={styles.headerAction}>
+          <TouchableOpacity
+            onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
+            accessibilityRole="button"
+            accessibilityLabel="Return to previous screen"
+            style={styles.headerAction}
+          >
             <Text style={styles.headerActionText}>Return</Text>
           </TouchableOpacity>
         }
@@ -107,9 +136,7 @@ export default function CodexScreen() {
           {STAT_NAMES.map((stat) => (
             <View key={stat} style={styles.statChip}>
               <Text style={styles.statIcon}>{STAT_ICONS[stat]}</Text>
-              <Text style={styles.statLabel}>
-                {stat.charAt(0).toUpperCase() + stat.slice(1)}
-              </Text>
+              <Text style={styles.statLabel}>{stat.charAt(0).toUpperCase() + stat.slice(1)}</Text>
             </View>
           ))}
         </View>
@@ -140,8 +167,8 @@ export default function CodexScreen() {
             Daily rewards and streak bonuses are there to help momentum feel warm, not punishing.
           </Text>
           <Text style={styles.infoItem}>
-            If the app ever feels too loud, return to smaller quests and let the sanctuary page guide
-            the next step.
+            If the app ever feels too loud, return to smaller quests and let the sanctuary page
+            guide the next step.
           </Text>
         </View>
         {activePathDefinition ? (
@@ -160,10 +187,7 @@ export default function CodexScreen() {
           {classLineage.map((tier) => (
             <View
               key={tier.tier}
-              style={[
-                styles.lineageRow,
-                hero.classTier >= tier.tier && styles.lineageUnlocked,
-              ]}
+              style={[styles.lineageRow, hero.classTier >= tier.tier && styles.lineageUnlocked]}
             >
               <Text style={styles.lineageTier}>Tier {tier.tier}</Text>
               <Text style={styles.lineageName}>{tier.name}</Text>
@@ -180,20 +204,17 @@ export default function CodexScreen() {
         {SKILLS.map((skill) => {
           const unlocked = isSkillUnlocked(skill.id);
           return (
-            <View
-              key={skill.id}
-              style={[styles.skillRow, !unlocked && styles.ledgerLocked]}
-            >
+            <View key={skill.id} style={[styles.skillRow, !unlocked && styles.ledgerLocked]}>
               <Text style={styles.skillIcon}>{unlocked ? skill.icon : '🔒'}</Text>
               <View style={styles.skillInfo}>
-                <Text style={styles.skillName}>
-                  {unlocked ? skill.name : '????'}
-                </Text>
+                <Text style={styles.skillName}>{unlocked ? skill.name : '????'}</Text>
                 <Text style={styles.skillEffect} numberOfLines={1}>
                   {unlocked
                     ? skill.effect
                     : `${skill.requiredStat ?? 'cross'} L${skill.requiredLevel}${
-                        skill.secondaryLevel ? ` + ${skill.secondaryStat} L${skill.secondaryLevel}` : ''
+                        skill.secondaryLevel
+                          ? ` + ${skill.secondaryStat} L${skill.secondaryLevel}`
+                          : ''
                       }`}
                 </Text>
               </View>
@@ -244,17 +265,20 @@ export default function CodexScreen() {
       {unlockedSkills.length > 0 && (
         <Card>
           <Text style={styles.sectionTitle}>Recently Awakened</Text>
-          {unlockedSkills.slice(-6).reverse().map((skill) => (
-            <View key={skill.id} style={styles.skillRow}>
-              <Text style={styles.skillIcon}>{skill.icon}</Text>
-              <View style={styles.skillInfo}>
-                <Text style={styles.skillName}>{skill.name}</Text>
-                <Text style={styles.skillEffect} numberOfLines={1}>
-                  {skill.effect}
-                </Text>
+          {unlockedSkills
+            .slice(-6)
+            .reverse()
+            .map((skill) => (
+              <View key={skill.id} style={styles.skillRow}>
+                <Text style={styles.skillIcon}>{skill.icon}</Text>
+                <View style={styles.skillInfo}>
+                  <Text style={styles.skillName}>{skill.name}</Text>
+                  <Text style={styles.skillEffect} numberOfLines={1}>
+                    {skill.effect}
+                  </Text>
+                </View>
               </View>
-            </View>
-          ))}
+            ))}
         </Card>
       )}
 
@@ -266,7 +290,9 @@ export default function CodexScreen() {
             return (
               <View key={boss.id} style={styles.bossRow}>
                 <Text style={styles.bossTitle}>{saga?.sagaTitle ?? boss.title}</Text>
-                <Text style={styles.bossReward}>Relic: {saga?.rewardTitle ?? 'Campaign Relic'}</Text>
+                <Text style={styles.bossReward}>
+                  Relic: {saga?.rewardTitle ?? 'Campaign Relic'}
+                </Text>
               </View>
             );
           })}
@@ -288,9 +314,22 @@ export default function CodexScreen() {
       )}
 
       <View style={styles.actionRow}>
-        <Button title="Adventures" onPress={() => router.push('/quests')} style={styles.actionBtn} />
-        <Button title="World Map" onPress={() => router.push('/map' as Href)} variant="secondary" style={styles.actionBtn} />
-        <Button title="Trophy Hall" onPress={() => router.push('/achievements' as Href)} style={styles.actionBtn} />
+        <Button
+          title="Adventures"
+          onPress={() => router.push('/quests')}
+          style={styles.actionBtn}
+        />
+        <Button
+          title="World Map"
+          onPress={() => router.push('/map' as Href)}
+          variant="secondary"
+          style={styles.actionBtn}
+        />
+        <Button
+          title="Trophy Hall"
+          onPress={() => router.push('/achievements' as Href)}
+          style={styles.actionBtn}
+        />
         <Button
           title="Sanctuary"
           onPress={() => router.push('/')}

@@ -76,6 +76,8 @@ export type MouthStyle = 'laugh' | 'smile' | 'peace';
 export type GlassesStyle = 'none' | 'round' | 'square';
 
 export interface CharacterAppearance {
+  portraitStyle?: 'painted' | 'illustrated';
+  portraitId?: 'moonweaver' | 'wildwood';
   gender: Gender;
   skinTone: SkinTone;
   hairStyle: HairStyle;

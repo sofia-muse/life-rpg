@@ -1,3 +1,4 @@
+import { FantasyIcon } from './FantasyIcon';
 import React, { useState } from 'react';
 import {
   View,
@@ -20,7 +21,6 @@ import {
   QuestDifficulty,
   STAT_NAMES,
   STAT_COLORS,
-  STAT_ICONS,
   DIFFICULTY_XP,
 } from '../../types';
 import { guidanceApi } from '../../api/guidanceApi';
@@ -79,6 +79,11 @@ export function QuestCreateModal() {
 
   const handleCreate = () => {
     if (!title.trim()) return;
+    if (
+      type === 'boss' &&
+      (!/^[1-9]\d*$/.test(totalSteps) || !Number.isSafeInteger(Number(totalSteps)))
+    )
+      return;
     if (!isDifficultyAllowed(difficulty, stat, unlockedSkillIds)) return;
 
     const chapters =
@@ -87,7 +92,10 @@ export function QuestCreateModal() {
         : '';
     const sagaMeta =
       type === 'boss'
-        ? [bossSagaTitle ? `Saga: ${bossSagaTitle}` : '', bossRewardTitle ? `Reward: ${bossRewardTitle}` : '']
+        ? [
+            bossSagaTitle ? `Saga: ${bossSagaTitle}` : '',
+            bossRewardTitle ? `Reward: ${bossRewardTitle}` : '',
+          ]
             .filter(Boolean)
             .join('\n')
         : '';
@@ -158,6 +166,7 @@ export function QuestCreateModal() {
             <TextInput
               style={styles.input}
               placeholder="What's the quest?"
+              accessibilityLabel="Quest name"
               placeholderTextColor={colors.textMuted}
               value={title}
               onChangeText={setTitle}
@@ -169,6 +178,7 @@ export function QuestCreateModal() {
             <TextInput
               style={[styles.input, styles.multiline]}
               placeholder="Details..."
+              accessibilityLabel="Quest description"
               placeholderTextColor={colors.textMuted}
               value={description}
               onChangeText={setDescription}
@@ -200,6 +210,7 @@ export function QuestCreateModal() {
                 <TextInput
                   style={styles.input}
                   placeholder="e.g. 10"
+                  accessibilityLabel="Total boss steps"
                   placeholderTextColor={colors.textMuted}
                   value={totalSteps}
                   onChangeText={setTotalSteps}
@@ -251,7 +262,7 @@ export function QuestCreateModal() {
                   ]}
                   onPress={() => selectStat(s)}
                 >
-                  <Text style={styles.chipIcon}>{STAT_ICONS[s]}</Text>
+                  <FantasyIcon stat={s} size={32} />
                   <Text style={[styles.chipText, stat === s && { color: STAT_COLORS[s] }]}>
                     {s.slice(0, 3).toUpperCase()}
                   </Text>
@@ -311,7 +322,16 @@ export function QuestCreateModal() {
                   setQuestCreateModal(false);
                 }}
               />
-              <Button title="Create Quest" onPress={handleCreate} disabled={!title.trim() || !isDifficultyAllowed(difficulty, stat, unlockedSkillIds)} />
+              <Button
+                title="Create Quest"
+                onPress={handleCreate}
+                disabled={
+                  !title.trim() ||
+                  !isDifficultyAllowed(difficulty, stat, unlockedSkillIds) ||
+                  (type === 'boss' &&
+                    (!/^[1-9]\d*$/.test(totalSteps) || !Number.isSafeInteger(Number(totalSteps))))
+                }
+              />
             </View>
           </ScrollView>
         </View>

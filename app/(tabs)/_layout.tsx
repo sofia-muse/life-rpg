@@ -1,3 +1,5 @@
+import { FantasyIcon } from '../../src/components/game/FantasyIcon';
+import { StatName } from '../../src/types';
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { View, Text, StyleSheet, Platform, useWindowDimensions } from 'react-native';
@@ -30,7 +32,20 @@ function TabIcon({
         pointerEvents="none"
         style={[styles.innerBorder, focused && styles.innerBorderActive]}
       />
-      <Text style={[styles.tabIcon, focused && styles.tabIconActive]}>{icon}</Text>
+      <FantasyIcon
+        stat={
+          (
+            {
+              '⌂': 'vitality',
+              '⚔': 'strength',
+              '⛨': 'willpower',
+              '✦': 'intelligence',
+              '✎': 'dexterity',
+            } as Record<string, StatName>
+          )[icon] ?? 'intelligence'
+        }
+        size={30}
+      />
       <Text style={[styles.tabLabel, focused && styles.tabLabelActive]}>{label}</Text>
     </View>
   );

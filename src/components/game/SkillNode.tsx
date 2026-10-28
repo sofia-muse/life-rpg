@@ -1,3 +1,4 @@
+import { FantasyIcon } from './FantasyIcon';
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Skill, STAT_COLORS } from '../../types';
@@ -24,7 +25,7 @@ export function SkillNode({ skill, isUnlocked, progress, onPress }: Props) {
       accessibilityRole="button"
       accessibilityLabel={`${skill.name}, ${isUnlocked ? 'unlocked' : 'locked'}. View skill details`}
     >
-      <Text style={styles.icon}>{skill.icon}</Text>
+      <FantasyIcon stat={skill.requiredStat ?? 'intelligence'} size={40} />
       <Text style={[styles.name, isUnlocked ? { color: statColor } : styles.lockedText]}>
         {skill.name}
       </Text>
