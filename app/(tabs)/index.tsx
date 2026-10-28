@@ -1,6 +1,14 @@
+import { ForestScene } from '../../src/components/layout/StoryHeader';
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, useWindowDimensions } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Platform,
+  useWindowDimensions,
+} from 'react-native';
 import { useRouter, Href } from 'expo-router';
 import { useHeroStore } from '../../src/store/heroStore';
 import { useQuestStore } from '../../src/store/questStore';
@@ -23,8 +31,6 @@ import { HallOfChampions } from '../../src/components/game/HallOfChampions';
 import { colors, spacing, fontSize, typography } from '../../src/config/theme';
 import { STAT_NAMES, STAT_COLORS, StatName } from '../../src/types';
 import { getStatDisplayProgress } from '../../src/engine/xpEngine';
-import { HeroCrest } from '../../src/components/avatar/HeroCrest';
-import { PulseGlow } from '../../src/components/animated/PulseGlow';
 import { getPrimaryContract } from '../../src/config/classContracts';
 import { buildWeeklyCupSummary, getActiveWeeklyPath } from '../../src/config/weeklyPaths';
 import { getWeeklyCapacityBonus } from '../../src/engine/skillEngine';
@@ -33,13 +39,12 @@ import { buildHallOfFameEntry, useHallOfFameStore } from '../../src/store/hallOf
 import { EQUIPPABLE_TITLES } from '../../src/config/achievements';
 import { useForgedSkillStore } from '../../src/store/forgedSkillStore';
 import { useGameplayStore } from '../../src/store/gameplayStore';
-import { getTimeOfDayGreeting, PERIOD_GRADIENTS } from '../../src/utils/gameFeedback';
+import { getTimeOfDayGreeting } from '../../src/utils/gameFeedback';
 import { presentQuestCompletionFeedback } from '../../src/utils/questCompletionFeedback';
 import {
   getContentMaxWidth,
   getScreenHorizontalPadding,
   getScreenTopPadding,
-  getViewportSize,
 } from '../../src/config/responsive';
 
 export default function DashboardScreen() {
@@ -61,7 +66,7 @@ export default function DashboardScreen() {
   const hallEntries = useHallOfFameStore((s) => s.entries);
   const addHallEntry = useHallOfFameStore((s) => s.addEntry);
   const forged = useForgedSkillStore((s) => s.forged);
-  const { greeting, period } = getTimeOfDayGreeting();
+  const { greeting } = getTimeOfDayGreeting();
   const equippedTitle =
     settings.customTitleLabels[settings.equippedTitleId] ??
     EQUIPPABLE_TITLES.find((t) => t.id === settings.equippedTitleId)?.label ??
@@ -99,6 +104,7 @@ export default function DashboardScreen() {
     setTimeout(() => useUIStore.getState().setCharacterEvent('idle'), 2000);
   };
 
+  const [showShareCard, setShowShareCard] = useState(false);
   const [dailyReward, setDailyReward] = useState<{
     xp: number;
     stat: StatName;
@@ -151,9 +157,8 @@ export default function DashboardScreen() {
         contract.requiredCount,
       )
     : null;
-  const viewport = getViewportSize(width);
   const useTwoColumns = width >= 980;
-  const stackHero = width < 820;
+  const stackHero = width < 360;
   const shellPadding = getScreenHorizontalPadding(width);
   const topPadding = getScreenTopPadding(width, Platform.OS === 'web');
   const pageMaxWidth = getContentMaxWidth(width, 'wide');
@@ -191,18 +196,12 @@ export default function DashboardScreen() {
         <View style={[styles.pageShell, pageMaxWidth ? { maxWidth: pageMaxWidth } : null]}>
           <FadeIn delay={0} slideFrom="none" duration={650} scaleFrom={0.98}>
             <View style={styles.heroPanel}>
-              <LinearGradient
-                colors={PERIOD_GRADIENTS[period] as [string, string]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={StyleSheet.absoluteFillObject}
-              />
-              <View pointerEvents="none" style={styles.heroPanelOrb} />
+              <ForestScene />
 
               <View style={styles.panelTopRow}>
                 <View style={styles.panelTopCopy}>
-                  <Text style={styles.panelOverline}>Sanctuary Profile</Text>
-                  <Text style={styles.panelTitle}>Your Living Legend</Text>
+                  <Text style={styles.panelOverline}>Life RPG · The Enchanted Grove</Text>
+                  <Text style={styles.panelTitle}>Your story awakens</Text>
                 </View>
                 <TouchableOpacity onPress={() => router.push('/modal')} style={styles.settingsBtn}>
                   <Text style={styles.settingsIcon}>&#9881;</Text>
@@ -210,65 +209,53 @@ export default function DashboardScreen() {
               </View>
 
               <View style={[styles.header, stackHero && styles.headerStacked]}>
-                <PulseGlow
-                  color={STAT_COLORS[hero.dominantStat]}
-                  intensity="strong"
-                  style={styles.headerAvatarGlow}
-                >
+                <View style={[styles.headerAvatarGlow, width < 600 && { width: 116, height: 116 }]}>
                   <TouchableOpacity onPress={() => router.push('/customize')} activeOpacity={0.86}>
                     <NiceAvatarCharacter
                       appearance={hero.characterAppearance}
                       dominantStat={hero.dominantStat}
                       classTier={hero.classTier}
-                      size={86}
+                      size={width < 600 ? 96 : 160}
                       event={characterEvent}
                     />
                   </TouchableOpacity>
-                </PulseGlow>
+                </View>
 
                 <View style={[styles.headerInfo, stackHero && styles.headerInfoStacked]}>
                   <Text style={styles.heroName}>{hero.name}</Text>
                   <Text style={styles.heroTitle}>{equippedTitle}</Text>
                   <Badge
                     label={`${hero.className} • Tier ${hero.classTier}`}
-                    color={STAT_COLORS[hero.dominantStat]}
+                    color={colors.goldLight}
                   />
                   <Text style={styles.heroBlessing}>{greeting}</Text>
                   <Text style={styles.heroSubBlessing}>{homeBlessing}</Text>
                   <Text style={styles.heroLevel}>Hero Level {hero.heroLevel}</Text>
-                  <View style={styles.heroActions}>
-                    <TouchableOpacity
-                      onPress={() => router.push('/map' as Href)}
-                      style={styles.primaryAction}
-                      activeOpacity={0.85}
-                    >
-                      <Text style={styles.primaryActionText}>World Map</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => router.push('/customize')}
-                      style={styles.secondaryAction}
-                      activeOpacity={0.85}
-                    >
-                      <Text style={styles.secondaryActionText}>Atelier</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => router.push('/achievements' as Href)}
-                      style={styles.secondaryAction}
-                      activeOpacity={0.85}
-                    >
-                      <Text style={styles.secondaryActionText}>Trophies</Text>
-                    </TouchableOpacity>
-                  </View>
                 </View>
+              </View>
 
-                <View style={[styles.crestWrap, stackHero && styles.crestWrapStacked]}>
-                  <HeroCrest
-                    hero={hero}
-                    size={viewport === 'phone' ? 92 : 104}
-                    onPress={() => router.push('/customize')}
-                    variant="heroic"
-                  />
-                </View>
+              <View style={styles.heroActions}>
+                <TouchableOpacity
+                  onPress={() => router.push('/map' as Href)}
+                  style={styles.primaryAction}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.primaryActionText}>World Map</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => router.push('/customize')}
+                  style={styles.secondaryAction}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.secondaryActionText}>Atelier</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => router.push('/achievements' as Href)}
+                  style={styles.secondaryAction}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.secondaryActionText}>Trophies</Text>
+                </TouchableOpacity>
               </View>
 
               <View style={styles.profileMetrics}>
@@ -290,22 +277,46 @@ export default function DashboardScreen() {
             </View>
           </FadeIn>
 
-          <FadeIn delay={80} slideFrom="bottom">
-            <WeeklyCampaignPanel
-              hero={hero}
-              settings={settings}
-              quests={quests}
-              onChoosePath={settings.chooseWeeklyPath}
-              onClaimReward={handleClaimWeeklyReward}
-            />
-          </FadeIn>
-
-          <FadeIn delay={90} slideFrom="bottom">
-            <MentorQuote dominantStat={hero.dominantStat} />
-          </FadeIn>
-
           <View style={[styles.contentGrid, useTwoColumns && styles.contentGridWide]}>
             <View style={[styles.mainColumn, useTwoColumns && styles.mainColumnWide]}>
+              <FadeIn delay={100} slideFrom="bottom">
+                <Card style={styles.questSummary}>
+                  <Text style={styles.sectionTitle}>Today&apos;s Quests</Text>
+                  {todayQuests.length === 0 ? (
+                    <Text style={styles.emptyText}>
+                      No active quests yet. Visit Quests and choose one small act to begin the day.
+                    </Text>
+                  ) : (
+                    todayQuests.map((quest, i) => (
+                      <FadeIn
+                        key={quest.id}
+                        delay={600 + i * 60}
+                        slideFrom="right"
+                        slideDistance={12}
+                      >
+                        <TouchableOpacity
+                          style={styles.questRow}
+                          onPress={() => handleCompleteTodayQuest(quest.id)}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Complete ${quest.title}`}
+                          activeOpacity={0.8}
+                        >
+                          <View
+                            style={[styles.questDot, { backgroundColor: STAT_COLORS[quest.stat] }]}
+                          />
+                          <Text style={styles.questTitle} numberOfLines={3}>
+                            {quest.title}
+                          </Text>
+                          <Text style={[styles.questXP, { color: '#3E5845' }]}>
+                            +{quest.xpReward}
+                          </Text>
+                        </TouchableOpacity>
+                      </FadeIn>
+                    ))
+                  )}
+                </Card>
+              </FadeIn>
+
               <FadeIn delay={100} slideFrom="bottom">
                 <StreakBanner streakDays={hero.currentStreak} />
               </FadeIn>
@@ -342,33 +353,18 @@ export default function DashboardScreen() {
             </View>
 
             <View style={[styles.sideColumn, useTwoColumns && styles.sideColumnWide]}>
-              <FadeIn delay={500} slideFrom="bottom">
-                <Card style={styles.questSummary}>
-                  <Text style={styles.sectionTitle}>Today&apos;s Quests</Text>
-                  {todayQuests.length === 0 ? (
-                    <Text style={styles.emptyText}>
-                      No active quests yet. Visit Quests and choose one small act to begin the day.
-                    </Text>
-                  ) : (
-                    todayQuests.map((quest, i) => (
-                      <FadeIn key={quest.id} delay={600 + i * 60} slideFrom="right" slideDistance={12}>
-                        <TouchableOpacity
-                          style={styles.questRow}
-                          onPress={() => handleCompleteTodayQuest(quest.id)}
-                          activeOpacity={0.8}
-                        >
-                          <View style={[styles.questDot, { backgroundColor: STAT_COLORS[quest.stat] }]} />
-                          <Text style={styles.questTitle} numberOfLines={useTwoColumns ? 2 : 1}>
-                            {quest.title}
-                          </Text>
-                          <Text style={[styles.questXP, { color: STAT_COLORS[quest.stat] }]}>
-                            +{quest.xpReward}
-                          </Text>
-                        </TouchableOpacity>
-                      </FadeIn>
-                    ))
-                  )}
-                </Card>
+              <FadeIn delay={80} slideFrom="bottom">
+                <WeeklyCampaignPanel
+                  hero={hero}
+                  settings={settings}
+                  quests={quests}
+                  onChoosePath={settings.chooseWeeklyPath}
+                  onClaimReward={handleClaimWeeklyReward}
+                />
+              </FadeIn>
+
+              <FadeIn delay={90} slideFrom="bottom">
+                <MentorQuote dominantStat={hero.dominantStat} />
               </FadeIn>
 
               <FadeIn delay={650} slideFrom="bottom">
@@ -378,28 +374,21 @@ export default function DashboardScreen() {
                   currentRank={cup?.rank}
                 />
               </FadeIn>
-
-              <FadeIn delay={700} slideFrom="bottom">
-                <View style={styles.quickStats}>
-                  <Card style={styles.quickStatCard}>
-                    <Text style={styles.quickStatNum}>{hero.totalQuestsCompleted}</Text>
-                    <Text style={styles.quickStatLabel}>Quests Honored</Text>
-                  </Card>
-                  <Card style={styles.quickStatCard}>
-                    <Text style={styles.quickStatNum}>{hero.longestStreak}</Text>
-                    <Text style={styles.quickStatLabel}>Steady Days</Text>
-                  </Card>
-                  <Card style={styles.quickStatCard}>
-                    <Text style={styles.quickStatNum}>{unlockedSkillCount}</Text>
-                    <Text style={styles.quickStatLabel}>Awakened Skills</Text>
-                  </Card>
-                </View>
-              </FadeIn>
             </View>
           </View>
 
           <FadeIn delay={800} slideFrom="bottom">
-            <HeroShareCard hero={hero} />
+            <TouchableOpacity
+              onPress={() => setShowShareCard(!showShareCard)}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: showShareCard }}
+              style={styles.shareToggle}
+            >
+              <Text style={styles.secondaryActionText}>
+                {showShareCard ? 'Close hero card' : 'Share your story ↗'}
+              </Text>
+            </TouchableOpacity>
+            {showShareCard && <HeroShareCard hero={hero} />}
           </FadeIn>
         </View>
       </View>
@@ -408,10 +397,19 @@ export default function DashboardScreen() {
 }
 
 const styles = StyleSheet.create({
+  shareToggle: {
+    padding: spacing.md,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    marginTop: spacing.md,
+  },
   scroll: { flex: 1, backgroundColor: colors.bgPrimary },
   scrollContent: { flexGrow: 1 },
   container: { flex: 1 },
   pageShell: {
+    paddingBottom: 110,
     width: '100%',
     alignSelf: 'center',
   },
@@ -445,7 +443,7 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: spacing.sm,
   },
   headerStacked: {
@@ -453,8 +451,9 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   heroPanel: {
+    minHeight: 360,
     position: 'relative',
-    backgroundColor: colors.bgCard,
+    backgroundColor: colors.bgCanvas,
     borderRadius: 28,
     borderWidth: 1,
     borderColor: colors.borderStrong,
@@ -500,8 +499,8 @@ const styles = StyleSheet.create({
     ...typography.heading,
   },
   headerAvatarGlow: {
-    width: 112,
-    height: 112,
+    width: 180,
+    height: 180,
   },
   headerInfo: { flex: 1, minWidth: 0 },
   headerInfoStacked: {
@@ -570,7 +569,7 @@ const styles = StyleSheet.create({
     ...typography.headingWide,
   },
   secondaryAction: {
-    backgroundColor: 'rgba(15, 15, 26, 0.6)',
+    backgroundColor: 'rgba(7, 18, 15, 0.6)',
     borderRadius: 999,
     borderWidth: 1,
     borderColor: colors.borderLight,
@@ -591,7 +590,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.borderLight,
-    backgroundColor: 'rgba(15, 15, 26, 0.55)',
+    backgroundColor: 'rgba(7, 18, 15, 0.55)',
   },
   settingsIcon: { color: colors.textMuted, fontSize: 20 },
   profileMetrics: {
@@ -641,9 +640,17 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     ...typography.journal,
   },
-  questRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.xs },
+  questRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+    minHeight: 64,
+    backgroundColor: '#EEE5CB',
+    borderRadius: 10,
+  },
   questDot: { width: 8, height: 8, borderRadius: 4, marginRight: spacing.sm },
-  questTitle: { flex: 1, color: colors.textPrimary, fontSize: fontSize.md, ...typography.body },
+  questTitle: { flex: 1, color: '#21382D', fontSize: fontSize.md, ...typography.body },
   questXP: { fontSize: fontSize.sm, fontWeight: '700', ...typography.headingWide },
   quickStats: {
     flexDirection: 'row',

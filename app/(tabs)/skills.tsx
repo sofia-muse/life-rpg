@@ -1,3 +1,4 @@
+import { StoryHeader } from '../../src/components/layout/StoryHeader';
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity } from 'react-native';
 import { ScreenWrapper } from '../../src/components/layout/ScreenWrapper';
@@ -51,8 +52,11 @@ export default function SkillsScreen() {
 
   return (
     <ScreenWrapper>
-      <Text style={styles.title}>Skill Trees</Text>
-      <Text style={styles.subtitle}>Unlock skills by leveling your stats</Text>
+      <StoryHeader
+        chapter="Chapter IV · Ancient knowledge"
+        title="Skill Trees"
+        subtitle="Every small ritual awakens a new gift."
+      />
 
       {/* Forged skills: demo seeds always visible; live AI forge is online-only */}
       {(forged.length > 0 || aiSkillsEnabled || canForge) && (
@@ -84,7 +88,7 @@ export default function SkillsScreen() {
             />
           ) : env.demoMode ? (
             <Text style={styles.hint}>
-              Demo preview skills — live AI forging needs a deployed API with demo mode off.
+              A preview of the enchanted skills your hero can discover.
             </Text>
           ) : (
             <Text style={styles.hint}>

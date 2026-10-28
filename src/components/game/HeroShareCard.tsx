@@ -305,7 +305,7 @@ const styles = StyleSheet.create({
   statItem: {
     alignItems: 'center',
     width: '31%',
-    backgroundColor: 'rgba(15, 15, 26, 0.55)',
+    backgroundColor: 'rgba(7, 18, 15, 0.55)',
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.borderLight,

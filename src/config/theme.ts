@@ -2,32 +2,32 @@ import { Platform } from 'react-native';
 
 export const colors = {
   // Backgrounds
-  bgPrimary: '#0F0F1A',
-  bgCanvas: '#090B14',
-  bgSecondary: '#1A1A2E',
-  bgCard: '#16213E',
-  bgCardRaised: '#1E2A4A',
-  bgPanel: '#221B3D',
-  bgInset: '#11162B',
-  bgInput: '#1E2A4A',
-  bgModal: '#0D0D1A',
+  bgPrimary: '#0B1916',
+  bgCanvas: '#07120F',
+  bgSecondary: '#142B24',
+  bgCard: '#142B24',
+  bgCardRaised: '#1A342C',
+  bgPanel: '#203B2E',
+  bgInset: '#0D211B',
+  bgInput: '#10251E',
+  bgModal: '#0B1916',
 
   // Text
-  textPrimary: '#E8E8F0',
-  textSecondary: '#9CA3AF',
-  textMuted: '#6B7280',
-  textSoft: '#B8BCC8',
-  textAccent: '#C4A962',
+  textPrimary: '#F5F0DF',
+  textSecondary: '#BECDC3',
+  textMuted: '#A0B5A8',
+  textSoft: '#D2DDD3',
+  textAccent: '#DEC68B',
 
   // Accents
-  gold: '#C4A962',
-  goldLight: '#D4B872',
+  gold: '#D5BB7B',
+  goldLight: '#E5D39D',
   goldBright: '#F1DEA1',
   goldDark: '#A48942',
   goldGlow: 'rgba(196, 169, 98, 0.18)',
   goldSoft: 'rgba(196, 169, 98, 0.1)',
   starlight: 'rgba(240, 232, 196, 0.65)',
-  veil: 'rgba(9, 11, 20, 0.72)',
+  veil: 'rgba(7, 18, 15, 0.85)',
   moon: '#C9D1E3',
   amethyst: '#7C5CFC',
   amethystGlow: 'rgba(124, 92, 252, 0.25)',
@@ -35,21 +35,21 @@ export const colors = {
   rose: '#E879B8',
 
   // Stat colors
-  strength: '#EF4444',
-  vitality: '#22C55E',
-  intelligence: '#3B82F6',
-  charisma: '#F59E0B',
-  dexterity: '#8B5CF6',
-  willpower: '#EC4899',
+  strength: '#F0A18E',
+  vitality: '#A6D2A6',
+  intelligence: '#8EBAE4',
+  charisma: '#E7C987',
+  dexterity: '#C0AFE4',
+  willpower: '#DDB1CE',
 
   // Surfaces / glass
-  bgGlass: 'rgba(22, 33, 62, 0.55)',
-  bgGlassStrong: 'rgba(15, 15, 26, 0.78)',
+  bgGlass: 'rgba(20, 43, 36, 0.85)',
+  bgGlassStrong: 'rgba(11, 25, 22, 0.94)',
 
   // UI
-  border: '#2A2A4A',
-  borderLight: '#3A3A5A',
-  borderStrong: '#60547A',
+  border: '#2C493C',
+  borderLight: '#3A5949',
+  borderStrong: '#776F4A',
   borderGlow: 'rgba(196, 169, 98, 0.35)',
   success: '#22C55E',
   error: '#EF4444',
@@ -57,9 +57,9 @@ export const colors = {
   shadowHeavy: 'rgba(5, 8, 20, 0.45)',
 
   // Tab bar
-  tabActive: '#C4A962',
-  tabInactive: '#6B7280',
-  tabBg: '#0A0A14',
+  tabActive: '#E5D39D',
+  tabInactive: '#ADBEAF',
+  tabBg: '#0A1914',
 };
 
 export const fonts = {
@@ -95,15 +95,15 @@ export const spacing = {
 export const radius = {
   sm: 6,
   md: 12,
-  lg: 16,
+  lg: 18,
   xl: 24,
   full: 999,
 };
 
 export const fontSize = {
-  xs: 10,
-  sm: 12,
-  md: 14,
+  xs: 12,
+  sm: 14,
+  md: 16,
   lg: 16,
   xl: 20,
   xxl: 24,

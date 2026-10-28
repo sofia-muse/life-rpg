@@ -1,3 +1,4 @@
+import { ForestScene, StoryHeader } from '../src/components/layout/StoryHeader';
 import React, { useState } from 'react';
 import {
   View,
@@ -132,7 +133,15 @@ export default function OnboardingScreen() {
   };
 
   const question = QUIZ_QUESTIONS[currentQuestion];
-  const totalSteps: Step[] = ['welcome', 'name', 'character', 'quiz', 'results', 'starter', 'begin'];
+  const totalSteps: Step[] = [
+    'welcome',
+    'name',
+    'character',
+    'quiz',
+    'results',
+    'starter',
+    'begin',
+  ];
   const progressIndex = step === 'quiz' ? 3 : totalSteps.indexOf(step);
   const viewport = getViewportSize(width);
   const showWideShell = viewport !== 'phone';
@@ -142,7 +151,11 @@ export default function OnboardingScreen() {
   const topPadding = getScreenTopPadding(width, Platform.OS === 'web');
   const shellMaxWidth = getContentMaxWidth(width, 'wide') ?? 1200;
   const previewName = heroName.trim() || 'Your Hero';
-  const focusPreviewStats: StatName[] = quizResult?.topStats ?? ['strength', 'vitality', 'willpower'];
+  const focusPreviewStats: StatName[] = quizResult?.topStats ?? [
+    'strength',
+    'vitality',
+    'willpower',
+  ];
   const stepLabels: Record<Step, string> = {
     welcome: 'Welcome',
     name: 'Naming',
@@ -165,13 +178,11 @@ export default function OnboardingScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={[colors.bgCanvas, colors.bgPrimary, '#18122B']}
+        colors={[colors.bgCanvas, colors.bgPrimary, colors.bgPrimary]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFillObject}
       />
-      <View pointerEvents="none" style={styles.glowTop} />
-      <View pointerEvents="none" style={styles.glowBottom} />
 
       <ScrollView
         contentContainerStyle={[
@@ -183,11 +194,14 @@ export default function OnboardingScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={[styles.shell, { maxWidth: shellMaxWidth }, showWideShell && styles.shellWide]}>
+        <View
+          style={[styles.shell, { maxWidth: shellMaxWidth }, showWideShell && styles.shellWide]}
+        >
           {showWideShell && (
             <View style={[styles.aside, showSplitLayout && styles.asideWide]}>
-              <Text style={styles.asideEyebrow}>First Dawn</Text>
-              <Text style={styles.asideTitle}>Enter the Sanctuary</Text>
+              <ForestScene />
+              <Text style={styles.asideEyebrow}>Life RPG · First Dawn</Text>
+              <Text style={styles.asideTitle}>The Enchanted Grove</Text>
               <Text style={styles.asideBody}>{stepNarratives[step]}</Text>
 
               <View style={styles.asideAvatarPanel}>
@@ -221,7 +235,10 @@ export default function OnboardingScreen() {
 
               <View style={styles.asideStatChips}>
                 {focusPreviewStats.map((stat) => (
-                  <View key={stat} style={[styles.asideStatChip, { borderColor: `${STAT_COLORS[stat]}66` }]}>
+                  <View
+                    key={stat}
+                    style={[styles.asideStatChip, { borderColor: `${STAT_COLORS[stat]}66` }]}
+                  >
                     <Text style={styles.asideStatIcon}>{STAT_ICONS[stat]}</Text>
                     <Text style={[styles.asideStatText, { color: STAT_COLORS[stat] }]}>
                       {stat.charAt(0).toUpperCase() + stat.slice(1)}
@@ -232,25 +249,36 @@ export default function OnboardingScreen() {
             </View>
           )}
 
+          {!showWideShell && step === 'welcome' && (
+            <StoryHeader
+              chapter="Life RPG · A new chapter"
+              title="The Enchanted Grove"
+              subtitle="Small rituals. Extraordinary stories."
+            />
+          )}
           <Card style={[styles.stepCard, showWideShell && styles.stepCardWide]}>
             <View style={styles.stepCardContent}>
               <Text style={styles.stepEyebrow}>Rite of Beginning • {stepLabels[step]}</Text>
 
               {step === 'welcome' && (
                 <View style={styles.stepCenter}>
-                  <Text style={styles.bigIcon}>⚔️</Text>
+                  <Text style={styles.bigIcon}>✧</Text>
                   <Text style={styles.heading}>Welcome, Adventurer</Text>
                   <Text style={styles.body}>
                     Your real life can become a gentler kind of quest.{'\n\n'}
                     Build small rituals. Earn XP. Let everyday acts of care shape your legend.
                   </Text>
-                  <Button title="Begin Your Journey" onPress={() => setStep('name')} style={styles.ctaButton} />
+                  <Button
+                    title="Begin Your Journey"
+                    onPress={() => setStep('name')}
+                    style={styles.ctaButton}
+                  />
                 </View>
               )}
 
               {step === 'name' && (
                 <View style={styles.stepCenter}>
-                  <Text style={styles.bigIcon}>🏰</Text>
+                  <Text style={styles.bigIcon}>✧</Text>
                   <Text style={styles.heading}>Name Your Hero</Text>
                   <Text style={styles.body}>What name will your journey answer to?</Text>
                   <View style={styles.inputWrap}>
@@ -277,10 +305,13 @@ export default function OnboardingScreen() {
                 <View style={styles.stepWideContent}>
                   <Text style={styles.heading}>Shape Your Hero</Text>
                   <Text style={styles.body}>
-                    Pick a form that feels familiar. This is only the first silhouette of your legend.
+                    Pick a form that feels familiar. This is only the first silhouette of your
+                    legend.
                   </Text>
 
-                  <View style={[styles.characterShell, showSplitLayout && styles.characterShellWide]}>
+                  <View
+                    style={[styles.characterShell, showSplitLayout && styles.characterShellWide]}
+                  >
                     <View style={styles.characterPreviewPanel}>
                       <NiceAvatarCharacter
                         appearance={charAppearance}
@@ -289,7 +320,9 @@ export default function OnboardingScreen() {
                         size={showSplitLayout ? 164 : 124}
                       />
                       <Text style={styles.previewTitle}>{previewName}</Text>
-                      <Text style={styles.previewHint}>Your crest, class, and rituals will build from here.</Text>
+                      <Text style={styles.previewHint}>
+                        Your crest, class, and rituals will build from here.
+                      </Text>
                     </View>
 
                     <View style={styles.characterControls}>
@@ -304,7 +337,9 @@ export default function OnboardingScreen() {
                             ]}
                             onPress={() => setCharAppearance((prev) => ({ ...prev, gender: g }))}
                           >
-                            <Text style={styles.charOptionText}>{g === 'male' ? '♂ Male' : '♀ Female'}</Text>
+                            <Text style={styles.charOptionText}>
+                              {g === 'male' ? '♂ Male' : '♀ Female'}
+                            </Text>
                           </TouchableOpacity>
                         ))}
                       </View>
@@ -319,7 +354,9 @@ export default function OnboardingScreen() {
                               { backgroundColor: SKIN_TONE_COLORS[tone] },
                               charAppearance.skinTone === tone && styles.swatchActive,
                             ]}
-                            onPress={() => setCharAppearance((prev) => ({ ...prev, skinTone: tone }))}
+                            onPress={() =>
+                              setCharAppearance((prev) => ({ ...prev, skinTone: tone }))
+                            }
                           />
                         ))}
                       </View>
@@ -333,7 +370,9 @@ export default function OnboardingScreen() {
                               styles.charOption,
                               charAppearance.hairStyle === hs && styles.charOptionActive,
                             ]}
-                            onPress={() => setCharAppearance((prev) => ({ ...prev, hairStyle: hs }))}
+                            onPress={() =>
+                              setCharAppearance((prev) => ({ ...prev, hairStyle: hs }))
+                            }
                           >
                             <Text style={styles.charOptionText}>
                               {hs.charAt(0).toUpperCase() + hs.slice(1)}
@@ -352,7 +391,9 @@ export default function OnboardingScreen() {
                               { backgroundColor: HAIR_COLOR_VALUES[hc] },
                               charAppearance.hairColor === hc && styles.swatchActive,
                             ]}
-                            onPress={() => setCharAppearance((prev) => ({ ...prev, hairColor: hc }))}
+                            onPress={() =>
+                              setCharAppearance((prev) => ({ ...prev, hairColor: hc }))
+                            }
                           />
                         ))}
                       </View>
@@ -402,7 +443,7 @@ export default function OnboardingScreen() {
 
               {step === 'results' && quizResult && (
                 <View style={styles.stepWideContent}>
-                  <Text style={styles.bigIcon}>🔮</Text>
+                  <Text style={styles.bigIcon}>✧</Text>
                   <Text style={styles.heading}>Your Adventurer Profile</Text>
                   <Text style={styles.body}>
                     Based on your answers, these are the gifts that shine brightest right now:
@@ -438,7 +479,9 @@ export default function OnboardingScreen() {
                     </View>
 
                     <View style={styles.allScoresPanel}>
-                      <Text style={[styles.sectionLabel, styles.sectionLabelCompact]}>Full Constellation</Text>
+                      <Text style={[styles.sectionLabel, styles.sectionLabelCompact]}>
+                        Full Constellation
+                      </Text>
                       <View style={styles.allScores}>
                         {STAT_NAMES.map((stat) => (
                           <View key={stat} style={styles.miniScoreRow}>
@@ -455,7 +498,11 @@ export default function OnboardingScreen() {
                     </View>
                   </View>
 
-                  <Button title="See Your Starter Quests" onPress={() => setStep('starter')} style={styles.ctaButton} />
+                  <Button
+                    title="See Your Starter Quests"
+                    onPress={() => setStep('starter')}
+                    style={styles.ctaButton}
+                  />
                 </View>
               )}
 
@@ -477,32 +524,54 @@ export default function OnboardingScreen() {
                     </Card>
                   ))}
 
-                  <View style={[styles.previewInfoGrid, showWideAnswerGrid && styles.previewInfoGridWide]}>
+                  <View
+                    style={[
+                      styles.previewInfoGrid,
+                      showWideAnswerGrid && styles.previewInfoGridWide,
+                    ]}
+                  >
                     <View style={styles.previewInfoCard}>
-                      <Text style={[styles.sectionLabel, styles.sectionLabelCompact]}>🗡️ Side Quests</Text>
-                      <Text style={styles.sectionHint}>One-time goals to stretch your courage with care.</Text>
+                      <Text style={[styles.sectionLabel, styles.sectionLabelCompact]}>
+                        🗡️ Side Quests
+                      </Text>
+                      <Text style={styles.sectionHint}>
+                        One-time goals to stretch your courage with care.
+                      </Text>
                     </View>
                     <View style={styles.previewInfoCard}>
-                      <Text style={[styles.sectionLabel, styles.sectionLabelCompact]}>🐉 Boss Quest</Text>
-                      <Text style={styles.sectionHint}>A longer quest for the gift you rely on most.</Text>
+                      <Text style={[styles.sectionLabel, styles.sectionLabelCompact]}>
+                        🐉 Boss Quest
+                      </Text>
+                      <Text style={styles.sectionHint}>
+                        A longer quest for the gift you rely on most.
+                      </Text>
                     </View>
                   </View>
 
-                  <Button title="Looks Great!" onPress={() => setStep('begin')} style={styles.ctaButton} />
+                  <Button
+                    title="Looks Great!"
+                    onPress={() => setStep('begin')}
+                    style={styles.ctaButton}
+                  />
                 </View>
               )}
 
               {step === 'begin' && (
                 <View style={styles.stepCenter}>
-                  <Text style={styles.bigIcon}>🌟</Text>
+                  <Text style={styles.bigIcon}>✧</Text>
                   <Text style={styles.heading}>Ready, {heroName}?</Text>
                   <Text style={styles.body}>
                     Your journey begins with ordinary magic.{'\n\n'}
-                    Complete quests to grow your stats, unlock skills, and let your class awaken over
-                    time.{'\n\n'}
+                    Complete quests to grow your stats, unlock skills, and let your class awaken
+                    over time.{'\n\n'}
                     Every real-world act of care becomes part of your legend.
                   </Text>
-                  <Button title="Begin the First Day" onPress={handleComplete} size="lg" style={styles.ctaButton} />
+                  <Button
+                    title="Begin the First Day"
+                    onPress={handleComplete}
+                    size="lg"
+                    style={styles.ctaButton}
+                  />
                 </View>
               )}
             </View>
@@ -558,10 +627,11 @@ const styles = StyleSheet.create({
     alignItems: 'stretch',
   },
   aside: {
+    overflow: 'hidden',
     borderRadius: radius.xl,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: 'rgba(17, 22, 43, 0.78)',
+    backgroundColor: colors.bgCard,
     padding: spacing.lg,
     gap: spacing.md,
     minWidth: 280,
@@ -585,7 +655,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: fontSize.md,
     lineHeight: 22,
-    ...typography.journal,
+    ...typography.body,
   },
   asideAvatarPanel: {
     alignItems: 'center',
@@ -595,7 +665,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.borderLight,
-    backgroundColor: 'rgba(30, 42, 74, 0.45)',
+    backgroundColor: 'rgba(7,18,15,0.72)',
   },
   asideHeroName: {
     color: colors.textPrimary,
@@ -642,7 +712,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
     paddingVertical: spacing.xs + 2,
     paddingHorizontal: spacing.sm + 2,
-    backgroundColor: 'rgba(15, 15, 26, 0.5)',
+    backgroundColor: 'rgba(7, 18, 15, 0.5)',
   },
   asideStatIcon: {
     fontSize: 14,
@@ -656,7 +726,7 @@ const styles = StyleSheet.create({
   },
   stepCardWide: {
     flex: 1,
-    minHeight: 640,
+    minHeight: 520,
   },
   stepCardContent: {
     width: '100%',
@@ -685,7 +755,8 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   bigIcon: {
-    fontSize: 72,
+    fontSize: 46,
+    color: colors.gold,
     marginBottom: spacing.lg,
   },
   heading: {
@@ -703,7 +774,7 @@ const styles = StyleSheet.create({
     lineHeight: 26,
     marginBottom: spacing.xl,
     paddingHorizontal: spacing.md,
-    ...typography.journal,
+    ...typography.body,
   },
   ctaButton: {
     alignSelf: 'center',
@@ -885,7 +956,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     fontStyle: 'italic',
     marginTop: spacing.xs,
-    ...typography.journal,
+    ...typography.body,
   },
   questPreview: {
     marginBottom: spacing.sm,
@@ -924,7 +995,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: 'rgba(17, 22, 43, 0.62)',
+    backgroundColor: 'rgba(13, 33, 27, 0.9)',
     padding: spacing.md,
   },
   dots: {
@@ -962,7 +1033,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.borderLight,
-    backgroundColor: 'rgba(30, 42, 74, 0.5)',
+    backgroundColor: 'rgba(26, 52, 44, 0.8)',
   },
   previewTitle: {
     color: colors.textPrimary,

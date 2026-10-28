@@ -238,7 +238,9 @@ export interface HeroStore {
   createHero: (name: string, avatarSeed: string, focusStats: StatName[]) => void;
   addXP: (stat: StatName, amount: number) => StatLevelUpResult | null;
   recordQuestCompletion: () => void;
-  updateStreak: (unlockedSkillIds: string[]) => { usedStreakFreeze: boolean; rewardAvailable: boolean } | null;
+  updateStreak: (
+    unlockedSkillIds: string[],
+  ) => { usedStreakFreeze: boolean; rewardAvailable: boolean } | null;
   takeRestDay: (unlockedSkillIds: string[]) => void;
   getStatProgress: (stat: StatName) => StatProgress;
 }
@@ -339,12 +341,12 @@ export const STAT_NAMES: StatName[] = [
 ];
 
 export const STAT_COLORS: Record<StatName, string> = {
-  strength: '#EF4444',
-  vitality: '#22C55E',
-  intelligence: '#3B82F6',
-  charisma: '#F59E0B',
-  dexterity: '#8B5CF6',
-  willpower: '#EC4899',
+  strength: '#F0A18E',
+  vitality: '#A6D2A6',
+  intelligence: '#8EBAE4',
+  charisma: '#E7C987',
+  dexterity: '#C0AFE4',
+  willpower: '#DDB1CE',
 };
 
 export const STAT_ICONS: Record<StatName, string> = {

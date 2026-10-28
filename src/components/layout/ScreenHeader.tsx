@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { colors, spacing, fontSize, typography } from '../../config/theme';
+import { ForestScene } from './StoryHeader';
 
 interface Props {
   eyebrow?: string;
@@ -12,6 +13,7 @@ interface Props {
 export function ScreenHeader({ eyebrow, title, subtitle, action }: Props) {
   return (
     <View style={styles.container}>
+      <ForestScene />
       <View style={styles.copy}>
         {eyebrow ? <Text style={styles.eyebrow}>{eyebrow}</Text> : null}
         <Text style={styles.title}>{title}</Text>
@@ -24,7 +26,12 @@ export function ScreenHeader({ eyebrow, title, subtitle, action }: Props) {
 
 const styles = StyleSheet.create({
   container: {
+    backgroundColor: colors.bgCanvas,
+    padding: spacing.lg,
+    borderRadius: 20,
+    overflow: 'hidden',
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: spacing.md,
@@ -32,7 +39,7 @@ const styles = StyleSheet.create({
   },
   copy: {
     flex: 1,
-    minWidth: 0,
+    minWidth: 190,
   },
   eyebrow: {
     color: colors.textAccent,

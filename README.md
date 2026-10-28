@@ -123,6 +123,11 @@ eas build -p android --profile preview
 See [docs/AZURE_DEPLOY.md](docs/AZURE_DEPLOY.md) for infrastructure and env vars (`EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_DEMO_MODE=false`).
 
 ## Design decisions
+
+### Enchanted forest interface
+
+The interface uses illustrated forest chapter headers, quiet evergreen reading surfaces, warm parchment task rows, and larger supporting text. Artwork stays out of task content. The home screen puts daily quests first and keeps the share card behind an explicit toggle. Hero portraits are scalable SVG illustrations with saved skin, hair, expression, and glasses choices; they remain still between game events. The forest scene is an AI-generated project asset in `assets/storybook/`.
+
 - **Offline-first, server-validated.** The client applies XP optimistically for snappy UX; the server recomputes from the same engine and is the source of truth. Shared constants keep them identical (verified by tests).
 - **Idempotent sync.** Each queued operation carries a stable `opId` logged server-side, so replaying a batch after a flaky connection is a no-op.
 - **Secrets via Key Vault.** No connection strings or signing keys in the repo; the App Service reads them through Key Vault references using a managed identity.

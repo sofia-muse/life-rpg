@@ -1,3 +1,4 @@
+import { StoryHeader } from '../../src/components/layout/StoryHeader';
 import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -138,8 +139,11 @@ export default function QuestsScreen() {
         }
       />
 
-      <Text style={styles.title}>Adventures</Text>
-      <Text style={styles.subtitle}>Contracts, side ventures, and boss arcs</Text>
+      <StoryHeader
+        chapter="Chapter II · The quest board"
+        title="Adventures"
+        subtitle="Choose a small quest. Grow your legend."
+      />
 
       <TouchableOpacity onPress={() => router.push('/raids')} accessibilityRole="button">
         <Card style={styles.raidCallout}>
