@@ -51,9 +51,9 @@ describe('syncManager', () => {
     const yesterdayStr = yesterday.toISOString().split('T')[0]!;
 
     const applyServerJournalEntry = jest.fn();
-    const apiFetch = jest.fn(async () => ({
+    const apiFetch = jest.fn(async (_path: string, options?: { body?: { operations?: { opId: string }[] } }) => ({
       serverTime: new Date().toISOString(),
-      applied: ['op-1'],
+      applied: (options?.body?.operations ?? []).map((operation) => operation.opId),
       skipped: [],
       conflicts: [],
       serverChanges: {
@@ -103,7 +103,9 @@ describe('syncManager', () => {
     const { syncManager } = require('../syncManager') as typeof import('../syncManager');
 
     await syncManager.init();
+    (syncManager as any).online = false;
     syncManager.enqueue('quest', 'upsert', { id: 'quest-1' });
+    (syncManager as any).online = true;
     await syncManager.flush();
 
     expect(applyServerJournalEntry).toHaveBeenCalledWith(
