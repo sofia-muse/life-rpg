@@ -87,7 +87,9 @@ function startOfLocalWeek(date: Date): Date {
 }
 
 export function getCurrentWeekKey(now = new Date()): string {
-  return startOfLocalWeek(now).toISOString().split('T')[0];
+  const monday = startOfLocalWeek(now);
+  // Week identity follows the player's local calendar, including east of UTC.
+  return `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`;
 }
 
 export function getWeekKeyForIsoDate(value: string | null | undefined): string | null {
@@ -101,7 +103,10 @@ export function isCurrentWeek(weekKey: string | null | undefined, now = new Date
   return !!weekKey && weekKey === getCurrentWeekKey(now);
 }
 
-export function getActiveWeeklyPath(settings: WeeklyPathSettingsLike, now = new Date()): WeeklyPath | null {
+export function getActiveWeeklyPath(
+  settings: WeeklyPathSettingsLike,
+  now = new Date(),
+): WeeklyPath | null {
   if (!settings.weeklyPath || !isCurrentWeek(settings.weeklyPathWeekKey, now)) {
     return null;
   }
@@ -113,7 +118,10 @@ export function getWeeklyPathDefinition(path: WeeklyPath): WeeklyPathDefinition 
   return WEEKLY_PATHS[path];
 }
 
-export function isQuestAlignedToWeeklyPath(path: WeeklyPath, quest: Pick<Quest, 'stat' | 'type'>): boolean {
+export function isQuestAlignedToWeeklyPath(
+  path: WeeklyPath,
+  quest: Pick<Quest, 'stat' | 'type'>,
+): boolean {
   const definition = getWeeklyPathDefinition(path);
   return definition.stats.includes(quest.stat) && definition.allowedQuestTypes.includes(quest.type);
 }
@@ -140,12 +148,21 @@ export function buildWeeklyCupSummary(
   if (!path) return null;
 
   const definition = getWeeklyPathDefinition(path);
-  const contractProgress = Math.min(60, Math.round((completedMatches / Math.max(requiredCount, 1)) * 60));
-  const alignedBosses = quests.filter((quest) => quest.type === 'boss' && isQuestAlignedToWeeklyPath(path, quest));
+  const contractProgress = Math.min(
+    60,
+    Math.round((completedMatches / Math.max(requiredCount, 1)) * 60),
+  );
+  const alignedBosses = quests.filter(
+    (quest) => quest.type === 'boss' && isQuestAlignedToWeeklyPath(path, quest),
+  );
   const bossProgress = Math.min(
     20,
     Math.round(
-      alignedBosses.reduce((sum, quest) => sum + ((quest.completedSteps ?? 0) / Math.max(quest.totalSteps ?? 1, 1)) * 20, 0),
+      alignedBosses.reduce(
+        (sum, quest) =>
+          sum + ((quest.completedSteps ?? 0) / Math.max(quest.totalSteps ?? 1, 1)) * 20,
+        0,
+      ),
     ),
   );
   const streakBoost = Math.min(10, currentStreak);

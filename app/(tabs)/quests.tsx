@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ScreenWrapper } from '../../src/components/layout/ScreenWrapper';
 import { QuestCard } from '../../src/components/game/QuestCard';
@@ -14,7 +14,8 @@ import { useUIStore } from '../../src/store/uiStore';
 import { useSettingsStore } from '../../src/store/settingsStore';
 import { Card } from '../../src/components/layout/Card';
 import { colors, spacing, fontSize, radius } from '../../src/config/theme';
-import { STAT_COLORS, STAT_ICONS, DIFFICULTY_XP } from '../../src/types';
+import { STAT_COLORS, STAT_ICONS, STAT_NAMES, StatName, DIFFICULTY_XP } from '../../src/types';
+import { filterQuests, QuestStatus } from '../../src/utils/questFilters';
 import { getAllTemplates, QuestTemplate } from '../../src/config/questTemplates';
 import { getPrimaryContract } from '../../src/config/classContracts';
 import { isQuestContractAligned } from '../../src/config/achievements';
@@ -28,26 +29,23 @@ type Tab = 'daily' | 'side' | 'boss';
 export default function QuestsScreen() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab>('daily');
+  const [query, setQuery] = useState('');
+  const [statFilter, setStatFilter] = useState<StatName | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<QuestStatus>('all');
+  const clearFilters = () => {
+    setQuery('');
+    setStatFilter('all');
+    setStatusFilter('all');
+  };
   const [showBossPlanner, setShowBossPlanner] = useState(false);
-  const {
-    quests,
-    addQuest,
-    deleteQuest,
-    getDailyQuests,
-    getSideQuests,
-    getBossQuests,
-  } = useQuestStore();
+  const { quests, addQuest, deleteQuest, getDailyQuests, getSideQuests, getBossQuests } =
+    useQuestStore();
   const hero = useHeroStore((state) => state.hero);
   const settings = useSettingsStore();
   const completeQuestFlow = useGameplayStore((state) => state.completeQuest);
   const unlockedSkills = useSkillStore((s) => s.unlockedSkills);
   const unlockedSkillIds = unlockedSkills.map((s) => s.skillId);
-  const {
-    setQuestCreateModal,
-    showXPPopup,
-    xpPopupData,
-    dismissXP,
-  } = useUIStore();
+  const { setQuestCreateModal, showXPPopup, xpPopupData, dismissXP } = useUIStore();
 
   const tabQuests = {
     daily: getDailyQuests(),
@@ -59,10 +57,7 @@ export default function QuestsScreen() {
   const contract = hero
     ? getPrimaryContract(hero, settings, quests, getWeeklyCapacityBonus(unlockedSkillIds))
     : null;
-  const existingTitles = useMemo(
-    () => new Set(quests.map((q) => q.title)),
-    [quests],
-  );
+  const existingTitles = useMemo(() => new Set(quests.map((q) => q.title)), [quests]);
 
   const handleAddFromTemplate = useCallback(
     (template: QuestTemplate) => {
@@ -107,7 +102,16 @@ export default function QuestsScreen() {
     [completeQuestFlow],
   );
 
-  const filteredQuests = tabQuests[activeTab];
+  const currentQuests = tabQuests[activeTab];
+  const filteredQuests = filterQuests(
+    currentQuests,
+    query,
+    statFilter,
+    statusFilter,
+    settings.fantasyNames,
+  );
+  const completedCount = currentQuests.filter((quest) => quest.isCompleted).length;
+  const hasFilters = query.trim() !== '' || statFilter !== 'all' || statusFilter !== 'all';
 
   return (
     <ScreenWrapper showScrollIndicator>
@@ -156,6 +160,8 @@ export default function QuestsScreen() {
             key={tab}
             style={[styles.tab, activeTab === tab && styles.tabActive]}
             onPress={() => setActiveTab(tab)}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: activeTab === tab }}
           >
             <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
               {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -166,6 +172,96 @@ export default function QuestsScreen() {
           </TouchableOpacity>
         ))}
       </View>
+
+      <Card style={styles.questTools}>
+        <View style={styles.progressHeader}>
+          <Text style={styles.progressTitle}>
+            {activeTab === 'daily' ? "Today's progress" : 'Quest progress'}
+          </Text>
+          <Text style={styles.progressCount}>
+            {completedCount} / {currentQuests.length} complete
+          </Text>
+        </View>
+        <View
+          accessibilityRole="progressbar"
+          accessibilityLabel="Quest completion"
+          accessibilityValue={{
+            min: 0,
+            max: Math.max(currentQuests.length, 1),
+            now: completedCount,
+          }}
+          style={styles.progressTrack}
+        >
+          <View
+            style={[
+              styles.progressFill,
+              {
+                width: `${currentQuests.length ? (completedCount / currentQuests.length) * 100 : 0}%`,
+              },
+            ]}
+          />
+        </View>
+        <TextInput
+          value={query}
+          onChangeText={setQuery}
+          placeholder="Search your quests…"
+          placeholderTextColor={colors.textSecondary}
+          accessibilityLabel="Search your quests"
+          style={styles.searchInput}
+          autoCorrect={false}
+        />
+        <View style={styles.filterRow}>
+          {(['all', 'ready', 'completed', 'paused'] as QuestStatus[]).map((status) => (
+            <TouchableOpacity
+              key={status}
+              onPress={() => setStatusFilter(status)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: statusFilter === status }}
+              style={[styles.filterChip, statusFilter === status && styles.filterSelected]}
+            >
+              <Text
+                style={[styles.filterText, statusFilter === status && styles.filterTextSelected]}
+              >
+                {status === 'all'
+                  ? 'All quests'
+                  : status === 'ready'
+                    ? 'Ready to do'
+                    : status === 'completed'
+                      ? 'Completed'
+                      : 'Paused'}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <View style={styles.filterRow}>
+          {(['all', ...STAT_NAMES] as (StatName | 'all')[]).map((stat) => (
+            <TouchableOpacity
+              key={stat}
+              onPress={() => setStatFilter(stat)}
+              accessibilityRole="button"
+              accessibilityLabel={stat === 'all' ? 'All stats' : stat}
+              accessibilityState={{ selected: statFilter === stat }}
+              style={[styles.filterChip, statFilter === stat && styles.filterSelected]}
+            >
+              <Text style={[styles.filterText, statFilter === stat && styles.filterTextSelected]}>
+                {stat === 'all'
+                  ? 'All stats'
+                  : `${STAT_ICONS[stat]} ${stat.charAt(0).toUpperCase() + stat.slice(1)}`}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        {hasFilters && (
+          <View style={styles.progressHeader}>
+            <Text style={styles.progressCount}>
+              {filteredQuests.length} of {currentQuests.length} quests
+            </Text>
+            <TouchableOpacity onPress={clearFilters} accessibilityRole="button">
+              <Text style={styles.suggestionsToggleText}>Clear filters</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </Card>
 
       {activeTab === 'boss' && (
         <TouchableOpacity style={styles.bossPlannerBtn} onPress={() => setShowBossPlanner(true)}>
@@ -226,11 +322,15 @@ export default function QuestsScreen() {
         {filteredQuests.length === 0 ? (
           <View style={styles.empty}>
             <Text style={styles.emptyIcon}>📜</Text>
-            <Text style={styles.emptyText}>No {activeTab} quests yet.</Text>
+            <Text style={styles.emptyText}>
+              {hasFilters ? 'No matching quests' : `No ${activeTab} quests yet.`}
+            </Text>
             <Text style={styles.emptyHint}>
-              {showSuggestions
-                ? 'Pick one from above or tap + to create your own!'
-                : 'Browse suggestions above or tap + to create one!'}
+              {hasFilters
+                ? 'Try another search or clear your filters.'
+                : showSuggestions
+                  ? 'Pick one from above or tap + to create your own!'
+                  : 'Browse suggestions above or tap + to create one!'}
             </Text>
           </View>
         ) : (
@@ -251,6 +351,8 @@ export default function QuestsScreen() {
         style={styles.fab}
         onPress={() => setQuestCreateModal(true)}
         activeOpacity={0.8}
+        accessibilityRole="button"
+        accessibilityLabel="Create a quest"
       >
         <Text style={styles.fabText}>+</Text>
       </TouchableOpacity>
@@ -259,6 +361,45 @@ export default function QuestsScreen() {
 }
 
 const styles = StyleSheet.create({
+  questTools: { marginBottom: spacing.md, gap: spacing.sm },
+  progressHeader: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  progressTitle: { color: colors.textPrimary, fontSize: fontSize.sm, fontWeight: '700' },
+  progressCount: { color: colors.textSecondary, fontSize: fontSize.sm },
+  progressTrack: {
+    height: 6,
+    borderRadius: radius.full,
+    backgroundColor: colors.bgInset,
+    overflow: 'hidden',
+    marginBottom: spacing.sm,
+  },
+  progressFill: { height: '100%', backgroundColor: colors.gold, borderRadius: radius.full },
+  searchInput: {
+    color: colors.textPrimary,
+    backgroundColor: colors.bgInput,
+    borderColor: colors.borderLight,
+    borderWidth: 1,
+    borderRadius: radius.md,
+    padding: spacing.sm,
+    minHeight: 44,
+    fontSize: fontSize.sm,
+  },
+  filterRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  filterChip: {
+    paddingHorizontal: spacing.sm,
+    minHeight: 44,
+    justifyContent: 'center',
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  filterSelected: { backgroundColor: colors.goldGlow, borderColor: colors.gold },
+  filterText: { color: colors.textSecondary, fontSize: fontSize.xs },
+  filterTextSelected: { color: colors.goldBright },
   title: {
     color: colors.textPrimary,
     fontSize: fontSize.title,
