@@ -123,13 +123,23 @@ export function QuestCard({
 
         {!quest.isCompleted && (
           <TouchableOpacity
-            style={[styles.claimBtn, { backgroundColor: statColor }]}
+            style={[
+              styles.claimBtn,
+              { backgroundColor: colors.gold },
+              !quest.isActive && { opacity: 0.5 },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={`Complete ${quest.title}`}
+            accessibilityState={{ disabled: !quest.isActive }}
+            disabled={!quest.isActive}
             onPress={handlePress}
             onPressIn={handlePressIn}
             onPressOut={handlePressOut}
             activeOpacity={0.9}
           >
-            <Text style={styles.claimBtnText}>Claim Victory</Text>
+            <Text style={styles.claimBtnText}>
+              {quest.isActive ? 'Complete quest' : 'Paused quest'}
+            </Text>
           </TouchableOpacity>
         )}
 
@@ -140,7 +150,12 @@ export function QuestCard({
         )}
 
         {onDelete && !quest.isCompleted && (
-          <TouchableOpacity style={styles.deleteBtn} onPress={() => onDelete(quest.id)}>
+          <TouchableOpacity
+            style={styles.deleteBtn}
+            onPress={() => onDelete(quest.id)}
+            accessibilityRole="button"
+            accessibilityLabel={`Delete ${quest.title}`}
+          >
             <Text style={styles.deleteText}>✕</Text>
           </TouchableOpacity>
         )}
@@ -214,6 +229,7 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   title: {
+    paddingRight: 24,
     color: colors.textPrimary,
     fontSize: fontSize.md,
     fontWeight: '600',
@@ -231,6 +247,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: fontSize.sm,
     marginTop: 2,
+    lineHeight: 22,
   },
   meta: {
     flexDirection: 'row',
@@ -264,6 +281,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   claimBtn: {
+    minHeight: 44,
     marginTop: spacing.sm,
     borderRadius: radius.md,
     paddingVertical: spacing.sm,
@@ -273,7 +291,6 @@ const styles = StyleSheet.create({
     color: colors.bgPrimary,
     fontSize: fontSize.sm,
     fontWeight: '800',
-    textTransform: 'uppercase',
   },
   completedBanner: {
     marginTop: spacing.sm,

@@ -336,7 +336,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
     borderWidth: 1,
     borderColor: colors.borderLight,
-    backgroundColor: 'rgba(15, 15, 26, 0.55)',
+    backgroundColor: 'rgba(7, 18, 15, 0.55)',
   },
   focusTabActive: {
     borderColor: colors.gold,

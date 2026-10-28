@@ -19,7 +19,6 @@ export function Badge({ label, color = colors.gold, size = 'md', style }: Props)
         end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFillObject}
       />
-      <View pointerEvents="none" style={[styles.innerBorder, { borderColor: `${color}40` }]} />
       <Text style={[styles.text, { color }, size === 'sm' && styles.textSm]}>{label}</Text>
     </View>
   );
@@ -52,8 +51,8 @@ const styles = StyleSheet.create({
   text: {
     fontWeight: '600',
     fontSize: fontSize.sm,
-    textTransform: 'uppercase',
-    ...typography.headingWide,
+    lineHeight: 20,
+    ...typography.body,
   },
   textSm: {
     fontSize: fontSize.xs,

@@ -79,7 +79,6 @@ export function Button({
           />
         )}
         {variant !== 'primary' && <View pointerEvents="none" style={styles.secondaryGlow} />}
-        <View pointerEvents="none" style={styles.innerBorder} />
         {loading ? (
           <ActivityIndicator color={variant === 'primary' ? colors.bgPrimary : colors.gold} />
         ) : (
@@ -94,6 +93,7 @@ export function Button({
 
 const styles = StyleSheet.create({
   base: {
+    minHeight: 44,
     borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
@@ -133,8 +133,7 @@ const styles = StyleSheet.create({
   },
   text: {
     fontWeight: '700',
-    textTransform: 'uppercase',
-    ...typography.headingWide,
+    ...typography.body,
   },
   text_primary: {
     color: colors.bgPrimary,

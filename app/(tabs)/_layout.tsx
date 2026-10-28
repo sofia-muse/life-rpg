@@ -26,7 +26,10 @@ function TabIcon({
           style={StyleSheet.absoluteFillObject}
         />
       )}
-      <View pointerEvents="none" style={[styles.innerBorder, focused && styles.innerBorderActive]} />
+      <View
+        pointerEvents="none"
+        style={[styles.innerBorder, focused && styles.innerBorderActive]}
+      />
       <Text style={[styles.tabIcon, focused && styles.tabIconActive]}>{icon}</Text>
       <Text style={[styles.tabLabel, focused && styles.tabLabelActive]}>{label}</Text>
     </View>
@@ -54,6 +57,7 @@ export default function TabLayout() {
             : null,
         ],
         tabBarItemStyle: floatingDock ? styles.tabBarItemWide : undefined,
+        tabBarIconStyle: { width: '100%', height: 54 },
         tabBarShowLabel: false,
         tabBarHideOnKeyboard: true,
       }}
@@ -61,31 +65,41 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon label="Home" icon="⌂" focused={focused} wide={floatingDock} />,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon label="Sanctuary" icon="⌂" focused={focused} wide={floatingDock} />
+          ),
         }}
       />
       <Tabs.Screen
         name="quests"
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon label="Adventures" icon="⚔" focused={focused} wide={floatingDock} />,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon label="Adventures" icon="⚔" focused={focused} wide={floatingDock} />
+          ),
         }}
       />
       <Tabs.Screen
         name="raids"
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon label="Raids" icon="⛨" focused={focused} wide={floatingDock} />,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon label="Raids" icon="⛨" focused={focused} wide={floatingDock} />
+          ),
         }}
       />
       <Tabs.Screen
         name="skills"
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon label="Skills" icon="✦" focused={focused} wide={floatingDock} />,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon label="Skills" icon="✦" focused={focused} wide={floatingDock} />
+          ),
         }}
       />
       <Tabs.Screen
         name="journal"
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon label="Chronicle" icon="✎" focused={focused} wide={floatingDock} />,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon label="Chronicle" icon="✎" focused={focused} wide={floatingDock} />
+          ),
         }}
       />
     </Tabs>
@@ -110,7 +124,7 @@ const styles = StyleSheet.create({
     borderRadius: 26,
     height: 84,
     paddingHorizontal: 12,
-    backgroundColor: 'rgba(10, 10, 20, 0.94)',
+    backgroundColor: 'rgba(10,25,20,0.97)',
     shadowColor: colors.bgCanvas,
     shadowOpacity: 0.28,
     shadowRadius: 22,
@@ -123,7 +137,8 @@ const styles = StyleSheet.create({
   tabItem: {
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 72,
+    minWidth: 0,
+    width: '100%',
     minHeight: 50,
     borderRadius: 18,
     overflow: 'hidden',
@@ -158,11 +173,11 @@ const styles = StyleSheet.create({
     color: colors.tabActive,
   },
   tabLabel: {
-    fontSize: 10,
+    fontSize: 11,
     color: colors.tabInactive,
     marginTop: 3,
-    textTransform: 'uppercase',
-    ...typography.headingWide,
+    textTransform: 'none',
+    ...typography.body,
   },
   tabLabelActive: {
     color: colors.tabActive,

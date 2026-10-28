@@ -1,3 +1,4 @@
+import { StoryHeader } from '../../src/components/layout/StoryHeader';
 import React, { useEffect, useState, useMemo } from 'react';
 import { FlatList, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { Card } from '../../src/components/layout/Card';
@@ -101,8 +102,11 @@ export default function JournalScreen() {
 
   return (
     <ScreenWrapper scroll={false}>
-      <Text style={styles.title}>Chronicle</Text>
-      <Text style={styles.subtitle}>A living record of your campaign</Text>
+      <StoryHeader
+        chapter="Chapter V · Your story"
+        title="Chronicle"
+        subtitle="The story of your everyday magic."
+      />
 
       {(chronicle || offlineEpilogue) && (
         <Card style={styles.chronicleCard}>
@@ -112,9 +116,7 @@ export default function JournalScreen() {
           <Text style={styles.chronicleTitle}>
             {chronicle?.title ?? `${hero?.name}'s Recent Deeds`}
           </Text>
-          <Text style={styles.chronicleNarrative}>
-            {chronicle?.narrative ?? offlineEpilogue}
-          </Text>
+          <Text style={styles.chronicleNarrative}>{chronicle?.narrative ?? offlineEpilogue}</Text>
           {chronicle?.highlights.map((h, i) => (
             <Text key={i} style={styles.chronicleHighlight}>
               • {h}
@@ -163,9 +165,7 @@ export default function JournalScreen() {
                     : new Date(entry.date).toLocaleDateString()}
                 </Text>
 
-                {entry.narrative ? (
-                  <Text style={styles.narrative}>{entry.narrative}</Text>
-                ) : null}
+                {entry.narrative ? <Text style={styles.narrative}>{entry.narrative}</Text> : null}
 
                 {Object.entries(entry.xpGained).some(([_, v]) => v > 0) && (
                   <View style={styles.xpRow}>

@@ -23,10 +23,10 @@ const rpgDarkTheme = {
   ...DarkTheme,
   colors: {
     ...DarkTheme.colors,
-    background: '#0F0F1A',
-    card: '#1A1A2E',
-    text: '#E8E8F0',
-    border: '#2A2A4A',
+    background: '#0B1916',
+    card: '#142B24',
+    text: '#F5F0DF',
+    border: '#2C493C',
     primary: '#C4A962',
   },
 };

@@ -21,6 +21,8 @@ export function SkillNode({ skill, isUnlocked, progress, onPress }: Props) {
       ]}
       onPress={() => onPress(skill)}
       activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={`${skill.name}, ${isUnlocked ? 'unlocked' : 'locked'}. View skill details`}
     >
       <Text style={styles.icon}>{skill.icon}</Text>
       <Text style={[styles.name, isUnlocked ? { color: statColor } : styles.lockedText]}>
@@ -55,7 +57,6 @@ const styles = StyleSheet.create({
   locked: {
     borderColor: colors.border,
     backgroundColor: colors.bgSecondary,
-    opacity: 0.7,
   },
   icon: {
     fontSize: 24,
@@ -67,7 +68,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   lockedText: {
-    color: colors.textMuted,
+    color: colors.textSecondary,
   },
   progressBar: {
     width: '80%',

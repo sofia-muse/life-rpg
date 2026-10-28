@@ -122,22 +122,20 @@ export default function RaidsScreen() {
         <Card style={styles.gateCard}>
           <Text style={styles.gateTitle}>Preview: Iron Cohort Raid</Text>
           <Text style={styles.gateBody}>
-            Sample party goal — 500 push-ups pooled across guildmates. Progress, invite codes, and
-            clear rewards unlock when a backend API is live.
+            An example party goal: 500 push-ups shared across guildmates. Gather your party and work
+            toward a victory together.
           </Text>
           <View style={styles.previewMeter}>
             <View style={[styles.previewFill, { width: '42%' }]} />
           </View>
-          <Text style={styles.previewMeta}>210 / 500 push-ups · 3 members · Relic: Iron Cohort</Text>
+          <Text style={styles.previewMeta}>
+            210 / 500 push-ups · 3 members · Relic: Iron Cohort
+          </Text>
           {env.demoMode ? (
             <>
-              <Text style={styles.gateBody}>
-                Party raids need a deployed API. This hosted demo runs fully offline, so co-op
-                progress cannot sync here.
-              </Text>
+              <Text style={styles.gateBody}>Co-op adventures are not available in this demo.</Text>
               <Text style={styles.gateHint}>
-                Solo quests, campaigns, and the avatar atelier stay available. See docs/AZURE_DEPLOY.md
-                for wiring EXPO_PUBLIC_DEMO_MODE=false to a live API.
+                Your solo quests, world map, and hero atelier are ready to explore.
               </Text>
             </>
           ) : (
@@ -181,7 +179,10 @@ export default function RaidsScreen() {
             <TouchableOpacity onPress={() => setFormMode('join')} style={styles.headerBtn}>
               <Text style={styles.headerBtnText}>Join</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => setFormMode('create')} style={[styles.headerBtn, styles.headerBtnPrimary]}>
+            <TouchableOpacity
+              onPress={() => setFormMode('create')}
+              style={[styles.headerBtn, styles.headerBtnPrimary]}
+            >
               <Text style={[styles.headerBtnText, styles.headerBtnTextPrimary]}>Create</Text>
             </TouchableOpacity>
           </View>
@@ -195,11 +196,16 @@ export default function RaidsScreen() {
         <Card style={styles.emptyCard}>
           <Text style={styles.emptyTitle}>No party raids yet</Text>
           <Text style={styles.gateBody}>
-            Start one — e.g. 500 push-ups this week — and send friends the invite code. Everyone logs their own reps; the party pool decides victory.
+            Start one — e.g. 500 push-ups this week — and send friends the invite code. Everyone
+            logs their own reps; the party pool decides victory.
           </Text>
           <View style={styles.gateActions}>
             <Button title="Create raid" onPress={() => setFormMode('create')} />
-            <Button title="Join with code" onPress={() => setFormMode('join')} variant="secondary" />
+            <Button
+              title="Join with code"
+              onPress={() => setFormMode('join')}
+              variant="secondary"
+            />
           </View>
         </Card>
       ) : null}
@@ -214,7 +220,10 @@ export default function RaidsScreen() {
                 style={[styles.raidTab, active && styles.raidTabActive]}
                 onPress={() => selectRaid(raid.id)}
               >
-                <Text style={[styles.raidTabText, active && styles.raidTabTextActive]} numberOfLines={1}>
+                <Text
+                  style={[styles.raidTabText, active && styles.raidTabTextActive]}
+                  numberOfLines={1}
+                >
                   {raid.title}
                 </Text>
               </TouchableOpacity>
@@ -223,9 +232,16 @@ export default function RaidsScreen() {
         </View>
       ) : null}
 
-      {selected ? <RaidDetail raid={selected} onLog={() => setFormMode('contribute')} mutating={mutating} /> : null}
+      {selected ? (
+        <RaidDetail raid={selected} onLog={() => setFormMode('contribute')} mutating={mutating} />
+      ) : null}
 
-      <Modal visible={formMode !== null} transparent animationType="fade" onRequestClose={resetForms}>
+      <Modal
+        visible={formMode !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={resetForms}
+      >
         <Pressable style={styles.modalBackdrop} onPress={resetForms}>
           <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
             {formMode === 'create' ? (
@@ -421,7 +437,9 @@ function RaidDetail({
           <Text style={styles.progressPct}>{Math.round(progress * 100)}%</Text>
         </View>
         <View style={styles.barTrack}>
-          <View style={[styles.barFill, { width: `${progress * 100}%`, backgroundColor: statColor }]} />
+          <View
+            style={[styles.barFill, { width: `${progress * 100}%`, backgroundColor: statColor }]}
+          />
         </View>
         <Text style={styles.personalStrip}>
           You contributed {raid.yourContribution} · {Math.round(personalShare * 100)}% of the goal
@@ -476,7 +494,12 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     ...typography.headingWide,
   },
-  gateBody: { color: colors.textSecondary, fontSize: fontSize.md, lineHeight: 22, marginBottom: spacing.md },
+  gateBody: {
+    color: colors.textSecondary,
+    fontSize: fontSize.md,
+    lineHeight: 22,
+    marginBottom: spacing.md,
+  },
   gateHint: { color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 },
   gateActions: { gap: spacing.sm, marginTop: spacing.sm },
   previewMeter: {
@@ -509,7 +532,12 @@ const styles = StyleSheet.create({
   error: { color: colors.error, marginBottom: spacing.sm },
   muted: { color: colors.textMuted, marginBottom: spacing.md },
   emptyCard: { padding: spacing.lg },
-  emptyTitle: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: '700', marginBottom: spacing.sm },
+  emptyTitle: {
+    color: colors.textPrimary,
+    fontSize: fontSize.lg,
+    fontWeight: '700',
+    marginBottom: spacing.sm,
+  },
   raidTabs: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginBottom: spacing.md },
   raidTab: {
     borderWidth: 1,
@@ -530,13 +558,22 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
     ...typography.headingWide,
   },
-  detailTitle: { color: colors.textPrimary, fontSize: fontSize.title, fontWeight: '700', marginBottom: spacing.xs },
+  detailTitle: {
+    color: colors.textPrimary,
+    fontSize: fontSize.title,
+    fontWeight: '700',
+    marginBottom: spacing.xs,
+  },
   detailBody: { color: colors.textSecondary, marginBottom: spacing.md, lineHeight: 20 },
   metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginBottom: spacing.md },
   metaPill: { color: colors.textMuted, fontSize: fontSize.sm, marginRight: spacing.sm },
   clearedPill: { color: colors.gold, fontWeight: '700', fontSize: fontSize.sm },
   progressBlock: { marginBottom: spacing.md },
-  progressLabels: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.xs },
+  progressLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: spacing.xs,
+  },
   progressLabel: { color: colors.textPrimary, fontSize: fontSize.sm, fontWeight: '600' },
   progressPct: { color: colors.textMuted, fontSize: fontSize.sm },
   barTrack: {
