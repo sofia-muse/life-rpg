@@ -1,3 +1,4 @@
+import { FantasyIcon } from '../../src/components/game/FantasyIcon';
 import { ForestScene } from '../../src/components/layout/StoryHeader';
 import React, { useEffect, useState } from 'react';
 import {
@@ -29,7 +30,7 @@ import { MentorQuote } from '../../src/components/game/MentorQuote';
 import { BuildSummaryCard } from '../../src/components/game/BuildSummaryCard';
 import { HallOfChampions } from '../../src/components/game/HallOfChampions';
 import { colors, spacing, fontSize, typography } from '../../src/config/theme';
-import { STAT_NAMES, STAT_COLORS, StatName } from '../../src/types';
+import { STAT_NAMES, StatName } from '../../src/types';
 import { getStatDisplayProgress } from '../../src/engine/xpEngine';
 import { getPrimaryContract } from '../../src/config/classContracts';
 import { buildWeeklyCupSummary, getActiveWeeklyPath } from '../../src/config/weeklyPaths';
@@ -203,7 +204,12 @@ export default function DashboardScreen() {
                   <Text style={styles.panelOverline}>Life RPG · The Enchanted Grove</Text>
                   <Text style={styles.panelTitle}>Your story awakens</Text>
                 </View>
-                <TouchableOpacity onPress={() => router.push('/modal')} style={styles.settingsBtn}>
+                <TouchableOpacity
+                  onPress={() => router.push('/modal')}
+                  style={styles.settingsBtn}
+                  accessibilityRole="button"
+                  accessibilityLabel="Open settings"
+                >
                   <Text style={styles.settingsIcon}>&#9881;</Text>
                 </TouchableOpacity>
               </View>
@@ -301,9 +307,9 @@ export default function DashboardScreen() {
                           accessibilityLabel={`Complete ${quest.title}`}
                           activeOpacity={0.8}
                         >
-                          <View
-                            style={[styles.questDot, { backgroundColor: STAT_COLORS[quest.stat] }]}
-                          />
+                          <View style={{ marginRight: 12 }}>
+                            <FantasyIcon stat={quest.stat} size={40} />
+                          </View>
                           <Text style={styles.questTitle} numberOfLines={3}>
                             {quest.title}
                           </Text>
@@ -583,8 +589,8 @@ const styles = StyleSheet.create({
     ...typography.headingWide,
   },
   settingsBtn: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 20,

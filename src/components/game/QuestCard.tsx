@@ -1,6 +1,7 @@
+import { FantasyIcon } from './FantasyIcon';
 import React, { useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
-import { Quest, STAT_COLORS, STAT_ICONS } from '../../types';
+import { Quest, STAT_COLORS } from '../../types';
 import { colors, spacing, fontSize, radius } from '../../config/theme';
 import { Card } from '../layout/Card';
 import { getQuestEvolutionState, getBossSagaState } from '../../engine/questProgression';
@@ -104,9 +105,8 @@ export function QuestCard({
               </Text>
             ) : null}
             <View style={styles.meta}>
-              <Text style={styles.statBadge}>
-                {STAT_ICONS[quest.stat]} {quest.stat}
-              </Text>
+              <FantasyIcon stat={quest.stat} size={28} />
+              <Text style={styles.statBadge}>{quest.stat}</Text>
               <Text style={[styles.xpBadge, { color: statColor }]}>+{quest.xpReward} XP</Text>
               {quest.streak > 0 && <Text style={styles.streak}>🔥 {quest.streak}</Text>}
             </View>

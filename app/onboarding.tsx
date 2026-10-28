@@ -1,3 +1,4 @@
+import { PortraitPicker } from '../src/components/avatar/PortraitPicker';
 import { ForestScene, StoryHeader } from '../src/components/layout/StoryHeader';
 import React, { useState } from 'react';
 import {
@@ -52,7 +53,9 @@ export default function OnboardingScreen() {
   const [step, setStep] = useState<Step>('welcome');
   const [heroName, setHeroName] = useState('');
   const [charAppearance, setCharAppearance] = useState<CharacterAppearance>({
-    gender: 'male',
+    gender: 'female',
+    portraitStyle: 'painted',
+    portraitId: 'moonweaver',
     skinTone: 2 as SkinTone,
     hairStyle: 'short',
     hairColor: 1 as HairColor,
@@ -326,77 +329,87 @@ export default function OnboardingScreen() {
                     </View>
 
                     <View style={styles.characterControls}>
-                      <Text style={styles.charLabel}>Gender</Text>
-                      <View style={styles.charRow}>
-                        {(['male', 'female'] as Gender[]).map((g) => (
-                          <TouchableOpacity
-                            key={g}
-                            style={[
-                              styles.charOption,
-                              charAppearance.gender === g && styles.charOptionActive,
-                            ]}
-                            onPress={() => setCharAppearance((prev) => ({ ...prev, gender: g }))}
-                          >
-                            <Text style={styles.charOptionText}>
-                              {g === 'male' ? '♂ Male' : '♀ Female'}
-                            </Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
+                      <PortraitPicker
+                        appearance={charAppearance}
+                        onChange={(patch) => setCharAppearance((prev) => ({ ...prev, ...patch }))}
+                      />
+                      {charAppearance.portraitStyle === 'illustrated' && (
+                        <>
+                          <Text style={styles.charLabel}>Gender</Text>
+                          <View style={styles.charRow}>
+                            {(['male', 'female'] as Gender[]).map((g) => (
+                              <TouchableOpacity
+                                key={g}
+                                style={[
+                                  styles.charOption,
+                                  charAppearance.gender === g && styles.charOptionActive,
+                                ]}
+                                onPress={() =>
+                                  setCharAppearance((prev) => ({ ...prev, gender: g }))
+                                }
+                              >
+                                <Text style={styles.charOptionText}>
+                                  {g === 'male' ? '♂ Male' : '♀ Female'}
+                                </Text>
+                              </TouchableOpacity>
+                            ))}
+                          </View>
 
-                      <Text style={styles.charLabel}>Skin Tone</Text>
-                      <View style={styles.charRow}>
-                        {([0, 1, 2, 3, 4, 5] as SkinTone[]).map((tone) => (
-                          <TouchableOpacity
-                            key={tone}
-                            style={[
-                              styles.colorSwatch,
-                              { backgroundColor: SKIN_TONE_COLORS[tone] },
-                              charAppearance.skinTone === tone && styles.swatchActive,
-                            ]}
-                            onPress={() =>
-                              setCharAppearance((prev) => ({ ...prev, skinTone: tone }))
-                            }
-                          />
-                        ))}
-                      </View>
+                          <Text style={styles.charLabel}>Skin Tone</Text>
+                          <View style={styles.charRow}>
+                            {([0, 1, 2, 3, 4, 5] as SkinTone[]).map((tone) => (
+                              <TouchableOpacity
+                                key={tone}
+                                style={[
+                                  styles.colorSwatch,
+                                  { backgroundColor: SKIN_TONE_COLORS[tone] },
+                                  charAppearance.skinTone === tone && styles.swatchActive,
+                                ]}
+                                onPress={() =>
+                                  setCharAppearance((prev) => ({ ...prev, skinTone: tone }))
+                                }
+                              />
+                            ))}
+                          </View>
 
-                      <Text style={styles.charLabel}>Hair Style</Text>
-                      <View style={styles.charRow}>
-                        {(['short', 'medium', 'long', 'shaved'] as HairStyle[]).map((hs) => (
-                          <TouchableOpacity
-                            key={hs}
-                            style={[
-                              styles.charOption,
-                              charAppearance.hairStyle === hs && styles.charOptionActive,
-                            ]}
-                            onPress={() =>
-                              setCharAppearance((prev) => ({ ...prev, hairStyle: hs }))
-                            }
-                          >
-                            <Text style={styles.charOptionText}>
-                              {hs.charAt(0).toUpperCase() + hs.slice(1)}
-                            </Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
+                          <Text style={styles.charLabel}>Hair Style</Text>
+                          <View style={styles.charRow}>
+                            {(['short', 'medium', 'long', 'shaved'] as HairStyle[]).map((hs) => (
+                              <TouchableOpacity
+                                key={hs}
+                                style={[
+                                  styles.charOption,
+                                  charAppearance.hairStyle === hs && styles.charOptionActive,
+                                ]}
+                                onPress={() =>
+                                  setCharAppearance((prev) => ({ ...prev, hairStyle: hs }))
+                                }
+                              >
+                                <Text style={styles.charOptionText}>
+                                  {hs.charAt(0).toUpperCase() + hs.slice(1)}
+                                </Text>
+                              </TouchableOpacity>
+                            ))}
+                          </View>
 
-                      <Text style={styles.charLabel}>Hair Color</Text>
-                      <View style={styles.charRow}>
-                        {([0, 1, 2, 3, 4] as HairColor[]).map((hc) => (
-                          <TouchableOpacity
-                            key={hc}
-                            style={[
-                              styles.colorSwatch,
-                              { backgroundColor: HAIR_COLOR_VALUES[hc] },
-                              charAppearance.hairColor === hc && styles.swatchActive,
-                            ]}
-                            onPress={() =>
-                              setCharAppearance((prev) => ({ ...prev, hairColor: hc }))
-                            }
-                          />
-                        ))}
-                      </View>
+                          <Text style={styles.charLabel}>Hair Color</Text>
+                          <View style={styles.charRow}>
+                            {([0, 1, 2, 3, 4] as HairColor[]).map((hc) => (
+                              <TouchableOpacity
+                                key={hc}
+                                style={[
+                                  styles.colorSwatch,
+                                  { backgroundColor: HAIR_COLOR_VALUES[hc] },
+                                  charAppearance.hairColor === hc && styles.swatchActive,
+                                ]}
+                                onPress={() =>
+                                  setCharAppearance((prev) => ({ ...prev, hairColor: hc }))
+                                }
+                              />
+                            ))}
+                          </View>
+                        </>
+                      )}
                     </View>
                   </View>
 

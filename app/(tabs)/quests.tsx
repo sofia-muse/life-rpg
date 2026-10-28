@@ -1,3 +1,4 @@
+import { FantasyIcon } from '../../src/components/game/FantasyIcon';
 import { StoryHeader } from '../../src/components/layout/StoryHeader';
 import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity } from 'react-native';
@@ -15,7 +16,7 @@ import { useUIStore } from '../../src/store/uiStore';
 import { useSettingsStore } from '../../src/store/settingsStore';
 import { Card } from '../../src/components/layout/Card';
 import { colors, spacing, fontSize, radius } from '../../src/config/theme';
-import { STAT_COLORS, STAT_ICONS, STAT_NAMES, StatName, DIFFICULTY_XP } from '../../src/types';
+import { STAT_COLORS, STAT_NAMES, StatName, DIFFICULTY_XP } from '../../src/types';
 import { filterQuests, QuestStatus } from '../../src/utils/questFilters';
 import { getAllTemplates, QuestTemplate } from '../../src/config/questTemplates';
 import { getPrimaryContract } from '../../src/config/classContracts';
@@ -145,6 +146,16 @@ export default function QuestsScreen() {
         subtitle="Choose a small quest. Grow your legend."
       />
 
+      <TouchableOpacity
+        style={styles.createButton}
+        onPress={() => setQuestCreateModal(true)}
+        activeOpacity={0.8}
+        accessibilityRole="button"
+        accessibilityLabel="Create a quest"
+      >
+        <Text style={styles.createButtonText}>+ Create a quest</Text>
+      </TouchableOpacity>
+
       <TouchableOpacity onPress={() => router.push('/raids')} accessibilityRole="button">
         <Card style={styles.raidCallout}>
           <Text style={styles.raidCalloutTitle}>Guild Raid</Text>
@@ -247,11 +258,12 @@ export default function QuestsScreen() {
               accessibilityState={{ selected: statFilter === stat }}
               style={[styles.filterChip, statFilter === stat && styles.filterSelected]}
             >
-              <Text style={[styles.filterText, statFilter === stat && styles.filterTextSelected]}>
-                {stat === 'all'
-                  ? 'All stats'
-                  : `${STAT_ICONS[stat]} ${stat.charAt(0).toUpperCase() + stat.slice(1)}`}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                {stat !== 'all' && <FantasyIcon stat={stat} size={24} />}
+                <Text style={[styles.filterText, statFilter === stat && styles.filterTextSelected]}>
+                  {stat === 'all' ? 'All stats' : `${stat.charAt(0).toUpperCase() + stat.slice(1)}`}
+                </Text>
+              </View>
             </TouchableOpacity>
           ))}
         </View>
@@ -295,7 +307,7 @@ export default function QuestsScreen() {
                 <View style={styles.suggestionContent}>
                   <View style={styles.suggestionInfo}>
                     <View style={styles.suggestionHeader}>
-                      <Text style={styles.suggestionIcon}>{STAT_ICONS[template.stat]}</Text>
+                      <FantasyIcon stat={template.stat} size={32} />
                       <Text style={styles.suggestionTitle}>{template.title}</Text>
                     </View>
                     <Text style={styles.suggestionDesc} numberOfLines={1}>
@@ -350,21 +362,20 @@ export default function QuestsScreen() {
           ))
         )}
       </View>
-
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => setQuestCreateModal(true)}
-        activeOpacity={0.8}
-        accessibilityRole="button"
-        accessibilityLabel="Create a quest"
-      >
-        <Text style={styles.fabText}>+</Text>
-      </TouchableOpacity>
     </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
+  createButton: {
+    minHeight: 48,
+    padding: 12,
+    alignSelf: 'flex-end',
+    borderRadius: 12,
+    backgroundColor: colors.gold,
+    marginBottom: 16,
+  },
+  createButtonText: { color: colors.bgCanvas, fontSize: 16, fontWeight: '700' },
   questTools: { marginBottom: spacing.md, gap: spacing.sm },
   progressHeader: {
     flexDirection: 'row',

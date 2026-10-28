@@ -1,10 +1,25 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import {
+  Animated,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { useHeroStore } from '../../store/heroStore';
 import { HeroCrest } from './HeroCrest';
 import { StatRadar } from './StatRadar';
 import { colors, spacing, fontSize, radius, typography } from '../../config/theme';
-import { AccentOverride, CrestShape, HeroAppearance, SigilStyle, STAT_COLORS, STAT_NAMES } from '../../types';
+import {
+  AccentOverride,
+  CrestShape,
+  HeroAppearance,
+  SigilStyle,
+  STAT_COLORS,
+  STAT_NAMES,
+} from '../../types';
 import { APPEARANCE_UNLOCKS, ACCENT_COLORS } from '../../config/appearanceConfig';
 import { Card } from '../layout/Card';
 import { FadeIn } from '../animated/FadeIn';
@@ -27,7 +42,10 @@ const SIGIL_LABELS: Record<SigilStyle, string> = {
 
 type FocusArea = 'shape' | 'sigil' | 'accent' | 'title' | 'radar';
 
-const FOCUS_COPY: Record<FocusArea, { title: string; hint: string; scale: number; lift: number; turn: number }> = {
+const FOCUS_COPY: Record<
+  FocusArea,
+  { title: string; hint: string; scale: number; lift: number; turn: number }
+> = {
   shape: {
     title: 'Define the sacred frame',
     hint: 'The outer form establishes the crest’s authority before its symbol is read.',
@@ -103,7 +121,9 @@ export function CrestCustomizer() {
   ];
 
   const applyAppearance = (
-    patch: Partial<Pick<HeroAppearance, 'crestShape' | 'sigil' | 'accentOverride' | 'titleDisplay'>>,
+    patch: Partial<
+      Pick<HeroAppearance, 'crestShape' | 'sigil' | 'accentOverride' | 'titleDisplay'>
+    >,
     nextFocus: FocusArea,
   ) => {
     setFocus(nextFocus);
@@ -111,7 +131,7 @@ export function CrestCustomizer() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <View style={styles.content}>
       <FadeIn slideFrom="bottom" slideDistance={16} duration={460} scaleFrom={0.98}>
         <Card style={styles.previewCard}>
           <Text style={styles.previewOverline}>Sacred Banner</Text>
@@ -159,7 +179,9 @@ export function CrestCustomizer() {
         <Card style={styles.sectionCard}>
           <Text style={styles.sectionOverline}>Frame</Text>
           <Text style={styles.sectionTitle}>Crest shape</Text>
-          <Text style={styles.sectionHint}>Choose the ceremonial silhouette that carries the banner.</Text>
+          <Text style={styles.sectionHint}>
+            Choose the ceremonial silhouette that carries the banner.
+          </Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.picker}>
             {(['shield', 'circle', 'diamond', 'hexagon'] as CrestShape[]).map((shape) => {
               const isUnlocked = appearance.unlockedCrestShapes.includes(shape);
@@ -195,7 +217,9 @@ export function CrestCustomizer() {
         <Card style={styles.sectionCard}>
           <Text style={styles.sectionOverline}>Sigil</Text>
           <Text style={styles.sectionTitle}>Inner mark</Text>
-          <Text style={styles.sectionHint}>The sigil defines what power the crest is remembered for.</Text>
+          <Text style={styles.sectionHint}>
+            The sigil defines what power the crest is remembered for.
+          </Text>
           <View style={styles.grid}>
             {(['sword', 'flame', 'eye', 'star', 'tree', 'crown'] as SigilStyle[]).map((sig) => {
               const isUnlocked = appearance.unlockedSigils.includes(sig);
@@ -231,7 +255,9 @@ export function CrestCustomizer() {
         <Card style={styles.sectionCard}>
           <Text style={styles.sectionOverline}>Metalwork</Text>
           <Text style={styles.sectionTitle}>Accent color</Text>
-          <Text style={styles.sectionHint}>Tune the glow of the crest without losing its dominant-stat identity.</Text>
+          <Text style={styles.sectionHint}>
+            Tune the glow of the crest without losing its dominant-stat identity.
+          </Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.picker}>
             {accentOptions.map((opt) => {
               const isSelected = appearance.accentOverride === opt.key;
@@ -256,7 +282,9 @@ export function CrestCustomizer() {
         <Card style={styles.sectionCard}>
           <Text style={styles.sectionOverline}>Heraldry</Text>
           <Text style={styles.sectionTitle}>Title ribbon</Text>
-          <Text style={styles.sectionHint}>Choose whether the class title is spoken aloud by the crest.</Text>
+          <Text style={styles.sectionHint}>
+            Choose whether the class title is spoken aloud by the crest.
+          </Text>
           <View style={styles.toggleRow}>
             <View style={styles.toggleCopy}>
               <Text style={styles.toggleLabel}>Show Class Title</Text>
@@ -278,13 +306,15 @@ export function CrestCustomizer() {
         <Card style={styles.sectionCard}>
           <Text style={styles.sectionOverline}>Constellation</Text>
           <Text style={styles.sectionTitle}>Stat profile</Text>
-          <Text style={styles.sectionHint}>Your stat radar becomes the hidden astronomy beneath the crest.</Text>
+          <Text style={styles.sectionHint}>
+            Your stat radar becomes the hidden astronomy beneath the crest.
+          </Text>
           <View style={styles.radarCard}>
             <StatRadar stats={hero.stats} size={200} opacity={0.85} showLabels />
           </View>
         </Card>
       </FadeIn>
-    </ScrollView>
+    </View>
   );
 }
 

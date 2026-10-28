@@ -1,6 +1,7 @@
+import { FantasyIcon } from '../../src/components/game/FantasyIcon';
 import { StoryHeader } from '../../src/components/layout/StoryHeader';
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Modal, ScrollView, TouchableOpacity } from 'react-native';
 import { ScreenWrapper } from '../../src/components/layout/ScreenWrapper';
 import { SkillNode } from '../../src/components/game/SkillNode';
 import { Card } from '../../src/components/layout/Card';
@@ -15,7 +16,7 @@ import { getSkillsByCategory } from '../../src/config/skills';
 import { getSkillProgress } from '../../src/engine/skillEngine';
 import { env } from '../../src/config/env';
 import { colors, spacing, fontSize, radius } from '../../src/config/theme';
-import { Skill, STAT_NAMES, STAT_COLORS, STAT_ICONS } from '../../src/types';
+import { Skill, StatName, STAT_NAMES, STAT_COLORS, STAT_ICONS } from '../../src/types';
 
 export default function SkillsScreen() {
   const { hero } = useHeroStore();
@@ -105,7 +106,10 @@ export default function SkillsScreen() {
         return (
           <Card key={cat.key} style={styles.treeCard}>
             <View style={styles.treeHeader}>
-              <Text style={styles.treeIcon}>{cat.icon}</Text>
+              <FantasyIcon
+                stat={cat.key === 'cross' ? 'intelligence' : (cat.key as StatName)}
+                size={40}
+              />
               <Text style={[styles.treeName, { color: cat.color }]}>{cat.label}</Text>
             </View>
             <View style={styles.nodesRow}>
@@ -136,36 +140,39 @@ export default function SkillsScreen() {
           onPress={() => setSelectedSkill(null)}
         >
           <View style={styles.modalContent}>
-            {selectedSkill && (
-              <>
-                <Text style={styles.modalIcon}>{selectedSkill.icon}</Text>
-                <Text style={styles.modalName}>{selectedSkill.name}</Text>
-                <Text style={styles.modalDesc}>{selectedSkill.description}</Text>
-                <View style={styles.modalDivider} />
-                <Text style={styles.modalEffect}>{selectedSkill.effect}</Text>
-                <View style={styles.modalReq}>
-                  <Text style={styles.modalReqLabel}>Requires:</Text>
-                  <Text style={styles.modalReqText}>
-                    {selectedSkill.requiredStat
-                      ? `${selectedSkill.requiredStat.charAt(0).toUpperCase() + selectedSkill.requiredStat.slice(1)} Lv. ${selectedSkill.requiredLevel}`
-                      : 'Unknown'}
-                    {selectedSkill.secondaryStat
-                      ? ` + ${selectedSkill.secondaryStat.charAt(0).toUpperCase() + selectedSkill.secondaryStat.slice(1)} Lv. ${selectedSkill.secondaryLevel}`
-                      : ''}
-                  </Text>
-                </View>
-                <View
-                  style={[
-                    styles.modalStatus,
-                    isSkillUnlocked(selectedSkill.id) ? styles.modalUnlocked : styles.modalLocked,
-                  ]}
-                >
-                  <Text style={styles.modalStatusText}>
-                    {isSkillUnlocked(selectedSkill.id) ? '✓ Unlocked' : '🔒 Locked'}
-                  </Text>
-                </View>
-              </>
-            )}
+            <ScrollView style={{ flexShrink: 1 }} contentContainerStyle={{ alignItems: 'center' }}>
+              {selectedSkill && (
+                <>
+                  <Text style={styles.modalIcon}>{selectedSkill.icon}</Text>
+                  <Text style={styles.modalName}>{selectedSkill.name}</Text>
+                  <Text style={styles.modalDesc}>{selectedSkill.description}</Text>
+                  <View style={styles.modalDivider} />
+                  <Text style={styles.modalEffect}>{selectedSkill.effect}</Text>
+                  <View style={styles.modalReq}>
+                    <Text style={styles.modalReqLabel}>Requires:</Text>
+                    <Text style={styles.modalReqText}>
+                      {selectedSkill.requiredStat
+                        ? `${selectedSkill.requiredStat.charAt(0).toUpperCase() + selectedSkill.requiredStat.slice(1)} Lv. ${selectedSkill.requiredLevel}`
+                        : 'Unknown'}
+                      {selectedSkill.secondaryStat
+                        ? ` + ${selectedSkill.secondaryStat.charAt(0).toUpperCase() + selectedSkill.secondaryStat.slice(1)} Lv. ${selectedSkill.secondaryLevel}`
+                        : ''}
+                    </Text>
+                  </View>
+                  <View
+                    style={[
+                      styles.modalStatus,
+                      isSkillUnlocked(selectedSkill.id) ? styles.modalUnlocked : styles.modalLocked,
+                    ]}
+                  >
+                    <Text style={styles.modalStatusText}>
+                      {isSkillUnlocked(selectedSkill.id) ? '✓ Unlocked' : '🔒 Locked'}
+                    </Text>
+                  </View>
+                </>
+              )}
+            </ScrollView>
+            <Button title="Close skill details" onPress={() => setSelectedSkill(null)} />
           </View>
         </TouchableOpacity>
       </Modal>
@@ -222,6 +229,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   modalContent: {
+    maxHeight: '90%',
+    maxWidth: 480,
+    gap: 16,
     backgroundColor: colors.bgCard,
     borderRadius: radius.xl,
     borderWidth: 1,
