@@ -120,6 +120,48 @@ public class HeroService
         return Result<List<StatProgressDto>>.Success(list);
     }
 
+    public async Task<Result<HeroDto>> ClaimRewardAsync(bool restDay, CancellationToken ct = default)
+    {
+        var hero = await LoadAsync(ct);
+        if (hero is null) return Result<HeroDto>.NotFound("Hero not found");
+        var today = _clock.Today;
+        if (restDay ? hero.Settings.LastRestDayDate == today.ToString("yyyy-MM-dd") : hero.LastRewardDate == today)
+            return Result<HeroDto>.Success(hero.ToDto()); // Idempotent retry, no second reward.
+        int xp;
+        var stat = restDay ? StatName.Vitality : hero.DominantStat;
+        if (restDay)
+        {
+            xp = SkillResolver.GetRestDayXpReward(hero.UnlockedSkills.Select(s => s.SkillId));
+            hero.Settings.LastRestDayDate = today.ToString("yyyy-MM-dd");
+            hero.RestDaysUsed += 1;
+        }
+        else
+        {
+            hero.TotalLoginDays += 1;
+            xp = Math.Min(5 + hero.TotalLoginDays, 25) + (hero.CurrentStreak >= 30 ? 50 : hero.CurrentStreak >= 14 ? 25 : hero.CurrentStreak >= 7 ? 15 : hero.CurrentStreak >= 3 ? 5 : 0);
+            hero.LastRewardDate = today;
+        }
+        hero.StatXp[stat] += xp;
+        RecomputeProgression(hero);
+        foreach (var skill in SkillResolver.GetNewlyUnlockedSkills(hero.StatXp, hero.UnlockedSkills.Select(s => s.SkillId).ToHashSet()))
+            hero.UnlockedSkills.Add(new UnlockedSkill { HeroId = hero.Id, SkillId = skill.Id, UnlockedAt = _clock.UtcNow });
+        try { await _db.SaveChangesAsync(ct); }
+        catch (DbUpdateConcurrencyException) { return Result<HeroDto>.Conflict("Reward changed on another device. Reload and retry."); }
+        return Result<HeroDto>.Success(hero.ToDto());
+    }
+
+    public async Task<Result<List<CompletionEventDto>>> GetCompletionsAsync(CancellationToken ct = default)
+    {
+        var hero = await LoadAsync(ct);
+        if (hero is null) return Result<List<CompletionEventDto>>.NotFound("Hero not found");
+        var facts = await _db.QuestCompletions.Where(c => c.HeroId == hero.Id).ToListAsync(ct);
+        var quests = await _db.Quests.Where(q => q.HeroId == hero.Id).ToDictionaryAsync(q => q.Id, ct);
+        return Result<List<CompletionEventDto>>.Success(facts.Select(c => new CompletionEventDto(
+            c.QuestId, quests.TryGetValue(c.QuestId, out var q) ? q.Title : "Completed quest",
+            quests.TryGetValue(c.QuestId, out var current) ? current.Type : QuestType.Side,
+            c.Stat, c.CompletedAt, c.XpAwarded)).ToList());
+    }
+
     public async Task<Result<WeeklyCupDto>> GetWeeklyCupAsync(CancellationToken ct = default)
     {
         var hero = await _db.Heroes
@@ -145,11 +187,11 @@ public class HeroService
         };
 
         var statSet = stats.ToHashSet();
-        var completedMatches = hero.Quests.Count(q =>
-            q.IsCompleted
-            && statSet.Contains(q.Stat)
-            && q.CompletedAt is { } completedAt
-            && WeekKey(DateOnly.FromDateTime(completedAt.UtcDateTime)) == hero.Settings.WeeklyPathWeekKey);
+        var weekStart = DateOnly.Parse(hero.Settings.WeeklyPathWeekKey!);
+        var weekEnd = weekStart.AddDays(7);
+        var completedMatches = await _db.QuestCompletions.CountAsync(c =>
+            c.HeroId == hero.Id && stats.Contains(c.Stat)
+            && c.CompletionDate >= weekStart && c.CompletionDate < weekEnd, ct);
 
         var bossProgress = Math.Min(20, (int)Math.Round(hero.Quests
             .Where(q => q.Type == QuestType.Boss && statSet.Contains(q.Stat) && q.TotalSteps is > 0)

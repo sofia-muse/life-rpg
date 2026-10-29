@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Modal, Animated, TouchableOpacity } from 'react-native';
 import AppLottie from '../animated/AppLottie';
 import { StatName, STAT_COLORS, STAT_ICONS } from '../../types';
@@ -10,10 +10,17 @@ interface Props {
   stat: StatName;
   bonusType: string;
   loginDays: number;
-  onClaim: () => void;
+  onClaim: () => void | Promise<void>;
 }
 
 export function DailyRewardModal({ visible, xp, stat, bonusType, loginDays, onClaim }: Props) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const claim = async () => {
+    if (busy) return;
+    setBusy(true); setError('');
+    try { await onClaim(); } catch { setError('Could not save your reward. Please try again.'); } finally { setBusy(false); }
+  };
   const scale = useRef(new Animated.Value(0.3)).current;
   const opacity = useRef(new Animated.Value(0)).current;
 
@@ -32,7 +39,7 @@ export function DailyRewardModal({ visible, xp, stat, bonusType, loginDays, onCl
   const statColor = STAT_COLORS[stat];
 
   return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={onClaim}>
+    <Modal visible={visible} transparent animationType="none" onRequestClose={() => { void claim(); }}>
       <Animated.View style={[styles.overlay, { opacity }]}>
         <Animated.View style={[styles.content, { transform: [{ scale }] }]}>
           <AppLottie
@@ -67,10 +74,13 @@ export function DailyRewardModal({ visible, xp, stat, bonusType, loginDays, onCl
 
           <TouchableOpacity
             style={[styles.button, { backgroundColor: statColor }]}
-            onPress={onClaim}
+            accessibilityRole="button"
+            disabled={busy}
+            onPress={() => { void claim(); }}
           >
-            <Text style={styles.buttonText}>Claim!</Text>
+            <Text style={styles.buttonText}>{busy ? 'Saving…' : 'Claim!'}</Text>
           </TouchableOpacity>
+          {!!error && <Text style={styles.statLabel}>{error}</Text>}
         </Animated.View>
       </Animated.View>
     </Modal>

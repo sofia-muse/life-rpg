@@ -130,6 +130,7 @@ export interface Hero {
   longestStreak: number;
   lastActiveDate: string;
   restDaysUsed: number;
+  lastRestDayDate?: string;
   appearance: HeroAppearance;
   characterAppearance: CharacterAppearance;
   lastRewardDate: string;

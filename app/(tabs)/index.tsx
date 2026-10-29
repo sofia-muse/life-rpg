@@ -1,3 +1,4 @@
+import { useCompletionStore } from '../../src/store/completionStore';
 import { FantasyIcon } from '../../src/components/game/FantasyIcon';
 import { ForestScene } from '../../src/components/layout/StoryHeader';
 import React, { useEffect, useState } from 'react';
@@ -53,7 +54,7 @@ export default function DashboardScreen() {
   const { width } = useWindowDimensions();
   const hero = useHeroStore((s) => s.hero);
   const getDailyRewardPreview = useHeroStore((s) => s.getDailyRewardPreview);
-  const claimDailyReward = useHeroStore((s) => s.claimDailyReward);
+  const claimDailyReward = useGameplayStore((s) => s.claimDailyLogin);
   const getActiveQuests = useQuestStore((s) => s.getActiveQuests);
   const getQuestById = useQuestStore((s) => s.getQuestById);
   const getUnlockedSkillIds = useSkillStore((s) => s.getUnlockedSkillIds);
@@ -62,6 +63,7 @@ export default function DashboardScreen() {
   const xpPopupData = useUIStore((s) => s.xpPopupData);
   const dismissXP = useUIStore((s) => s.dismissXP);
   const characterEvent = useUIStore((s) => s.characterEvent);
+  const completions = useCompletionStore((s) => s.events);
   const settings = useSettingsStore();
   const { quests } = useQuestStore();
   const hallEntries = useHallOfFameStore((s) => s.entries);
@@ -86,6 +88,7 @@ export default function DashboardScreen() {
       settings,
       quests,
       getWeeklyCapacityBonus(getUnlockedSkillIds()),
+      completions,
     );
     const payload = buildWeeklyChallengePayload(hero, settings, contract, quests);
     if (payload && settings.weeklyPathWeekKey) {
@@ -121,8 +124,8 @@ export default function DashboardScreen() {
     }
   }, [hero?.id, hero?.lastRewardDate, getDailyRewardPreview]);
 
-  const handleClaimReward = () => {
-    if (dailyReward) claimDailyReward(getUnlockedSkillIds());
+  const handleClaimReward = async () => {
+    if (dailyReward) await claimDailyReward();
     setDailyReward(null);
   };
 
@@ -148,7 +151,7 @@ export default function DashboardScreen() {
   const unlockedSkillIds = getUnlockedSkillIds();
   const weeklyCapacityBonus = getWeeklyCapacityBonus(unlockedSkillIds);
   const todayQuests = activeQuests.filter((q) => q.type === 'daily');
-  const contract = getPrimaryContract(hero, settings, quests, weeklyCapacityBonus);
+  const contract = getPrimaryContract(hero, settings, quests, weeklyCapacityBonus, completions);
   const cup = getActiveWeeklyPath(settings)
     ? buildWeeklyCupSummary(
         settings,

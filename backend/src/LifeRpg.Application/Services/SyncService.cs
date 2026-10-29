@@ -13,7 +13,7 @@ namespace LifeRpg.Application.Services;
 /// Idempotent batch sync. Each operation carries an opId logged in SyncRequestLogs, so replaying
 /// a batch (e.g. after a flaky connection) is a no-op. Storage mutations accept only newer payloads
 /// by UpdatedAt; quest *completion* is intentionally handled by the authoritative /complete endpoint,
-/// not here, so progression is always server-computed. Returns a delta of server changes to converge.
+/// not here, so progression is always server-computed. Returns a full quest snapshot plus other changed entities to converge.
 /// </summary>
 public class SyncService
 {
@@ -138,9 +138,9 @@ public class SyncService
                 XpReward = DifficultyXp.For(dto.Difficulty), // server owns XP
                 IsActive = dto.IsActive && (dto.Type != QuestType.Daily || CanActivateDailyQuest(hero, null)),
                 TotalSteps = dto.TotalSteps,
-                CompletedSteps = dto.CompletedSteps,
-                IsCompleted = dto.IsCompleted,
-                CompletedAt = dto.CompletedAt,
+                CompletedSteps = dto.Type == QuestType.Boss ? 0 : null,
+                IsCompleted = false,
+                CompletedAt = null,
                 CreatedAt = dto.CreatedAt == default ? _clock.UtcNow : dto.CreatedAt,
                 UpdatedAt = dto.UpdatedAt == default ? _clock.UtcNow : dto.UpdatedAt,
             });
@@ -160,7 +160,6 @@ public class SyncService
         existing.IsActive = dto.IsActive
             && (dto.Type != QuestType.Daily || CanActivateDailyQuest(hero, existing.Id));
         existing.TotalSteps = dto.TotalSteps;
-        existing.CompletedSteps = dto.CompletedSteps;
         existing.XpReward = DifficultyXp.For(dto.Difficulty);
         existing.UpdatedAt = dto.UpdatedAt;
         return null;
@@ -193,50 +192,7 @@ public class SyncService
         {
             hero.Name = name.GetString()!.Trim();
         }
-        if (op.Payload.TryGetProperty("statXP", out var statXp)
-            || op.Payload.TryGetProperty("statXp", out statXp))
-        {
-            var parsed = statXp.Deserialize<Domain.ValueObjects.StatBlock>(Json);
-            if (parsed is not null)
-            {
-                hero.StatXp = parsed;
-                HeroService.RecomputeProgression(hero);
-            }
-        }
-        if (op.Payload.TryGetProperty("currentStreak", out var currentStreak) && currentStreak.TryGetInt32(out var parsedCurrentStreak))
-        {
-            hero.CurrentStreak = parsedCurrentStreak;
-        }
-        if (op.Payload.TryGetProperty("longestStreak", out var longestStreak) && longestStreak.TryGetInt32(out var parsedLongestStreak))
-        {
-            hero.LongestStreak = parsedLongestStreak;
-        }
-        if (op.Payload.TryGetProperty("restDaysUsed", out var restDaysUsed) && restDaysUsed.TryGetInt32(out var parsedRestDaysUsed))
-        {
-            hero.RestDaysUsed = parsedRestDaysUsed;
-        }
-        if (op.Payload.TryGetProperty("totalLoginDays", out var totalLoginDays) && totalLoginDays.TryGetInt32(out var parsedTotalLoginDays))
-        {
-            hero.TotalLoginDays = parsedTotalLoginDays;
-        }
-        if (op.Payload.TryGetProperty("lastActiveDate", out var lastActiveDate)
-            && lastActiveDate.ValueKind == JsonValueKind.String
-            && DateOnly.TryParse(lastActiveDate.GetString(), out var parsedLastActiveDate))
-        {
-            hero.LastActiveDate = parsedLastActiveDate;
-        }
-        if (op.Payload.TryGetProperty("lastRewardDate", out var lastRewardDate)
-            && lastRewardDate.ValueKind == JsonValueKind.String
-            && DateOnly.TryParse(lastRewardDate.GetString(), out var parsedLastRewardDate))
-        {
-            hero.LastRewardDate = parsedLastRewardDate;
-        }
-        if (op.Payload.TryGetProperty("lastStreakFreezeDate", out var lastStreakFreezeDate)
-            && lastStreakFreezeDate.ValueKind == JsonValueKind.String
-            && DateOnly.TryParse(lastStreakFreezeDate.GetString(), out var parsedLastStreakFreezeDate))
-        {
-            hero.LastStreakFreezeDate = parsedLastStreakFreezeDate;
-        }
+        // Rewards and progression are accepted only through validated commands.
         if (op.Payload.TryGetProperty("appearance", out var appearance))
         {
             var parsed = appearance.Deserialize<Domain.ValueObjects.HeroAppearance>(Json);
@@ -258,6 +214,7 @@ public class SyncService
             var parsed = settings.Deserialize<Domain.ValueObjects.HeroSettings>(Json);
             if (parsed is not null)
             {
+                parsed.LastRestDayDate = hero.Settings.LastRestDayDate;
                 hero.Settings = parsed;
             }
         }
@@ -333,17 +290,17 @@ public class SyncService
         var heroChanged = since is null || hero.UpdatedAt > since;
 
         var quests = await _db.Quests
-            .Where(q => q.HeroId == hero.Id && (since == null || q.UpdatedAt > since))
+            .Where(q => q.HeroId == hero.Id)
             .ToListAsync(ct);
 
         var journal = await _db.JournalEntries
-            .Where(j => j.HeroId == hero.Id && (since == null || j.UpdatedAt > since))
+            .Where(j => j.HeroId == hero.Id)
             .ToListAsync(ct);
 
         return new SyncServerChanges(
             heroChanged ? hero.ToDto() : null,
             quests.Select(q => q.ToDto()).ToList(),
-            journal.Select(j => j.ToDto()).ToList());
+            journal.Where(j => since is null || j.UpdatedAt > since).Select(j => j.ToDto()).ToList());
     }
 
     private bool CanActivateDailyQuest(Hero hero, Guid? currentQuestId)

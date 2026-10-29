@@ -29,6 +29,15 @@ public class HeroesController : ApiControllerBase
     [HttpGet("me/stats")]
     public async Task<IActionResult> Stats() => ToResponse(await _heroes.GetStatsAsync());
 
+    [HttpPost("me/rest-day")]
+    public async Task<IActionResult> RestDay() => ToResponse(await _heroes.ClaimRewardAsync(true));
+
+    [HttpPost("me/daily-reward")]
+    public async Task<IActionResult> DailyReward() => ToResponse(await _heroes.ClaimRewardAsync(false));
+
+    [HttpGet("me/completions")]
+    public async Task<IActionResult> Completions() => ToResponse(await _heroes.GetCompletionsAsync());
+
     [HttpGet("me/weekly-cup")]
     public async Task<IActionResult> WeeklyCup() => ToResponse(await _heroes.GetWeeklyCupAsync());
 }

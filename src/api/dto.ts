@@ -27,6 +27,7 @@ export interface ApiHero {
   lastStreakFreezeDate: string | null;
   lastRewardDate: string | null;
   restDaysUsed: number;
+  lastRestDayDate?: string | null;
   totalLoginDays: number;
   statXp: ApiStatBlock;
   stats: ApiStatBlock;

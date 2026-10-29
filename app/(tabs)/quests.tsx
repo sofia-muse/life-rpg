@@ -1,3 +1,4 @@
+import { useCompletionStore } from '../../src/store/completionStore';
 import { FantasyIcon } from '../../src/components/game/FantasyIcon';
 import { StoryHeader } from '../../src/components/layout/StoryHeader';
 import React, { useState, useCallback, useMemo } from 'react';
@@ -22,7 +23,7 @@ import { getAllTemplates, QuestTemplate } from '../../src/config/questTemplates'
 import { getPrimaryContract } from '../../src/config/classContracts';
 import { isQuestContractAligned } from '../../src/config/achievements';
 import { resolveEvolutionPathId } from '../../src/engine/questProgression';
-import { isDifficultyAllowed, getWeeklyCapacityBonus } from '../../src/engine/skillEngine';
+import { isDifficultyAllowed, getWeeklyCapacityBonus, getActiveDailyQuestCapacityBonus } from '../../src/engine/skillEngine';
 import { useSkillStore } from '../../src/store/skillStore';
 import { presentQuestCompletionFeedback } from '../../src/utils/questCompletionFeedback';
 
@@ -43,6 +44,7 @@ export default function QuestsScreen() {
   const { quests, addQuest, deleteQuest, getDailyQuests, getSideQuests, getBossQuests } =
     useQuestStore();
   const hero = useHeroStore((state) => state.hero);
+  const completions = useCompletionStore((s) => s.events);
   const settings = useSettingsStore();
   const completeQuestFlow = useGameplayStore((state) => state.completeQuest);
   const unlockedSkills = useSkillStore((s) => s.unlockedSkills);
@@ -57,7 +59,7 @@ export default function QuestsScreen() {
 
   const [showSuggestions, setShowSuggestions] = useState(false);
   const contract = hero
-    ? getPrimaryContract(hero, settings, quests, getWeeklyCapacityBonus(unlockedSkillIds))
+    ? getPrimaryContract(hero, settings, quests, getWeeklyCapacityBonus(unlockedSkillIds), completions)
     : null;
   const existingTitles = useMemo(() => new Set(quests.map((q) => q.title)), [quests]);
 
@@ -356,6 +358,8 @@ export default function QuestsScreen() {
               quest={item}
               onComplete={handleComplete}
               onDelete={deleteQuest}
+              onToggleActive={(id) => useQuestStore.getState().toggleQuestActive(id)}
+              resumeDisabled={quests.filter((q) => q.type === 'daily' && q.isActive).length >= 3 + getActiveDailyQuestCapacityBonus(unlockedSkillIds)}
               contractAligned={contract ? isQuestContractAligned(item, contract) : false}
               useFantasyNames={settings.fantasyNames}
             />

@@ -25,4 +25,5 @@ public record SyncBatchResult(
 public record SyncServerChanges(
     HeroDto? Hero,
     List<QuestDto> Quests,
-    List<JournalEntryDto> Journal);
+    List<JournalEntryDto> Journal,
+    string Kind = "snapshot");

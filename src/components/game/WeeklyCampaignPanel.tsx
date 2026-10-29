@@ -1,3 +1,4 @@
+import { useCompletionStore } from '../../store/completionStore';
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Card } from '../layout/Card';
@@ -41,7 +42,7 @@ export function WeeklyCampaignPanel({
 }: Props) {
   const activePath = getActiveWeeklyPath(settings);
   const capacityBonus = getWeeklyCapacityBonus(useSkillStore.getState().getUnlockedSkillIds());
-  const contract = getPrimaryContract(hero, settings, quests, capacityBonus);
+  const contract = getPrimaryContract(hero, settings, quests, capacityBonus, useCompletionStore((s) => s.events));
   const cup = activePath
     ? buildWeeklyCupSummary(
         settings,

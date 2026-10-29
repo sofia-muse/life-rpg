@@ -1,3 +1,4 @@
+import { CompletionEvent } from '../store/completionStore';
 import { Hero, Quest, StatName, WeeklyPath } from '../types';
 import {
   QuestTemplate,
@@ -154,7 +155,7 @@ function buildRecommendedForStats(
   return [...daily, ...side, ...boss];
 }
 
-export function getClassContract(hero: Hero, quests: Quest[] = []): ClassContract {
+export function getClassContract(hero: Hero, quests: Quest[] = [], completions?: CompletionEvent[]): ClassContract {
   const blueprint = CONTRACT_BLUEPRINTS[hero.dominantStat];
   const gender = hero.characterAppearance?.gender;
 
@@ -174,7 +175,7 @@ export function getClassContract(hero: Hero, quests: Quest[] = []): ClassContrac
     summary: `${hero.className} heroes thrive when their week reinforces ${blueprint.focus}. ${blueprint.summary}`,
     requiredCount: 3,
     activeMatches: countContractMatches(quests, recommendedTitles, false),
-    completedMatches: countContractMatches(quests, recommendedTitles, true),
+    completedMatches: completions ? completions.filter((event) => event.stat === hero.dominantStat).length : countContractMatches(quests, recommendedTitles, true),
     recommended,
   };
 }
@@ -184,6 +185,7 @@ export function getWeeklyPathContract(
   settings: WeeklyPathSettingsLike,
   quests: Quest[] = [],
   weeklyCapacityBonus = 0,
+  completions?: CompletionEvent[],
 ): WeeklyContract | null {
   const activePath = getActiveWeeklyPath(settings);
   if (!activePath) return null;
@@ -202,7 +204,7 @@ export function getWeeklyPathContract(
     summary: definition.summary,
     requiredCount: definition.requiredCount + Math.max(0, weeklyCapacityBonus),
     activeMatches: countPathMatches(quests, definition.stats, false),
-    completedMatches: countPathMatches(quests, definition.stats, true, settings.weeklyPathWeekKey),
+    completedMatches: completions ? completions.filter((event) => definition.stats.includes(event.stat) && getWeekKeyForIsoDate(event.completedAt) === settings.weeklyPathWeekKey).length : countPathMatches(quests, definition.stats, true, settings.weeklyPathWeekKey),
     recommended,
     stats: [...definition.stats],
     reward: {
@@ -218,11 +220,12 @@ export function getPrimaryContract(
   settings: WeeklyPathSettingsLike,
   quests: Quest[] = [],
   weeklyCapacityBonus = 0,
+  completions?: CompletionEvent[],
 ): WeeklyContract {
-  const weekly = getWeeklyPathContract(hero, settings, quests, weeklyCapacityBonus);
+  const weekly = getWeeklyPathContract(hero, settings, quests, weeklyCapacityBonus, completions);
   if (weekly) return weekly;
 
-  const fallback = getClassContract(hero, quests);
+  const fallback = getClassContract(hero, quests, completions);
   return {
     ...fallback,
     kind: 'class',

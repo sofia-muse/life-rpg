@@ -40,7 +40,8 @@ public record HeroDto(
     HeroAppearance Appearance,
     CharacterAppearance CharacterAppearance,
     List<UnlockedSkillDto> UnlockedSkills,
-    HeroSettings Settings);
+    HeroSettings Settings,
+    string? LastRestDayDate = null);
 
 public record UpdateAppearanceRequest(HeroAppearance? Appearance, CharacterAppearance? CharacterAppearance);
 
@@ -57,6 +58,8 @@ public record WeeklyCupDto(
     string RewardBadge);
 
 public record StatProgressDto(StatName Stat, int Level, int CurrentXp, int XpNeeded, double Progress);
+
+public record CompletionEventDto(Guid QuestId, string Title, QuestType Type, StatName Stat, DateTimeOffset CompletedAt, int XpAwarded);
 
 // ─── Quests ───
 public record CreateQuestRequest(
