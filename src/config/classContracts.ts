@@ -1,3 +1,4 @@
+import { CompletionEvent } from '../store/completionStore';
 import { Hero, Quest, StatName, WeeklyPath } from '../types';
 import {
   QuestTemplate,
@@ -184,6 +185,7 @@ export function getWeeklyPathContract(
   settings: WeeklyPathSettingsLike,
   quests: Quest[] = [],
   weeklyCapacityBonus = 0,
+  completions?: CompletionEvent[],
 ): WeeklyContract | null {
   const activePath = getActiveWeeklyPath(settings);
   if (!activePath) return null;
@@ -202,7 +204,7 @@ export function getWeeklyPathContract(
     summary: definition.summary,
     requiredCount: definition.requiredCount + Math.max(0, weeklyCapacityBonus),
     activeMatches: countPathMatches(quests, definition.stats, false),
-    completedMatches: countPathMatches(quests, definition.stats, true, settings.weeklyPathWeekKey),
+    completedMatches: completions ? completions.filter((event) => definition.stats.includes(event.stat) && getWeekKeyForIsoDate(event.completedAt) === settings.weeklyPathWeekKey).length : countPathMatches(quests, definition.stats, true, settings.weeklyPathWeekKey),
     recommended,
     stats: [...definition.stats],
     reward: {
@@ -218,8 +220,9 @@ export function getPrimaryContract(
   settings: WeeklyPathSettingsLike,
   quests: Quest[] = [],
   weeklyCapacityBonus = 0,
+  completions?: CompletionEvent[],
 ): WeeklyContract {
-  const weekly = getWeeklyPathContract(hero, settings, quests, weeklyCapacityBonus);
+  const weekly = getWeeklyPathContract(hero, settings, quests, weeklyCapacityBonus, completions);
   if (weekly) return weekly;
 
   const fallback = getClassContract(hero, quests);

@@ -204,10 +204,12 @@ public class QuestService
         }
 
         var unlockedIds = hero.UnlockedSkills.Select(s => s.SkillId).ToList();
+        AdvanceStreak(hero, today);
         var streakMultiplier = StreakCalculator.GetMultiplier(hero.CurrentStreak);
         var skillBonus = SkillResolver.GetSkillBonusForQuest(quest.Type, quest.Stat, unlockedIds)
             + SkillResolver.GetForgedBonusForStat(quest.Stat, hero.GeneratedSkills)
-            + GetWeeklyPathBonus(hero, quest, today);
+            + GetWeeklyPathBonus(hero, quest, today)
+            + (quest.Type == QuestType.Boss ? SkillResolver.GetBossStepXpBonus(unlockedIds) : 0);
         var reward = XpCalculator.CalculateXpReward(quest.Difficulty, streakMultiplier, skillBonus);
 
         var oldTier = hero.ClassTier;
@@ -225,8 +227,6 @@ public class QuestService
                 UnlockedAt = _clock.UtcNow,
             });
         }
-
-        AdvanceStreak(hero, today);
 
         quest.IsCompleted = true;
         quest.CompletedAt = _clock.UtcNow;
@@ -291,7 +291,11 @@ public class QuestService
         }
         else
         {
-            hero.CurrentStreak = 1;
+            var ids = hero.UnlockedSkills.Select(s => s.SkillId).ToList();
+            var freezeAvailable = SkillResolver.GetWeeklyStreakFreezeAllowance(ids) > 0
+                && (hero.LastStreakFreezeDate is null || today.DayNumber - hero.LastStreakFreezeDate.Value.DayNumber >= 7);
+            if (hero.LastActiveDate is not null && freezeAvailable) hero.LastStreakFreezeDate = today;
+            else hero.CurrentStreak = (hero.LastActiveDate is null ? 0 : (int)Math.Floor(hero.CurrentStreak * SkillResolver.GetStreakRetentionRatio(ids))) + 1;
         }
 
         hero.LongestStreak = Math.Max(hero.LongestStreak, hero.CurrentStreak);

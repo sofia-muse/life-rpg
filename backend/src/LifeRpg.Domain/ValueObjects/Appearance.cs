@@ -31,6 +31,7 @@ public sealed class CharacterAppearance
 /// <summary>Per-user preferences. Persisted as a JSON column on the hero. Mirrors the client's settings store.</summary>
 public sealed class HeroSettings
 {
+    public string? LastRestDayDate { get; set; }
     public bool NotificationsEnabled { get; set; } = true;
     public bool HapticEnabled { get; set; } = true;
     public string ReminderTime { get; set; } = "09:00";

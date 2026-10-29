@@ -1,3 +1,4 @@
+import { SyncStatusPanel } from '../src/components/game/SyncStatusPanel';
 import { env } from '../src/config/env';
 import React, { useState } from 'react';
 import {
@@ -87,6 +88,8 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         }
       />
+
+      <SyncStatusPanel />
 
       {hero && (
         <Card tone="accent">

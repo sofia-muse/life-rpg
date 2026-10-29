@@ -40,6 +40,7 @@ export function mapApiHero(hero: ApiHero): Hero {
     longestStreak: hero.longestStreak,
     lastActiveDate: hero.lastActiveDate ?? '',
     restDaysUsed: hero.restDaysUsed,
+    lastRestDayDate: hero.lastRestDayDate ?? undefined,
     appearance: hero.appearance,
     characterAppearance: hero.characterAppearance,
     lastRewardDate: hero.lastRewardDate ?? '',

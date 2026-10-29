@@ -1,3 +1,5 @@
+import { useLibraryStore } from './libraryStore';
+import { useCompletionStore } from './completionStore';
 import { create } from 'zustand';
 import { ApiError } from '../api/client';
 import { mapApiHero, mapApiQuest } from '../api/mappers';
@@ -37,6 +39,8 @@ interface GameplayState {
   completeQuest: (questId: string) => Promise<QuestCompletionFlowResult | null>;
   runDailyLifecycle: () => { rewardAvailable: boolean; usedStreakFreeze: boolean };
   resetLocalState: () => void;
+  claimRestDay: () => Promise<void>;
+  claimDailyLogin: () => Promise<void>;
 }
 
 const emptyXpGained = (): Record<StatName, number> => ({
@@ -54,6 +58,7 @@ function applyJournalEntry(
   levelResult: QuestCompletionFlowResult['levelResult'],
   newSkills: Skill[],
 ): void {
+  useCompletionStore.getState().recordCompletion(quest, xpAwarded);
   useJournalStore.getState().updateTodayEntry({
     narrative: generateQuestNarrative(quest),
     questsCompleted: [quest.id],
@@ -73,6 +78,7 @@ function applyJournalEntry(
     useSettingsStore.getState(),
     useQuestStore.getState().quests,
     getWeeklyCapacityBonus(useSkillStore.getState().getUnlockedSkillIds()),
+    useCompletionStore.getState().events,
   );
   const vow = buildTomorrowVow(
     hero.dominantStat,
@@ -175,6 +181,7 @@ async function completeAuthoritativeQuest(quest: Quest): Promise<QuestCompletion
     ? mapLevelResult(completion.stat, completion.oldLevel, completion.newLevel, completion.tierUp, newSkills)
     : null;
   const xpAwarded = completion?.xpAwarded ?? 0;
+  useCompletionStore.getState().ensureHero(mappedHero.id);
   applyJournalEntry(refreshedQuest, xpAwarded, levelResult, newSkills);
 
   return {
@@ -201,6 +208,8 @@ function completeLocalQuest(questId: string): QuestCompletionFlowResult | null {
     return null;
   }
 
+  useCompletionStore.getState().ensureHero(hero.id);
+  useCompletionStore.getState().seedLegacy(questState.quests);
   questState.resetDailyQuests();
 
   const quest = questState.getQuestById(questId);
@@ -301,6 +310,8 @@ export const useGameplayStore = create<GameplayState>((set) => ({
       useSkillStore.getState().replaceUnlockedSkills(apiHero.unlockedSkills);
       useSettingsStore.getState().replaceSettings(apiHero.settings);
       useQuestStore.getState().replaceQuests(apiQuests.map(mapApiQuest));
+      useCompletionStore.getState().ensureHero(apiHero.id);
+      useCompletionStore.getState().mergeEvents(await heroApi.getCompletions());
       await useForgedSkillStore.getState().load();
       await useRaidStore.getState().load();
     } catch (error) {
@@ -346,21 +357,40 @@ export const useGameplayStore = create<GameplayState>((set) => ({
   },
 
   runDailyLifecycle: () => {
-    const unlockedSkillIds = useSkillStore.getState().getUnlockedSkillIds();
     useSettingsStore.getState().clearStaleWeeklyPath();
-    useQuestStore.getState().resetDailyQuests();
-    const result = useHeroStore.getState().updateStreak(unlockedSkillIds);
-    if (result?.usedStreakFreeze) {
-      console.info('[GameplayStore] Daily lifecycle used a streak freeze to preserve progress.');
+    const hero = useHeroStore.getState().hero;
+    if (hero) {
+      useCompletionStore.getState().ensureHero(hero.id);
+      useCompletionStore.getState().seedLegacy(useQuestStore.getState().quests);
     }
-
+    useQuestStore.getState().resetDailyQuests();
     return {
       rewardAvailable: useHeroStore.getState().getDailyRewardPreview() !== null,
-      usedStreakFreeze: result?.usedStreakFreeze ?? false,
+      usedStreakFreeze: false,
     };
   },
 
+  claimRestDay: async () => {
+    if (env.demoMode || useAuthStore.getState().status !== 'authenticated') {
+      useHeroStore.getState().takeRestDay(useSkillStore.getState().getUnlockedSkillIds());
+      return;
+    }
+    const hero = await heroApi.claimRestDay();
+    useHeroStore.getState().setHero(mapApiHero(hero));
+    useSkillStore.getState().replaceUnlockedSkills(hero.unlockedSkills);
+  },
+  claimDailyLogin: async () => {
+    if (env.demoMode || useAuthStore.getState().status !== 'authenticated') {
+      useHeroStore.getState().claimDailyReward(useSkillStore.getState().getUnlockedSkillIds());
+      return;
+    }
+    const hero = await heroApi.claimDailyReward();
+    useHeroStore.getState().setHero(mapApiHero(hero));
+    useSkillStore.getState().replaceUnlockedSkills(hero.unlockedSkills);
+  },
   resetLocalState: () => {
+    useCompletionStore.getState().clear();
+    useLibraryStore.getState().clear();
     useHeroStore.getState().clearHero();
     useQuestStore.getState().clearQuests();
     useSkillStore.getState().clearUnlockedSkills();

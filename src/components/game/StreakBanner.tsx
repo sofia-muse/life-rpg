@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Animated, TouchableOpacity } from 'react-native';
 import { colors, spacing, fontSize, radius } from '../../config/theme';
 import {
@@ -7,7 +7,7 @@ import {
   daysUntilNextMilestone,
 } from '../../engine/streakEngine';
 import { useHeroStore } from '../../store/heroStore';
-import { useSkillStore } from '../../store/skillStore';
+import { useGameplayStore } from '../../store/gameplayStore';
 import { useUIStore } from '../../store/uiStore';
 import { playGameFeedback } from '../../utils/gameFeedback';
 import { useSettingsStore } from '../../store/settingsStore';
@@ -17,11 +17,13 @@ interface Props {
 }
 
 export function StreakBanner({ streakDays }: Props) {
+  const restClaimed = useHeroStore((s) => s.hero?.lastRestDayDate === new Date().toISOString().slice(0, 10));
   const multiplier = getStreakMultiplier(streakDays);
   const currentMilestone = getCurrentMilestone(streakDays);
   const daysToNext = daysUntilNextMilestone(streakDays);
-  const takeRestDay = useHeroStore((s) => s.takeRestDay);
-  const getUnlockedSkillIds = useSkillStore((s) => s.getUnlockedSkillIds);
+  const claimRestDay = useGameplayStore((s) => s.claimRestDay);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
   const setCharacterEvent = useUIStore((s) => s.setCharacterEvent);
   const hapticEnabled = useSettingsStore((s) => s.hapticEnabled);
 
@@ -39,20 +41,26 @@ export function StreakBanner({ streakDays }: Props) {
     return () => bounce.stop();
   }, [streakDays, fireScale]);
 
-  const handleRestDay = () => {
-    takeRestDay(getUnlockedSkillIds());
-    void playGameFeedback('questComplete', hapticEnabled);
-    setCharacterEvent('rest');
-    setTimeout(() => setCharacterEvent('idle'), 1500);
+  const handleRestDay = async () => {
+    if (restClaimed || busy) return;
+    setBusy(true); setError('');
+    try {
+      await claimRestDay();
+      void playGameFeedback('questComplete', hapticEnabled);
+      setCharacterEvent('rest');
+      setTimeout(() => setCharacterEvent('idle'), 1500);
+    } catch { setError('Could not save your rest day. Please try again.'); }
+    finally { setBusy(false); }
   };
 
   if (streakDays === 0) {
     return (
       <View style={styles.container}>
         <Text style={styles.label}>Complete a quest to start your streak!</Text>
-        <TouchableOpacity style={styles.restBtn} onPress={handleRestDay} activeOpacity={0.85}>
-          <Text style={styles.restBtnText}>Take a Rest Day</Text>
+        <TouchableOpacity style={styles.restBtn} disabled={restClaimed || busy} accessibilityRole="button" accessibilityLabel={restClaimed ? "Rest day saved for today" : "Take a rest day"} onPress={handleRestDay} activeOpacity={0.85}>
+          <Text style={styles.restBtnText}>{restClaimed ? "Rest day saved for today" : "Take a Rest Day"}</Text>
         </TouchableOpacity>
+        {!!error && <Text style={styles.next}>{error}</Text>}
       </View>
     );
   }
@@ -77,9 +85,10 @@ export function StreakBanner({ streakDays }: Props) {
           {daysToNext} day{daysToNext !== 1 ? 's' : ''} to next milestone
         </Text>
       )}
-      <TouchableOpacity style={styles.restBtn} onPress={handleRestDay} activeOpacity={0.85}>
-        <Text style={styles.restBtnText}>Rest Day · Second Wind XP</Text>
+      <TouchableOpacity style={styles.restBtn} disabled={restClaimed || busy} accessibilityRole="button" accessibilityLabel={restClaimed ? "Rest day saved for today" : "Take a rest day"} onPress={handleRestDay} activeOpacity={0.85}>
+        <Text style={styles.restBtnText}>{restClaimed ? "Rest day saved for today" : "Rest Day · Second Wind XP"}</Text>
       </TouchableOpacity>
+      {!!error && <Text style={styles.next}>{error}</Text>}
     </View>
   );
 }

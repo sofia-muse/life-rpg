@@ -1,3 +1,4 @@
+import { useCompletionStore } from '../src/store/completionStore';
 import React, { useEffect } from 'react';
 import { DarkTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack, Redirect } from 'expo-router';
@@ -32,6 +33,7 @@ const rpgDarkTheme = {
 };
 
 export default function RootLayout() {
+  const completionHydrated = useCompletionStore((s) => s.hydrated);
   const hasHydrated = useHeroStore((s) => s._hasHydrated);
   const isOnboarded = useHeroStore((s) => s.isOnboarded);
   const authStatus = useAuthStore((s) => s.status);
@@ -53,9 +55,9 @@ export default function RootLayout() {
 
   // Reset dailies / advance streak once hero + auth are ready. updateStreak is idempotent same-day.
   useEffect(() => {
-    if (!hasHydrated || authStatus === 'loading' || !isOnboarded) return;
+    if (!hasHydrated || !completionHydrated || authStatus === 'loading' || !isOnboarded) return;
     useGameplayStore.getState().runDailyLifecycle();
-  }, [hasHydrated, authStatus, isOnboarded]);
+  }, [hasHydrated, completionHydrated, authStatus, isOnboarded]);
 
   if (!hasHydrated || authStatus === 'loading') {
     return (

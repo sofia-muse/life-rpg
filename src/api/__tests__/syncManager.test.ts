@@ -117,3 +117,62 @@ describe('syncManager', () => {
     );
   });
 });
+
+describe('sync recovery regressions', () => {
+  const setup = async (apiFetch: jest.Mock, initialQuests: any[] = []) => {
+    jest.resetModules();
+    let quests = initialQuests;
+    const replaceQuests = jest.fn((next: any[]) => { quests = next; });
+    jest.doMock('../client', () => ({ apiFetch, ApiError: class ApiError extends Error {} }));
+    jest.doMock('../../config/env', () => ({ env: { demoMode: false } }));
+    jest.doMock('@react-native-async-storage/async-storage', () => ({ getItem: jest.fn().mockResolvedValue(null), setItem: jest.fn().mockResolvedValue(undefined), removeItem: jest.fn().mockResolvedValue(undefined) }));
+    jest.doMock('@react-native-community/netinfo', () => ({ __esModule: true, default: { addEventListener: jest.fn() } }));
+    jest.doMock('../../store/questStore', () => ({ useQuestStore: { getState: () => ({ quests, replaceQuests }) } }));
+    jest.doMock('../../store/heroStore', () => ({ useHeroStore: { getState: () => ({ setHero: jest.fn() }) } }));
+    jest.doMock('../../store/settingsStore', () => ({ useSettingsStore: { getState: () => ({ replaceSettings: jest.fn() }) } }));
+    jest.doMock('../../store/skillStore', () => ({ useSkillStore: { getState: () => ({ replaceUnlockedSkills: jest.fn() }) } }));
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { syncManager } = require('../syncManager') as typeof import('../syncManager');
+    await syncManager.init();
+    (syncManager as any).online = false;
+    return { syncManager, replaceQuests, getQuests: () => quests };
+  };
+  const response = (ops: any[], quests: any[] = [], kind?: string) => ({ serverTime: new Date().toISOString(), applied: ops.map((op) => op.opId), skipped: [], conflicts: [], serverChanges: { kind, hero: null, quests, journal: [] } });
+  const row = (id: string) => ({ id, title: id, type: 'side', difficulty: 'easy', stat: 'strength', xpReward: 15, isCompleted: false, isActive: true, createdAt: '', updatedAt: '', streak: 0, bestStreak: 0, daysCompleted: 0 });
+
+  it('retains work after more than five temporary failures and succeeds on retry', async () => {
+    const api = jest.fn().mockRejectedValue(new Error('Temporary outage'));
+    const { syncManager } = await setup(api);
+    syncManager.enqueue('quest', 'upsert', { id: 'q' });
+    (syncManager as any).online = true;
+    for (let attempt = 0; attempt < 7; attempt++) await syncManager.flush();
+    expect(syncManager.getPendingCount()).toBe(1);
+    expect(syncManager.getStatus().state).toBe('error');
+    api.mockImplementation(async (_: string, options: any) => response(options.body.operations));
+    await syncManager.retryPending();
+    expect(syncManager.getPendingCount()).toBe(0);
+    expect(syncManager.getStatus().state).toBe('idle');
+  });
+
+  it('merges legacy delta responses without dropping unchanged quests', async () => {
+    const api = jest.fn(async (_: string, options: any) => response(options.body.operations, [row('changed')]));
+    const { syncManager, getQuests } = await setup(api, [row('unchanged'), row('changed')]);
+    syncManager.enqueue('hero', 'upsert', { name: 'Hero' });
+    (syncManager as any).online = true;
+    await syncManager.flush();
+    expect(getQuests().map((q) => q.id).sort()).toEqual(['changed', 'unchanged']);
+  });
+
+  it('snapshot removes acknowledged deletes but keeps conflicted local changes', async () => {
+    const api = jest.fn(async (_: string, options: any) => ({ ...response([], [row('server')], 'snapshot'), conflicts: options.body.operations.map((op: any) => ({ opId: op.opId, reason: 'Needs review' })) }));
+    const { syncManager, getQuests } = await setup(api, [row('local'), row('removed')]);
+    syncManager.enqueue('quest', 'upsert', row('local'));
+    (syncManager as any).online = true;
+    await syncManager.flush();
+    expect(getQuests().map((q) => q.id).sort()).toEqual(['local', 'server']);
+    expect(syncManager.getStatus().conflicts).toHaveLength(1);
+    expect(syncManager.getPendingCount()).toBe(1);
+    await syncManager.flush();
+    expect(api).toHaveBeenCalledTimes(1);
+  });
+});

@@ -1,3 +1,4 @@
+import { LibraryChapter } from '../src/components/game/LibraryChapter';
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -64,6 +65,8 @@ export default function MapScreen() {
           </TouchableOpacity>
         }
       />
+
+      <LibraryChapter />
 
       <Card style={styles.chapterCard}>
         <Text style={styles.chapterOverline}>Active Chapter</Text>

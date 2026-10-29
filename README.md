@@ -108,7 +108,7 @@ Runs against a local SQLite database out of the box; configured for SQL Server /
 npm run typecheck && npm run lint && npm run test:coverage   # frontend
 cd backend && dotnet test                                    # backend
 ```
-- **Frontend:** 115 tests (Jest + jest-expo), engine coverage gated at 80%.
+- **Frontend:** 124 tests (Jest + jest-expo), engine coverage gated at 80%.
 - **Backend:** 72 tests — domain golden-value tests + WebApplicationFactory integration tests (auth, full quest flow, anti-cheat, sync idempotency).
 
 ### Android preview build (EAS)
@@ -133,6 +133,14 @@ The character editor uses a single vertical scroll on small screens. Web sharing
 - **Offline-first, server-validated.** The client applies XP optimistically for snappy UX; the server recomputes from the same engine and is the source of truth. Shared constants keep them identical (verified by tests).
 - **Idempotent sync.** Each queued operation carries a stable `opId` logged server-side, so replaying a batch after a flaky connection is a no-op.
 - **Secrets via Key Vault.** No connection strings or signing keys in the repo; the App Service reads them through Key Vault references using a managed identity.
+
+### Reliable progress and the first story
+
+Completion facts are persisted separately from mutable quest cards. Weekly path credit uses those facts, so daily resets and removed tasks do not erase earned credit. Existing saves import only their known completion timestamps; unknown historical dates are not invented. Account mode exposes completion history through the API.
+
+Rest-day rewards are guarded once per UTC day. Online rest/login rewards use idempotent server commands; generic hero sync no longer accepts progression counters or XP. Quest rewards advance streak before calculation in both modes. The sync response marks a complete quest snapshot; the client also merges older delta responses safely, retains pending edits and conflicts, and exposes retry status in Settings.
+
+The Starlit Library is a five-day reading chapter in the World Map. The player chooses a reading goal and session length, explicitly swaps an active habit if all daily slots are occupied, and restores one lantern per reading day. Days need not be consecutive; completion unlocks a unique equippable title once. The story run is device-local for now, and daily boundaries use UTC; both limits are stated in the chapter.
 
 ## License
 MIT — see [LICENSE](LICENSE).

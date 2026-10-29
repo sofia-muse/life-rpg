@@ -1,3 +1,4 @@
+import { useCompletionStore } from '../../store/completionStore';
 import { SharePreview } from './SharePreview';
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Share, Platform } from 'react-native';
@@ -24,6 +25,7 @@ interface Props {
 }
 
 export function HeroShareCard({ hero }: Props) {
+
   const [sharePreview, setSharePreview] = useState<string | null>(null);
   const shareContent = async (content: { message: string; title?: string }) => {
     if (Platform.OS === 'web') {
@@ -35,13 +37,14 @@ export function HeroShareCard({ hero }: Props) {
   const [sharingChronicle, setSharingChronicle] = useState(false);
   const [chronicleError, setChronicleError] = useState<string | null>(null);
   const aiSkillsEnabled = useSettingsStore((s) => s.aiSkillsEnabled);
+  const completions = useCompletionStore((s) => s.events);
   const settings = useSettingsStore();
   const { quests } = useQuestStore();
   const authenticated = useAuthStore((s) => s.status === 'authenticated');
   const canUseGuidance = aiSkillsEnabled && !env.demoMode && authenticated;
 
   const handleShareWeekly = async () => {
-    const contract = getPrimaryContract(hero, settings, quests);
+    const contract = getPrimaryContract(hero, settings, quests, 0, completions);
     const payload = buildWeeklyChallengePayload(hero, settings, contract, quests);
     if (!payload) {
       await shareContent({

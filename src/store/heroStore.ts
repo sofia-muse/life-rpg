@@ -50,7 +50,7 @@ interface HeroState {
   } | null;
   recordQuestCompletion: () => void;
   updateStreak: (unlockedSkillIds: string[]) => { usedStreakFreeze: boolean; rewardAvailable: boolean } | null;
-  takeRestDay: (unlockedSkillIds: string[]) => void;
+  takeRestDay: (unlockedSkillIds: string[]) => boolean;
   getStatProgress: (stat: StatName) => StatProgress;
   updateAppearance: (
     patch: Partial<
@@ -286,8 +286,8 @@ export const useHeroStore = create<HeroState>()(
             const retentionRatio = getStreakRetentionRatio(unlockedSkillIds);
             newStreak =
               retentionRatio > 0
-                ? Math.floor(hero.currentStreak * retentionRatio)
-                : getStreakAfterBreak(hero.currentStreak, false);
+                ? Math.floor(hero.currentStreak * retentionRatio) + 1
+                : getStreakAfterBreak(hero.currentStreak, false) + 1;
           }
         } else {
           newStreak = hero.currentStreak + 1;
@@ -313,19 +313,21 @@ export const useHeroStore = create<HeroState>()(
 
       takeRestDay: (unlockedSkillIds) => {
         const { hero } = get();
-        if (!hero) return;
+        if (!hero || hero.lastRestDayDate === today()) return false;
 
         const restXP = getRestDayXpReward(unlockedSkillIds);
         const { updatedHero } = applyHeroXp(hero, 'vitality', restXP, unlockedSkillIds);
         const syncedHero: Hero = {
           ...updatedHero,
           restDaysUsed: hero.restDaysUsed + 1,
+          lastRestDayDate: today(),
         };
 
         set({
           hero: syncedHero,
         });
         syncHeroState(syncedHero);
+        return true;
       },
 
       getStatProgress: (stat) => {
