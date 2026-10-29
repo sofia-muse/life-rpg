@@ -3,7 +3,7 @@ import React, { useEffect } from 'react';
 import { DarkTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack, Redirect } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, AppState } from 'react-native';
 import { useHeroStore } from '../src/store/heroStore';
 import { useAuthStore } from '../src/store/authStore';
 import { useForgedSkillStore } from '../src/store/forgedSkillStore';
@@ -53,10 +53,20 @@ export default function RootLayout() {
     }
   }, [hasHydrated, authStatus]);
 
-  // Reset dailies / advance streak once hero + auth are ready. updateStreak is idempotent same-day.
+  // Reset daily availability on startup, UTC day changes, and return from the background.
   useEffect(() => {
     if (!hasHydrated || !completionHydrated || authStatus === 'loading' || !isOnboarded) return;
-    useGameplayStore.getState().runDailyLifecycle();
+    const run = () => useGameplayStore.getState().runDailyLifecycle();
+    run();
+    let day = new Date().toISOString().slice(0, 10);
+    const timer = setInterval(() => {
+      const nextDay = new Date().toISOString().slice(0, 10);
+      if (nextDay !== day) { day = nextDay; run(); }
+    }, 30_000);
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') { day = new Date().toISOString().slice(0, 10); run(); }
+    });
+    return () => { clearInterval(timer); subscription.remove(); };
   }, [hasHydrated, completionHydrated, authStatus, isOnboarded]);
 
   if (!hasHydrated || authStatus === 'loading') {
