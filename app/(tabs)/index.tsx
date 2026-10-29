@@ -258,8 +258,7 @@ export default function DashboardScreen() {
                   style={styles.secondaryAction}
                   activeOpacity={0.85}
                 >
-                  <OrnamentIcon name={showShareCard ? 'close' : 'share'} size={18} />
-              <Text style={styles.secondaryActionText}>Atelier</Text>
+                  <Text style={styles.secondaryActionText}>Atelier</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => router.push('/achievements' as Href)}
@@ -396,6 +395,7 @@ export default function DashboardScreen() {
               accessibilityState={{ expanded: showShareCard }}
               style={[styles.shareToggle, { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }]}
             >
+              <OrnamentIcon name={showShareCard ? 'close' : 'share'} size={18} />
               <Text style={styles.secondaryActionText}>
                 {showShareCard ? 'Close hero card' : 'Share your story'}
               </Text>
