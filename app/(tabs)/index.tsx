@@ -1,3 +1,4 @@
+import { OrnamentIcon } from '../../src/components/game/OrnamentIcon';
 import { RPGIcon } from '../../src/components/game/RPGIcon';
 import { useCompletionStore } from '../../src/store/completionStore';
 import { FantasyIcon } from '../../src/components/game/FantasyIcon';
@@ -257,7 +258,8 @@ export default function DashboardScreen() {
                   style={styles.secondaryAction}
                   activeOpacity={0.85}
                 >
-                  <Text style={styles.secondaryActionText}>Atelier</Text>
+                  <OrnamentIcon name={showShareCard ? 'close' : 'share'} size={18} />
+              <Text style={styles.secondaryActionText}>Atelier</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => router.push('/achievements' as Href)}
@@ -392,10 +394,10 @@ export default function DashboardScreen() {
               onPress={() => setShowShareCard(!showShareCard)}
               accessibilityRole="button"
               accessibilityState={{ expanded: showShareCard }}
-              style={styles.shareToggle}
+              style={[styles.shareToggle, { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }]}
             >
               <Text style={styles.secondaryActionText}>
-                {showShareCard ? 'Close hero card' : 'Share your story ↗'}
+                {showShareCard ? 'Close hero card' : 'Share your story'}
               </Text>
             </TouchableOpacity>
             {showShareCard && <HeroShareCard hero={hero} />}
