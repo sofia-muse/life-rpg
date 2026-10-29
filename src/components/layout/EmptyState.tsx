@@ -1,3 +1,4 @@
+import { LegacyRPGIcon } from '../game/RPGIcon';
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { colors, spacing, fontSize } from '../../config/theme';
@@ -15,7 +16,7 @@ interface Props {
 export function EmptyState({ icon, title, message, actionLabel, onAction }: Props) {
   return (
     <View style={styles.container} accessibilityRole="summary">
-      <Text style={styles.icon}>{icon}</Text>
+      <LegacyRPGIcon symbol={icon} size={56} />
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.message}>{message}</Text>
       {actionLabel && onAction ? (

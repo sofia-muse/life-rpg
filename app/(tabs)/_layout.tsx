@@ -1,5 +1,4 @@
-import { FantasyIcon } from '../../src/components/game/FantasyIcon';
-import { StatName } from '../../src/types';
+import { RPGIcon, RPGIconName } from '../../src/components/game/RPGIcon';
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { View, Text, StyleSheet, Platform, useWindowDimensions } from 'react-native';
@@ -14,7 +13,7 @@ function TabIcon({
   wide,
 }: {
   label: string;
-  icon: string;
+  icon: RPGIconName;
   focused: boolean;
   wide: boolean;
 }) {
@@ -32,20 +31,7 @@ function TabIcon({
         pointerEvents="none"
         style={[styles.innerBorder, focused && styles.innerBorderActive]}
       />
-      <FantasyIcon
-        stat={
-          (
-            {
-              '⌂': 'vitality',
-              '⚔': 'strength',
-              '⛨': 'willpower',
-              '✦': 'intelligence',
-              '✎': 'dexterity',
-            } as Record<string, StatName>
-          )[icon] ?? 'intelligence'
-        }
-        size={30}
-      />
+      <RPGIcon name={icon} size={32} />
       <Text style={[styles.tabLabel, focused && styles.tabLabelActive]}>{label}</Text>
     </View>
   );
@@ -81,7 +67,7 @@ export default function TabLayout() {
         name="index"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon label="Sanctuary" icon="⌂" focused={focused} wide={floatingDock} />
+            <TabIcon label="Sanctuary" icon="vitality" focused={focused} wide={floatingDock} />
           ),
         }}
       />
@@ -89,7 +75,7 @@ export default function TabLayout() {
         name="quests"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon label="Adventures" icon="⚔" focused={focused} wide={floatingDock} />
+            <TabIcon label="Adventures" icon="map" focused={focused} wide={floatingDock} />
           ),
         }}
       />
@@ -97,7 +83,7 @@ export default function TabLayout() {
         name="raids"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon label="Raids" icon="⛨" focused={focused} wide={floatingDock} />
+            <TabIcon label="Raids" icon="shield" focused={focused} wide={floatingDock} />
           ),
         }}
       />
@@ -105,7 +91,7 @@ export default function TabLayout() {
         name="skills"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon label="Skills" icon="✦" focused={focused} wide={floatingDock} />
+            <TabIcon label="Skills" icon="crystal" focused={focused} wide={floatingDock} />
           ),
         }}
       />
@@ -113,7 +99,7 @@ export default function TabLayout() {
         name="journal"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon label="Chronicle" icon="✎" focused={focused} wide={floatingDock} />
+            <TabIcon label="Chronicle" icon="scroll" focused={focused} wide={floatingDock} />
           ),
         }}
       />

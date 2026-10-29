@@ -1,7 +1,8 @@
+import { RPGIcon } from './RPGIcon';
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Modal, Animated, TouchableOpacity } from 'react-native';
 import AppLottie from '../animated/AppLottie';
-import { StatName, STAT_COLORS, STAT_ICONS } from '../../types';
+import { StatName, STAT_COLORS, } from '../../types';
 import { colors, spacing, fontSize, radius } from '../../config/theme';
 
 interface Props {
@@ -49,12 +50,12 @@ export function DailyRewardModal({ visible, xp, stat, bonusType, loginDays, onCl
             speed={0.8}
             style={styles.lottie}
           />
-          <Text style={styles.gift}>🎁</Text>
+          <RPGIcon name="gift" size={76} style={{ marginBottom: 12 }} />
           <Text style={styles.title}>DAILY REWARD</Text>
           <Text style={styles.bonusType}>{bonusType}</Text>
 
           <View style={[styles.xpBox, { borderColor: statColor }]}>
-            <Text style={styles.xpIcon}>{STAT_ICONS[stat]}</Text>
+            <RPGIcon name={stat} size={28} />
             <Text style={[styles.xpAmount, { color: statColor }]}>+{xp} XP</Text>
           </View>
 

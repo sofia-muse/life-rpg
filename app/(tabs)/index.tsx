@@ -1,3 +1,4 @@
+import { RPGIcon } from '../../src/components/game/RPGIcon';
 import { useCompletionStore } from '../../src/store/completionStore';
 import { FantasyIcon } from '../../src/components/game/FantasyIcon';
 import { ForestScene } from '../../src/components/layout/StoryHeader';
@@ -213,7 +214,7 @@ export default function DashboardScreen() {
                   accessibilityRole="button"
                   accessibilityLabel="Open settings"
                 >
-                  <Text style={styles.settingsIcon}>&#9881;</Text>
+                  <RPGIcon name="settings" size={32} />
                 </TouchableOpacity>
               </View>
 

@@ -1,3 +1,4 @@
+import { OrnamentIcon } from './OrnamentIcon';
 import { FantasyIcon } from './FantasyIcon';
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
@@ -39,7 +40,7 @@ export function SkillNode({ skill, isUnlocked, progress, onPress }: Props) {
           />
         </View>
       )}
-      {isUnlocked && <Text style={styles.unlocked}>✓</Text>}
+      {isUnlocked && <View style={styles.unlocked}><OrnamentIcon name="check" size={14} /></View>}
     </TouchableOpacity>
   );
 }

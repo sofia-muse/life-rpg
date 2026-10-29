@@ -1,3 +1,4 @@
+import { RPGIcon } from '../../src/components/game/RPGIcon';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
@@ -17,7 +18,7 @@ import { useAuthStore } from '../../src/store/authStore';
 import { useRaidStore, RAID_STAT_OPTIONS } from '../../src/store/raidStore';
 import { env } from '../../src/config/env';
 import { colors, spacing, fontSize, radius, typography } from '../../src/config/theme';
-import { StatName, STAT_COLORS, STAT_ICONS, STAT_NAMES } from '../../src/types';
+import { StatName, STAT_COLORS, STAT_NAMES } from '../../src/types';
 import { RaidDto } from '../../src/api/raidApi';
 import { guidanceApi } from '../../src/api/guidanceApi';
 
@@ -325,9 +326,7 @@ export default function RaidsScreen() {
                       style={[styles.statChip, stat === s && { borderColor: STAT_COLORS[s] }]}
                       onPress={() => setStat(s)}
                     >
-                      <Text style={styles.statChipText}>
-                        {STAT_ICONS[s]} {s.slice(0, 3)}
-                      </Text>
+                      <RPGIcon name={s} size={28} /><Text style={styles.statChipText}>{s.slice(0, 3)}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -419,9 +418,7 @@ function RaidDetail({
       {raid.description ? <Text style={styles.detailBody}>{raid.description}</Text> : null}
 
       <View style={styles.metaRow}>
-        <Text style={[styles.metaPill, { color: statColor }]}>
-          {STAT_ICONS[raid.stat]} {raid.stat}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><RPGIcon name={raid.stat} size={28} /><Text style={[styles.metaPill, { color: statColor }]}>{raid.stat}</Text></View>
         <Text style={styles.metaPill}>
           {raid.memberCount}/{raid.maxMembers} heroes
         </Text>

@@ -1,3 +1,4 @@
+import { RPGIcon, LegacyRPGIcon } from './RPGIcon';
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Modal, Animated, TouchableOpacity } from 'react-native';
 import { AchievementDefinition } from '../../config/achievements';
@@ -26,9 +27,9 @@ export function AchievementUnlockModal({ visible, achievement, onDismiss }: Prop
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onDismiss}>
       <View style={styles.overlay}>
         <Animated.View style={[styles.content, { transform: [{ scale }] }]}>
-          <Text style={styles.sparkle}>🏆</Text>
+          <RPGIcon name="trophy" size={48} style={{ marginBottom: 10 }} />
           <Text style={styles.title}>ACHIEVEMENT!</Text>
-          <Text style={styles.icon}>{achievement.icon}</Text>
+          <LegacyRPGIcon symbol={achievement.icon} size={72} />
           <Text style={styles.name}>{achievement.title}</Text>
           <Text style={styles.description}>{achievement.description}</Text>
           <Text style={styles.tier}>{achievement.tier.toUpperCase()}</Text>

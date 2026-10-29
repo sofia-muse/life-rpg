@@ -1,3 +1,4 @@
+import { RPGIcon } from './RPGIcon';
 import React, { useEffect, useRef } from 'react';
 import { Text, StyleSheet, Modal, Animated, TouchableOpacity } from 'react-native';
 import { colors, spacing, fontSize, radius } from '../../config/theme';
@@ -29,7 +30,7 @@ export function AppearanceUnlockModal({ visible, type, name, onDismiss }: Props)
     <Modal visible={visible} transparent animationType="none" onRequestClose={onDismiss}>
       <Animated.View style={[styles.overlay, { opacity }]}>
         <Animated.View style={[styles.content, { transform: [{ scale }] }]}>
-          <Text style={styles.icon}>✨</Text>
+          <RPGIcon name="crown" size={72} style={{ marginBottom: 12 }} />
           <Text style={styles.title}>NEW UNLOCK!</Text>
           <Text style={styles.subtitle}>{type === 'shape' ? 'Crest Shape' : 'Sigil'} Unlocked</Text>
           <Text style={styles.name}>{name}</Text>

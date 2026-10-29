@@ -1,7 +1,8 @@
+import { RPGIcon } from './RPGIcon';
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Modal, Animated, TouchableOpacity } from 'react-native';
 import AppLottie from '../animated/AppLottie';
-import { StatName, STAT_COLORS, STAT_ICONS } from '../../types';
+import { StatName, STAT_COLORS, } from '../../types';
 import { colors, spacing, fontSize, radius } from '../../config/theme';
 
 interface Props {
@@ -40,10 +41,10 @@ export function LevelUpModal({ visible, stat, newLevel, onDismiss }: Props) {
             speed={0.6}
             style={styles.lottieEffect}
           />
-          <Text style={styles.trophy}>🏆</Text>
+          <RPGIcon name="trophy" size={76} style={{ marginBottom: 12 }} />
           <Text style={styles.title}>LEVEL UP!</Text>
           <View style={[styles.statBadge, { borderColor: statColor }]}>
-            <Text style={styles.statIcon}>{STAT_ICONS[stat]}</Text>
+            <RPGIcon name={stat} size={36} />
             <Text style={[styles.statName, { color: statColor }]}>
               {stat.charAt(0).toUpperCase() + stat.slice(1)}
             </Text>

@@ -1,9 +1,10 @@
+import { RPGIcon } from './RPGIcon';
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Card } from '../layout/Card';
 import { colors, spacing, fontSize, radius } from '../../config/theme';
 import { guidanceApi, QuestSuggestionPackDto } from '../../api/guidanceApi';
-import { STAT_COLORS, STAT_ICONS, DIFFICULTY_XP } from '../../types';
+import { STAT_COLORS, DIFFICULTY_XP } from '../../types';
 import { env } from '../../config/env';
 import { useAuthStore } from '../../store/authStore';
 import { useSettingsStore } from '../../store/settingsStore';
@@ -73,9 +74,7 @@ export function GuildmasterSuggestions({ onAddQuest, existingTitles }: Props) {
                 .map((suggestion) => (
                   <View key={suggestion.title} style={styles.suggestion}>
                     <View style={styles.suggestionInfo}>
-                      <Text style={styles.suggestionTitle}>
-                        {STAT_ICONS[suggestion.stat]} {suggestion.title}
-                      </Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><RPGIcon name={suggestion.stat} size={28} /><Text style={[styles.suggestionTitle, { flex: 1 }]}>{suggestion.title}</Text></View>
                       <Text style={styles.suggestionWhy} numberOfLines={2}>
                         {suggestion.whyItFits}
                       </Text>

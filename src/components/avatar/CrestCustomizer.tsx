@@ -1,3 +1,5 @@
+import { OrnamentIcon } from '../game/OrnamentIcon';
+import { RPGIcon } from '../game/RPGIcon';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
@@ -23,22 +25,6 @@ import {
 import { APPEARANCE_UNLOCKS, ACCENT_COLORS } from '../../config/appearanceConfig';
 import { Card } from '../layout/Card';
 import { FadeIn } from '../animated/FadeIn';
-
-const SHAPE_LABELS: Record<CrestShape, string> = {
-  shield: '🛡️',
-  circle: '⭕',
-  diamond: '💠',
-  hexagon: '⬡',
-};
-
-const SIGIL_LABELS: Record<SigilStyle, string> = {
-  sword: '⚔️',
-  flame: '🔥',
-  eye: '👁️',
-  star: '⭐',
-  tree: '🌳',
-  crown: '👑',
-};
 
 type FocusArea = 'shape' | 'sigil' | 'accent' | 'title' | 'radar';
 
@@ -199,7 +185,7 @@ export function CrestCustomizer() {
                   onPress={() => isUnlocked && applyAppearance({ crestShape: shape }, 'shape')}
                   activeOpacity={isUnlocked ? 0.78 : 1}
                 >
-                  <Text style={styles.optionIcon}>{SHAPE_LABELS[shape]}</Text>
+                  <OrnamentIcon name={shape} size={32} />
                   <Text style={[styles.optionLabel, isSelected && styles.optionLabelSelected]}>
                     {shape.charAt(0).toUpperCase() + shape.slice(1)}
                   </Text>
@@ -237,7 +223,7 @@ export function CrestCustomizer() {
                   onPress={() => isUnlocked && applyAppearance({ sigil: sig }, 'sigil')}
                   activeOpacity={isUnlocked ? 0.78 : 1}
                 >
-                  <Text style={styles.gridIcon}>{SIGIL_LABELS[sig]}</Text>
+                  {sig === 'sword' || sig === 'flame' || sig === 'crown' ? <RPGIcon name={sig === 'sword' ? 'strength' : sig} size={32} /> : <OrnamentIcon name={sig} size={30} />}
                   <Text style={[styles.optionLabel, isSelected && styles.optionLabelSelected]}>
                     {sig.charAt(0).toUpperCase() + sig.slice(1)}
                   </Text>

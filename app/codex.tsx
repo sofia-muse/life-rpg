@@ -1,3 +1,4 @@
+import { RPGIcon, LegacyRPGIcon } from '../src/components/game/RPGIcon';
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter, Href } from 'expo-router';
@@ -17,7 +18,7 @@ import { STREAK_MILESTONES } from '../src/engine/streakEngine';
 import { getBossSagaState } from '../src/engine/questProgression';
 import { APPEARANCE_UNLOCKS } from '../src/config/appearanceConfig';
 import { colors, spacing, fontSize, radius, typography } from '../src/config/theme';
-import { STAT_ICONS, STAT_NAMES, ClassTier, CrestShape, SigilStyle } from '../src/types';
+import { STAT_NAMES, ClassTier, CrestShape, SigilStyle } from '../src/types';
 
 const KNOWN_BOSS_RELICS = [
   {
@@ -135,7 +136,7 @@ export default function CodexScreen() {
         <View style={styles.statsGrid}>
           {STAT_NAMES.map((stat) => (
             <View key={stat} style={styles.statChip}>
-              <Text style={styles.statIcon}>{STAT_ICONS[stat]}</Text>
+              <RPGIcon name={stat} size={36} />
               <Text style={styles.statLabel}>{stat.charAt(0).toUpperCase() + stat.slice(1)}</Text>
             </View>
           ))}
@@ -205,7 +206,7 @@ export default function CodexScreen() {
           const unlocked = isSkillUnlocked(skill.id);
           return (
             <View key={skill.id} style={[styles.skillRow, !unlocked && styles.ledgerLocked]}>
-              <Text style={styles.skillIcon}>{unlocked ? skill.icon : '🔒'}</Text>
+              <RPGIcon name={unlocked ? (skill.requiredStat ?? "crystal") : "lock"} size={36} />
               <View style={styles.skillInfo}>
                 <Text style={styles.skillName}>{unlocked ? skill.name : '????'}</Text>
                 <Text style={styles.skillEffect} numberOfLines={1}>
@@ -236,7 +237,7 @@ export default function CodexScreen() {
                 key={`${unlock.type}-${unlock.id}`}
                 style={[styles.skillRow, !owned && styles.ledgerLocked]}
               >
-                <Text style={styles.skillIcon}>{owned ? '✦' : '·'}</Text>
+                <RPGIcon name={owned ? "shield" : "lock"} size={32} />
                 <View style={styles.skillInfo}>
                   <Text style={styles.skillName}>{unlock.label}</Text>
                   <Text style={styles.skillEffect}>{unlock.condition}</Text>
@@ -270,7 +271,7 @@ export default function CodexScreen() {
             .reverse()
             .map((skill) => (
               <View key={skill.id} style={styles.skillRow}>
-                <Text style={styles.skillIcon}>{skill.icon}</Text>
+                <LegacyRPGIcon symbol={skill.icon} size={36} />
                 <View style={styles.skillInfo}>
                   <Text style={styles.skillName}>{skill.name}</Text>
                   <Text style={styles.skillEffect} numberOfLines={1}>

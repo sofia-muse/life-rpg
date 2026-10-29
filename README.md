@@ -126,7 +126,7 @@ See [docs/AZURE_DEPLOY.md](docs/AZURE_DEPLOY.md) for infrastructure and env vars
 
 ### Enchanted forest interface
 
-The interface uses illustrated forest chapter headers, quiet evergreen reading surfaces, warm parchment task rows, and larger supporting text. Artwork stays out of task content. The home screen puts daily quests first and keeps the share card behind an explicit toggle. Heroes can choose two detailed painted fantasy portraits, or switch to the customizable SVG illustration with saved skin, hair, expression, and glasses choices. Painted portraits, six illustrated attribute medallions, and the forest scene are AI-generated project assets in `assets/storybook/`. Evergreen panels use restrained gold botanical corners, while parchment quest rows retain clear text.
+The interface uses illustrated forest chapter headers, quiet evergreen reading surfaces, warm parchment task rows, and larger supporting text. Artwork stays out of task content. The home screen puts daily quests first and keeps the share card behind an explicit toggle. Heroes can choose two detailed painted fantasy portraits, or switch to the customizable SVG illustration with saved skin, hair, expression, and glasses choices. Painted portraits, 18 custom fantasy medallions for attributes, adventures, and rituals, and the forest scene are AI-generated project assets in `assets/storybook/`. Evergreen panels use restrained gold botanical corners, while parchment quest rows retain clear text.
 
 The character editor uses a single vertical scroll on small screens. Web sharing offers an explicit text preview and copy fallback. Native-only reminders and haptics are explained and disabled in the browser. Campaign chapters resume existing bosses instead of duplicating them.
 
@@ -141,6 +141,10 @@ Completion facts are persisted separately from mutable quest cards. Weekly path 
 Rest-day rewards are guarded once per UTC day. Online rest/login rewards use idempotent server commands; generic hero sync no longer accepts progression counters or XP. Quest rewards advance streak before calculation in both modes. The sync response marks a complete quest snapshot; the client also merges older delta responses safely, retains pending edits and conflicts, and exposes retry status in Settings.
 
 The Starlit Library is a five-day reading chapter in the World Map. The player chooses a reading goal and session length, explicitly swaps an active habit if all daily slots are occupied, and restores one lantern per reading day. Days need not be consecutive; completion unlocks a unique equippable title once. The story run is device-local for now, and daily boundaries use UTC; both limits are stated in the chapter.
+
+### Custom icon set
+
+The 18-icon storybook set uses three bundled WebP atlases: attributes-v2, adventure-v2, and rituals-v2. RPGIcon maps semantic names to sprites; FantasyIcon remains the stat-specific wrapper. Existing achievement and generated skill metadata is mapped through LegacyRPGIcon, so saved records keep their IDs and effects. Small controls and crest selectors use custom gold SVG linework. Navigation, journal, codex, rewards, quests, achievements and avatar controls use the coordinated set; share text remains readable plain text.
 
 ## License
 MIT — see [LICENSE](LICENSE).

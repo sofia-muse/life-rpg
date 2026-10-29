@@ -1,3 +1,4 @@
+import { RPGIcon } from '../src/components/game/RPGIcon';
 import { LibraryChapter } from '../src/components/game/LibraryChapter';
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
@@ -110,7 +111,7 @@ export default function MapScreen() {
               </Text>
               {regionBosses.length > 0 && (
                 <View style={styles.dungeonNode}>
-                  <Text style={styles.dungeonText}>🐉 {regionBosses.length}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}><RPGIcon name="dragon" size={24} /><Text style={styles.dungeonText}>{regionBosses.length}</Text></View>
                 </View>
               )}
             </TouchableOpacity>

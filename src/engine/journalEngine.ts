@@ -50,6 +50,7 @@ export function generateDailySummary(
   levelsGained: StatName[],
   skillsUnlocked: string[],
   streakDays: number,
+  withIcons = true,
 ): string {
   const parts: string[] = [];
 
@@ -64,7 +65,7 @@ export function generateDailySummary(
 
   // Quest narratives
   for (const quest of questsCompleted) {
-    parts.push(`\n${STAT_ICONS[quest.stat]} ${generateQuestNarrative(quest)}`);
+    parts.push(`\n${withIcons ? STAT_ICONS[quest.stat] + ' ' : ''}${generateQuestNarrative(quest)}`);
   }
 
   // XP summary
@@ -76,20 +77,20 @@ export function generateDailySummary(
   // Level ups
   for (const stat of levelsGained) {
     parts.push(
-      `\n🎉 ${STAT_ICONS[stat]} ${stat.charAt(0).toUpperCase() + stat.slice(1)} leveled up!`,
+      `\n${withIcons ? '🎉 ' + STAT_ICONS[stat] + ' ' : ''}${stat.charAt(0).toUpperCase() + stat.slice(1)} leveled up!`,
     );
   }
 
   // Skills
   if (skillsUnlocked.length > 0) {
     parts.push(
-      `\n✨ ${skillsUnlocked.length} new skill${skillsUnlocked.length > 1 ? 's' : ''} unlocked!`,
+      `\n${withIcons ? '✨ ' : ''}${skillsUnlocked.length} new skill${skillsUnlocked.length > 1 ? 's' : ''} unlocked!`,
     );
   }
 
   // Streak
   if (streakDays > 0) {
-    parts.push(`\n🔥 Adventure streak: ${streakDays} day${streakDays > 1 ? 's' : ''}`);
+    parts.push(`\n${withIcons ? '🔥 ' : ''}Adventure streak: ${streakDays} day${streakDays > 1 ? 's' : ''}`);
   }
 
   return parts.join('');
