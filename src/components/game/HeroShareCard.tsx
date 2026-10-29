@@ -1,9 +1,10 @@
+import { RPGIcon } from './RPGIcon';
 import { useCompletionStore } from '../../store/completionStore';
 import { SharePreview } from './SharePreview';
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Share, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Hero, STAT_NAMES, STAT_COLORS, STAT_ICONS } from '../../types';
+import { Hero, STAT_NAMES, STAT_COLORS } from '../../types';
 import { colors, spacing, fontSize, radius, typography } from '../../config/theme';
 import { getStatDisplayProgress } from '../../engine/xpEngine';
 import { NiceAvatarCharacter } from '../avatar/NiceAvatarCharacter';
@@ -66,17 +67,17 @@ export function HeroShareCard({ hero }: Props) {
   const handleShare = async () => {
     const statLines = STAT_NAMES.map((stat) => {
       const p = getStatDisplayProgress(hero.statXP[stat]);
-      return `${STAT_ICONS[stat]} ${stat.charAt(0).toUpperCase() + stat.slice(1)}: Lv.${p.level}`;
+      return `${stat.charAt(0).toUpperCase() + stat.slice(1)}: Lv.${p.level}`;
     }).join('\n');
 
     const message =
       `Life RPG - Hero Card\n\n` +
-      `⚔️ ${hero.name}\n` +
-      `🏅 ${hero.className} (Tier ${hero.classTier})\n` +
-      `⭐ Hero Level ${hero.heroLevel}\n` +
-      `🔥 Streak: ${hero.currentStreak} days\n` +
-      `✅ ${hero.totalQuestsCompleted} quests completed\n\n` +
-      `📊 Stats:\n${statLines}\n\n` +
+      `${hero.name}\n` +
+      `${hero.className} (Tier ${hero.classTier})\n` +
+      `Hero Level ${hero.heroLevel}\n` +
+      `Streak: ${hero.currentStreak} days\n` +
+      `${hero.totalQuestsCompleted} quests completed\n\n` +
+      `Stats:\n${statLines}\n\n` +
       `Build your class through action.`;
 
     try {
@@ -172,7 +173,7 @@ export function HeroShareCard({ hero }: Props) {
                 scaleFrom={0.96}
                 style={styles.statItem}
               >
-                <Text style={styles.statIcon}>{STAT_ICONS[stat]}</Text>
+                <RPGIcon name={stat} size={36} />
                 <Text style={[styles.statLevel, { color: STAT_COLORS[stat] }]}>Lv.{p.level}</Text>
                 <Text style={styles.statName}>{stat.slice(0, 3).toUpperCase()}</Text>
               </FadeIn>

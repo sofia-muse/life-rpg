@@ -1,3 +1,4 @@
+import { OrnamentIcon } from '../game/OrnamentIcon';
 import React from 'react';
 import { Image, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { CharacterAppearance } from '../../types';
@@ -55,8 +56,8 @@ export function PortraitPicker({
                   resizeMode="cover"
                   accessible={false}
                 />
+                {selected.id === portrait.id && <View style={{ position: 'absolute', top: 6, right: 6, backgroundColor: '#10271F', padding: 3, borderRadius: 8 }}><OrnamentIcon name="check" size={18} /></View>}
                 <Text style={styles.name}>
-                  {selected.id === portrait.id ? '✓ ' : ''}
                   {portrait.name}
                 </Text>
               </TouchableOpacity>

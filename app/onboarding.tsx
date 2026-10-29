@@ -1,3 +1,4 @@
+import { RPGIcon } from '../src/components/game/RPGIcon';
 import { PortraitPicker } from '../src/components/avatar/PortraitPicker';
 import { ForestScene, StoryHeader } from '../src/components/layout/StoryHeader';
 import React, { useState } from 'react';
@@ -26,7 +27,6 @@ import {
   CharacterAppearance,
   STAT_NAMES,
   STAT_COLORS,
-  STAT_ICONS,
   DIFFICULTY_XP,
   StatName,
 } from '../src/types';
@@ -242,7 +242,7 @@ export default function OnboardingScreen() {
                     key={stat}
                     style={[styles.asideStatChip, { borderColor: `${STAT_COLORS[stat]}66` }]}
                   >
-                    <Text style={styles.asideStatIcon}>{STAT_ICONS[stat]}</Text>
+                    <RPGIcon name={stat} size={28} />
                     <Text style={[styles.asideStatText, { color: STAT_COLORS[stat] }]}>
                       {stat.charAt(0).toUpperCase() + stat.slice(1)}
                     </Text>
@@ -472,7 +472,7 @@ export default function OnboardingScreen() {
                             <View key={stat} style={styles.resultStatRow}>
                               <View style={styles.resultStatHeader}>
                                 <Text style={styles.resultRank}>#{i + 1}</Text>
-                                <Text style={styles.resultStatIcon}>{STAT_ICONS[stat]}</Text>
+                                <RPGIcon name={stat} size={28} />
                                 <Text style={[styles.resultStatName, { color: STAT_COLORS[stat] }]}>
                                   {stat.charAt(0).toUpperCase() + stat.slice(1)}
                                 </Text>
@@ -498,7 +498,7 @@ export default function OnboardingScreen() {
                       <View style={styles.allScores}>
                         {STAT_NAMES.map((stat) => (
                           <View key={stat} style={styles.miniScoreRow}>
-                            <Text style={styles.miniScoreIcon}>{STAT_ICONS[stat]}</Text>
+                            <RPGIcon name={stat} size={28} />
                             <Text style={styles.miniScoreName}>
                               {stat.charAt(0).toUpperCase() + stat.slice(1)}
                             </Text>
@@ -530,7 +530,7 @@ export default function OnboardingScreen() {
                   {getStarterQuests(quizResult.topStats).map((quest, i) => (
                     <Card key={`d${i}`} style={styles.questPreview}>
                       <View style={styles.questHeader}>
-                        <Text style={styles.questIcon}>{STAT_ICONS[quest.stat]}</Text>
+                        <RPGIcon name={quest.stat} size={28} />
                         <Text style={styles.questTitle}>{quest.title}</Text>
                       </View>
                       <Text style={styles.questDesc}>{quest.description}</Text>
@@ -545,7 +545,7 @@ export default function OnboardingScreen() {
                   >
                     <View style={styles.previewInfoCard}>
                       <Text style={[styles.sectionLabel, styles.sectionLabelCompact]}>
-                        🗡️ Side Quests
+                        Side Quests
                       </Text>
                       <Text style={styles.sectionHint}>
                         One-time goals to stretch your courage with care.
@@ -553,7 +553,7 @@ export default function OnboardingScreen() {
                     </View>
                     <View style={styles.previewInfoCard}>
                       <Text style={[styles.sectionLabel, styles.sectionLabelCompact]}>
-                        🐉 Boss Quest
+                        Boss Quest
                       </Text>
                       <Text style={styles.sectionHint}>
                         A longer quest for the gift you rely on most.

@@ -1,3 +1,4 @@
+import { RPGIcon } from './RPGIcon';
 import React, { useEffect, useRef } from 'react';
 import { Modal, Animated, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { colors, spacing, fontSize, radius, typography } from '../../config/theme';
@@ -29,7 +30,7 @@ export function EvolutionModal({ visible, rankName, nextTitle, onDismiss }: Prop
     <Modal visible={visible} transparent animationType="none" onRequestClose={onDismiss}>
       <Animated.View style={[styles.overlay, { opacity }]}>
         <Animated.View style={[styles.content, { transform: [{ scale }] }]}>
-          <Text style={styles.icon}>⬆️</Text>
+          <RPGIcon name="crown" size={72} style={{ marginBottom: 12 }} />
           <Text style={styles.title}>Quest Evolved!</Text>
           <Text style={styles.rank}>Rank: {rankName}</Text>
           {nextTitle ? (

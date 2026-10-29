@@ -1,3 +1,4 @@
+import { RPGIcon } from './RPGIcon';
 import React, { useState } from 'react';
 import {
   View,
@@ -11,7 +12,7 @@ import {
 } from 'react-native';
 import { colors, spacing, fontSize, radius, typography } from '../../config/theme';
 import { guidanceApi } from '../../api/guidanceApi';
-import { STAT_NAMES, STAT_ICONS, StatName } from '../../types';
+import { STAT_NAMES, StatName } from '../../types';
 import { env } from '../../config/env';
 import { useAuthStore } from '../../store/authStore';
 import { useSettingsStore } from '../../store/settingsStore';
@@ -111,10 +112,13 @@ export function BossPlannerModal({ visible, onClose, onCreateBoss, defaultStat }
                 {STAT_NAMES.map((s) => (
                   <TouchableOpacity
                     key={s}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${s} primary stat`}
+                    accessibilityState={{ selected: stat === s }}
                     style={[styles.statChip, stat === s && styles.statChipActive]}
                     onPress={() => setStat(s)}
                   >
-                    <Text style={styles.statChipText}>{STAT_ICONS[s]}</Text>
+                    <RPGIcon name={s} size={28} />
                   </TouchableOpacity>
                 ))}
               </View>

@@ -1,3 +1,4 @@
+import { RPGIcon } from '../src/components/game/RPGIcon';
 import { Link, Stack } from 'expo-router';
 import { View, Text, StyleSheet } from 'react-native';
 import { colors, spacing, fontSize } from '../src/config/theme';
@@ -7,7 +8,7 @@ export default function NotFoundScreen() {
     <>
       <Stack.Screen options={{ title: 'Not Found' }} />
       <View style={styles.container}>
-        <Text style={styles.icon}>🗺️</Text>
+        <RPGIcon name="map" size={72} style={{ marginBottom: 16 }} />
         <Text style={styles.title}>Lost in the Wilderness</Text>
         <Text style={styles.body}>This path leads nowhere, adventurer.</Text>
         <Link href="/" style={styles.link}>

@@ -1,3 +1,4 @@
+import { RPGIcon } from './RPGIcon';
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Animated, TouchableOpacity } from 'react-native';
 import { colors, spacing, fontSize, radius } from '../../config/theme';
@@ -68,9 +69,7 @@ export function StreakBanner({ streakDays }: Props) {
   return (
     <View style={styles.container}>
       <View style={styles.row}>
-        <Animated.Text style={[styles.fire, { transform: [{ scale: fireScale }] }]}>
-          🔥
-        </Animated.Text>
+        <Animated.View style={{ transform: [{ scale: fireScale }], marginRight: 8 }}><RPGIcon name="flame" size={32} /></Animated.View>
         <Text style={styles.count}>{streakDays}</Text>
         <Text style={styles.label}>day streak</Text>
         {multiplier > 1 && (

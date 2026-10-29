@@ -1,3 +1,5 @@
+import { OrnamentIcon } from '../../src/components/game/OrnamentIcon';
+import { RPGIcon } from '../../src/components/game/RPGIcon';
 import { useCompletionStore } from '../../src/store/completionStore';
 import { FantasyIcon } from '../../src/components/game/FantasyIcon';
 import { ForestScene } from '../../src/components/layout/StoryHeader';
@@ -213,7 +215,7 @@ export default function DashboardScreen() {
                   accessibilityRole="button"
                   accessibilityLabel="Open settings"
                 >
-                  <Text style={styles.settingsIcon}>&#9881;</Text>
+                  <RPGIcon name="settings" size={32} />
                 </TouchableOpacity>
               </View>
 
@@ -391,10 +393,11 @@ export default function DashboardScreen() {
               onPress={() => setShowShareCard(!showShareCard)}
               accessibilityRole="button"
               accessibilityState={{ expanded: showShareCard }}
-              style={styles.shareToggle}
+              style={[styles.shareToggle, { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }]}
             >
+              <OrnamentIcon name={showShareCard ? 'close' : 'share'} size={18} />
               <Text style={styles.secondaryActionText}>
-                {showShareCard ? 'Close hero card' : 'Share your story ↗'}
+                {showShareCard ? 'Close hero card' : 'Share your story'}
               </Text>
             </TouchableOpacity>
             {showShareCard && <HeroShareCard hero={hero} />}

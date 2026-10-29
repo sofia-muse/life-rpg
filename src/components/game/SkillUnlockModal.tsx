@@ -1,3 +1,4 @@
+import { RPGIcon } from './RPGIcon';
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Modal, Animated, TouchableOpacity } from 'react-native';
 import { Skill, STAT_COLORS } from '../../types';
@@ -28,9 +29,9 @@ export function SkillUnlockModal({ visible, skill, onDismiss }: Props) {
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onDismiss}>
       <View style={styles.overlay}>
         <Animated.View style={[styles.content, { transform: [{ scale }], borderColor: statColor }]}>
-          <Text style={styles.sparkle}>✨</Text>
+          <RPGIcon name="crystal" size={48} style={{ marginBottom: 10 }} />
           <Text style={styles.title}>SKILL UNLOCKED!</Text>
-          <Text style={styles.icon}>{skill.icon}</Text>
+          <RPGIcon name={skill.requiredStat ?? "crystal"} size={72} />
           <Text style={[styles.name, { color: statColor }]}>{skill.name}</Text>
           <Text style={styles.description}>{skill.description}</Text>
           <View style={styles.effectBox}>

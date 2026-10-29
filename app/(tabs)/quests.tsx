@@ -1,3 +1,4 @@
+import { RPGIcon } from '../../src/components/game/RPGIcon';
 import { useCompletionStore } from '../../src/store/completionStore';
 import { FantasyIcon } from '../../src/components/game/FantasyIcon';
 import { StoryHeader } from '../../src/components/layout/StoryHeader';
@@ -283,7 +284,7 @@ export default function QuestsScreen() {
 
       {activeTab === 'boss' && (
         <TouchableOpacity style={styles.bossPlannerBtn} onPress={() => setShowBossPlanner(true)}>
-          <Text style={styles.bossPlannerText}>✨ Forge a Boss Arc</Text>
+          <Text style={styles.bossPlannerText}>Forge a Boss Arc</Text>
         </TouchableOpacity>
       )}
 
@@ -339,7 +340,7 @@ export default function QuestsScreen() {
       <View style={styles.list}>
         {filteredQuests.length === 0 ? (
           <View style={styles.empty}>
-            <Text style={styles.emptyIcon}>📜</Text>
+            <RPGIcon name="scroll" size={64} style={{ marginBottom: 14 }} />
             <Text style={styles.emptyText}>
               {hasFilters ? 'No matching quests' : `No ${activeTab} quests yet.`}
             </Text>

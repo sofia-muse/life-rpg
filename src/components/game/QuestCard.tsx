@@ -1,3 +1,5 @@
+import { OrnamentIcon } from './OrnamentIcon';
+import { RPGIcon } from './RPGIcon';
 import { Button } from '../layout/Button';
 import { FantasyIcon } from './FantasyIcon';
 import React, { useRef } from 'react';
@@ -113,7 +115,7 @@ export function QuestCard({
               <FantasyIcon stat={quest.stat} size={28} />
               <Text style={styles.statBadge}>{quest.stat}</Text>
               <Text style={[styles.xpBadge, { color: statColor }]}>+{quest.xpReward} XP</Text>
-              {quest.streak > 0 && <Text style={styles.streak}>🔥 {quest.streak}</Text>}
+              {quest.streak > 0 && <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}><RPGIcon name="flame" size={22} /><Text style={styles.streak}>{quest.streak}</Text></View>}
             </View>
           </View>
 
@@ -154,7 +156,7 @@ export function QuestCard({
         </View>}
         {quest.isCompleted && (
           <View style={styles.completedBanner}>
-            <Text style={styles.completedText}>✓ Victorious</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><OrnamentIcon name="check" /><Text style={styles.completedText}>Victorious</Text></View>
           </View>
         )}
 
@@ -165,7 +167,7 @@ export function QuestCard({
             accessibilityRole="button"
             accessibilityLabel={`Delete ${quest.title}`}
           >
-            <Text style={styles.deleteText}>✕</Text>
+            <OrnamentIcon name="close" size={22} />
           </TouchableOpacity>
         )}
       </Card>

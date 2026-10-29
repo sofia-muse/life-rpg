@@ -65,6 +65,7 @@ const styles = StyleSheet.create({
   statInfo: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: spacing.sm,
   },
   icon: {
     fontSize: 16,

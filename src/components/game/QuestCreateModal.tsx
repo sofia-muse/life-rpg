@@ -1,3 +1,4 @@
+import { RPGIcon } from './RPGIcon';
 import { FantasyIcon } from './FantasyIcon';
 import React, { useState } from 'react';
 import {
@@ -298,8 +299,9 @@ export function QuestCreateModal() {
                       ]}
                     >
                       {d.charAt(0).toUpperCase() + d.slice(1)}
-                      {!allowed ? ' 🔒' : ''}
+
                     </Text>
+                    {!allowed && <RPGIcon name="lock" size={22} />}
                     <Text style={styles.chipXP}>{DIFFICULTY_XP[d]} XP</Text>
                   </TouchableOpacity>
                 );

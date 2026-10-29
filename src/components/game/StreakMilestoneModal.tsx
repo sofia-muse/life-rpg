@@ -1,3 +1,4 @@
+import { RPGIcon } from './RPGIcon';
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Modal, Animated, TouchableOpacity } from 'react-native';
 import { colors, spacing, fontSize, radius } from '../../config/theme';
@@ -25,7 +26,7 @@ export function StreakMilestoneModal({ visible, days, title, multiplier, onDismi
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onDismiss}>
       <View style={styles.overlay}>
         <Animated.View style={[styles.content, { transform: [{ scale }] }]}>
-          <Text style={styles.fire}>🔥</Text>
+          <RPGIcon name="flame" size={72} style={{ marginBottom: 12 }} />
           <Text style={styles.title}>STREAK MILESTONE!</Text>
           <Text style={styles.days}>{days} Days</Text>
           <Text style={styles.name}>{title}</Text>

@@ -1,3 +1,4 @@
+import { RPGIcon } from '../../src/components/game/RPGIcon';
 import { StoryHeader } from '../../src/components/layout/StoryHeader';
 import React, { useEffect, useState, useMemo } from 'react';
 import { FlatList, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
@@ -10,7 +11,7 @@ import { useHeroStore } from '../../src/store/heroStore';
 import { useSettingsStore } from '../../src/store/settingsStore';
 import { useAuthStore } from '../../src/store/authStore';
 import { useQuestStore } from '../../src/store/questStore';
-import { STAT_COLORS, STAT_ICONS, StatName, DIFFICULTY_XP } from '../../src/types';
+import { STAT_COLORS, StatName, DIFFICULTY_XP } from '../../src/types';
 import { getCurrentWeekKey } from '../../src/config/weeklyPaths';
 import { STREAK_MILESTONES } from '../../src/engine/streakEngine';
 import { guidanceApi, ChronicleDto } from '../../src/api/guidanceApi';
@@ -97,6 +98,7 @@ export default function JournalScreen() {
           entries[0]?.levelsGained ?? [],
           entries[0]?.skillsUnlocked ?? [],
           hero.currentStreak,
+          false,
         )
       : null;
 
@@ -110,9 +112,9 @@ export default function JournalScreen() {
 
       {(chronicle || offlineEpilogue) && (
         <Card style={styles.chronicleCard}>
-          <Text style={styles.chronicleOverline}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><RPGIcon name="scroll" size={28} /><Text style={styles.chronicleOverline}>
             {chronicle ? 'Weekly Chronicle' : 'Campaign Epilogue'}
-          </Text>
+          </Text></View>
           <Text style={styles.chronicleTitle}>
             {chronicle?.title ?? `${hero?.name}'s Recent Deeds`}
           </Text>
@@ -143,7 +145,7 @@ export default function JournalScreen() {
           <View style={styles.stampsRow}>
             {streakMilestones.map((m) => (
               <View key={m.days} style={styles.stamp}>
-                <Text style={styles.stampIcon}>🔥</Text>
+                <RPGIcon name="flame" size={36} />
                 <Text style={styles.stampLabel}>{m.title}</Text>
               </View>
             ))}
@@ -174,7 +176,7 @@ export default function JournalScreen() {
                       const s = stat as StatName;
                       return (
                         <View key={stat} style={styles.xpChip}>
-                          <Text style={styles.xpIcon}>{STAT_ICONS[s]}</Text>
+                          <RPGIcon name={s} size={28} />
                           <Text style={[styles.xpValue, { color: STAT_COLORS[s] }]}>+{xp}</Text>
                         </View>
                       );
@@ -204,7 +206,7 @@ export default function JournalScreen() {
 
                 {entry.skillsUnlocked.length > 0 && (
                   <Text style={styles.skillUnlock}>
-                    ✨ {entry.skillsUnlocked.length} skill
+                    {entry.skillsUnlocked.length} skill
                     {entry.skillsUnlocked.length > 1 ? 's' : ''} unlocked
                   </Text>
                 )}

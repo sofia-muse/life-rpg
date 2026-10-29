@@ -1,8 +1,9 @@
+import { RPGIcon } from './RPGIcon';
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Card } from '../layout/Card';
 import { colors, spacing, fontSize, typography } from '../../config/theme';
-import { Hero, STAT_COLORS, STAT_ICONS } from '../../types';
+import { Hero, STAT_COLORS, } from '../../types';
 import { getStreakMultiplier } from '../../engine/streakEngine';
 import { getWeeklyPathQuestBonus, WeeklyPathSettingsLike } from '../../config/weeklyPaths';
 import { getQuestSkillBonus } from '../../engine/skillEngine';
@@ -35,9 +36,7 @@ export function BuildSummaryCard({
     <Card style={styles.card}>
       <Text style={styles.overline}>Character Sheet</Text>
       <Text style={styles.title}>{hero.name}</Text>
-      <Text style={styles.classLine}>
-        {STAT_ICONS[hero.dominantStat]} {hero.className} · Tier {hero.classTier} · Lv.{hero.heroLevel}
-      </Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><RPGIcon name={hero.dominantStat} size={28} /><Text style={[styles.classLine, { flex: 1 }]}>{hero.className} · Tier {hero.classTier} · Lv.{hero.heroLevel}</Text></View>
 
       <View style={styles.grid}>
         <View style={styles.stat}>
@@ -61,7 +60,7 @@ export function BuildSummaryCard({
       </View>
 
       {forgedSkillCount > 0 && (
-        <Text style={styles.forged}>✨ {forgedSkillCount} forged skill{forgedSkillCount > 1 ? 's' : ''} active</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><RPGIcon name="hammer" size={24} /><Text style={styles.forged}>{forgedSkillCount} forged skill{forgedSkillCount > 1 ? 's' : ''} active</Text></View>
       )}
     </Card>
   );

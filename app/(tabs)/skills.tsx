@@ -1,4 +1,4 @@
-import { FantasyIcon } from '../../src/components/game/FantasyIcon';
+import { RPGIcon } from '../../src/components/game/RPGIcon';
 import { StoryHeader } from '../../src/components/layout/StoryHeader';
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Modal, ScrollView, TouchableOpacity } from 'react-native';
@@ -16,7 +16,7 @@ import { getSkillsByCategory } from '../../src/config/skills';
 import { getSkillProgress } from '../../src/engine/skillEngine';
 import { env } from '../../src/config/env';
 import { colors, spacing, fontSize, radius } from '../../src/config/theme';
-import { Skill, StatName, STAT_NAMES, STAT_COLORS, STAT_ICONS } from '../../src/types';
+import { Skill, StatName, STAT_NAMES, STAT_COLORS, } from '../../src/types';
 
 export default function SkillsScreen() {
   const { hero } = useHeroStore();
@@ -41,14 +41,13 @@ export default function SkillsScreen() {
 
   if (!hero) return null;
 
-  const categories: { key: string; label: string; color: string; icon: string }[] = [
+  const categories: { key: string; label: string; color: string }[] = [
     ...STAT_NAMES.map((stat) => ({
       key: stat,
       label: stat.charAt(0).toUpperCase() + stat.slice(1),
       color: STAT_COLORS[stat],
-      icon: STAT_ICONS[stat],
     })),
-    { key: 'cross', label: 'Cross-Stat', color: colors.gold, icon: '⚡' },
+    { key: 'cross', label: 'Cross-Stat', color: colors.gold },
   ];
 
   return (
@@ -63,7 +62,7 @@ export default function SkillsScreen() {
       {(forged.length > 0 || aiSkillsEnabled || canForge) && (
         <Card style={styles.treeCard}>
           <View style={styles.treeHeader}>
-            <Text style={styles.treeIcon}>✨</Text>
+            <RPGIcon name="hammer" size={32} />
             <Text style={[styles.treeName, { color: colors.gold }]}>Forged</Text>
           </View>
           {forged.length > 0 && (
@@ -81,7 +80,7 @@ export default function SkillsScreen() {
           )}
           {canForge ? (
             <Button
-              title={forging ? 'Forging…' : '✨ Forge a Skill'}
+              title={forging ? 'Forging…' : 'Forge a Skill'}
               onPress={handleForge}
               loading={forging}
               variant="secondary"
@@ -106,8 +105,8 @@ export default function SkillsScreen() {
         return (
           <Card key={cat.key} style={styles.treeCard}>
             <View style={styles.treeHeader}>
-              <FantasyIcon
-                stat={cat.key === 'cross' ? 'intelligence' : (cat.key as StatName)}
+              <RPGIcon
+                name={cat.key === 'cross' ? 'crystal' : (cat.key as StatName)}
                 size={40}
               />
               <Text style={[styles.treeName, { color: cat.color }]}>{cat.label}</Text>
@@ -143,7 +142,7 @@ export default function SkillsScreen() {
             <ScrollView style={{ flexShrink: 1 }} contentContainerStyle={{ alignItems: 'center' }}>
               {selectedSkill && (
                 <>
-                  <Text style={styles.modalIcon}>{selectedSkill.icon}</Text>
+                  <RPGIcon name={selectedSkill.requiredStat ?? "crystal"} size={64} style={{ marginBottom: 12 }} />
                   <Text style={styles.modalName}>{selectedSkill.name}</Text>
                   <Text style={styles.modalDesc}>{selectedSkill.description}</Text>
                   <View style={styles.modalDivider} />
@@ -166,7 +165,7 @@ export default function SkillsScreen() {
                     ]}
                   >
                     <Text style={styles.modalStatusText}>
-                      {isSkillUnlocked(selectedSkill.id) ? '✓ Unlocked' : '🔒 Locked'}
+                      {isSkillUnlocked(selectedSkill.id) ? 'Unlocked' : 'Locked'}
                     </Text>
                   </View>
                 </>
