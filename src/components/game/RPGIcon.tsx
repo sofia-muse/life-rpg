@@ -115,6 +115,6 @@ const LEGACY: Record<string, RPGIconName> = {
   '🎁': 'gift',
   '🗺️': 'map',
 };
-export function LegacyRPGIcon({ symbol, size = 32 }: { symbol: string; size?: number }) {
-  return <RPGIcon name={LEGACY[symbol] ?? 'crystal'} size={size} />;
+export function LegacyRPGIcon({ symbol, size = 32, label }: { symbol: string; size?: number; label?: string }) {
+  return <RPGIcon name={LEGACY[symbol] ?? 'crystal'} size={size} label={label} />;
 }

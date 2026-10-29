@@ -136,7 +136,7 @@ export default function AchievementsScreen() {
             style={[styles.achievementCard, !isEarned && styles.achievementLocked]}
           >
             <View style={styles.achievementRow}>
-              <LegacyRPGIcon symbol={isEarned ? def.icon : "🔒"} size={40} />
+              <LegacyRPGIcon symbol={isEarned ? def.icon : "🔒"} size={40} label={isEarned ? "Earned achievement" : "Locked achievement"} />
               <View style={styles.achievementInfo}>
                 <Text style={[styles.achievementTitle, !isEarned && styles.lockedText]}>
                   {def.title}

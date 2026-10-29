@@ -112,6 +112,9 @@ export function BossPlannerModal({ visible, onClose, onCreateBoss, defaultStat }
                 {STAT_NAMES.map((s) => (
                   <TouchableOpacity
                     key={s}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${s} primary stat`}
+                    accessibilityState={{ selected: stat === s }}
                     style={[styles.statChip, stat === s && styles.statChipActive]}
                     onPress={() => setStat(s)}
                   >
