@@ -198,7 +198,7 @@ export const useHeroStore = create<HeroState>()(
           totalQuestsCompleted: 0,
           currentStreak: 0,
           longestStreak: 0,
-          lastActiveDate: today(),
+          lastActiveDate: '',
           restDaysUsed: 0,
           appearance: getDefaultAppearance(),
           characterAppearance: charAppearance || getDefaultCharacterAppearance(),
@@ -255,9 +255,11 @@ export const useHeroStore = create<HeroState>()(
         if (!hero) return null;
 
         const todayStr = today();
-        if (!hero.lastActiveDate) {
+        if (!hero.lastActiveDate || (hero.currentStreak === 0 && hero.lastActiveDate === todayStr)) {
           const updatedHero: Hero = {
             ...hero,
+            currentStreak: 1,
+            longestStreak: Math.max(hero.longestStreak, 1),
             lastActiveDate: todayStr,
             updatedAt: new Date().toISOString(),
           };

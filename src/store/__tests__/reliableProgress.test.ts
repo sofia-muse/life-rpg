@@ -82,3 +82,11 @@ it('opening the app alone does not advance the habit streak', () => {
   useGameplayStore.getState().runDailyLifecycle();
   expect(useHeroStore.getState().hero!.currentStreak).toBe(2);
 });
+
+it('starts a new hero streak only after the first completed quest', async () => {
+  const hero = useHeroStore.getState().hero!;
+  expect(hero.currentStreak).toBe(0);
+  useQuestStore.setState({ quests: [{ ...quest('2026-10-26T12:00:00.000Z'), isCompleted: false, completedAt: undefined }] });
+  await useGameplayStore.getState().completeQuest('reading');
+  expect(useHeroStore.getState().hero!.currentStreak).toBe(1);
+});

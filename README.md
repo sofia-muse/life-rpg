@@ -108,7 +108,7 @@ Runs against a local SQLite database out of the box; configured for SQL Server /
 npm run typecheck && npm run lint && npm run test:coverage   # frontend
 cd backend && dotnet test                                    # backend
 ```
-- **Frontend:** 124 tests (Jest + jest-expo), engine coverage gated at 80%.
+- **Frontend:** 125 tests (Jest + jest-expo), engine coverage gated at 80%.
 - **Backend:** 72 tests — domain golden-value tests + WebApplicationFactory integration tests (auth, full quest flow, anti-cheat, sync idempotency).
 
 ### Android preview build (EAS)
@@ -144,3 +144,4 @@ The Starlit Library is a five-day reading chapter in the World Map. The player c
 
 ## License
 MIT — see [LICENSE](LICENSE).
+

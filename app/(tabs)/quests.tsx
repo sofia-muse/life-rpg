@@ -23,7 +23,7 @@ import { getAllTemplates, QuestTemplate } from '../../src/config/questTemplates'
 import { getPrimaryContract } from '../../src/config/classContracts';
 import { isQuestContractAligned } from '../../src/config/achievements';
 import { resolveEvolutionPathId } from '../../src/engine/questProgression';
-import { isDifficultyAllowed, getWeeklyCapacityBonus } from '../../src/engine/skillEngine';
+import { isDifficultyAllowed, getWeeklyCapacityBonus, getActiveDailyQuestCapacityBonus } from '../../src/engine/skillEngine';
 import { useSkillStore } from '../../src/store/skillStore';
 import { presentQuestCompletionFeedback } from '../../src/utils/questCompletionFeedback';
 
@@ -358,6 +358,8 @@ export default function QuestsScreen() {
               quest={item}
               onComplete={handleComplete}
               onDelete={deleteQuest}
+              onToggleActive={(id) => useQuestStore.getState().toggleQuestActive(id)}
+              resumeDisabled={quests.filter((q) => q.type === 'daily' && q.isActive).length >= 3 + getActiveDailyQuestCapacityBonus(unlockedSkillIds)}
               contractAligned={contract ? isQuestContractAligned(item, contract) : false}
               useFantasyNames={settings.fantasyNames}
             />

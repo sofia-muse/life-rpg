@@ -74,6 +74,9 @@ export function LibraryChapter() {
       }} />}
     </> : <>
       <Text style={styles.progress}>{progress} / {LIBRARY_DAYS} reading days · lanterns restored</Text>
+      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
+        {Array.from({ length: LIBRARY_DAYS }, (_, index) => <View key={index} accessible accessibilityLabel={`Lantern ${index + 1}: ${index < progress ? 'restored' : 'waiting'}`} style={{ opacity: index < progress ? 1 : 0.22 }}><FantasyIcon stat="willpower" size={36} /></View>)}
+      </View>
       <View accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: LIBRARY_DAYS, now: progress }} style={styles.track}>
         <View style={[styles.fill, { width: `${progress / LIBRARY_DAYS * 100}%` }]} />
       </View>

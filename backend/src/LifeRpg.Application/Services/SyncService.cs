@@ -294,13 +294,13 @@ public class SyncService
             .ToListAsync(ct);
 
         var journal = await _db.JournalEntries
-            .Where(j => j.HeroId == hero.Id && (since == null || j.UpdatedAt > since))
+            .Where(j => j.HeroId == hero.Id)
             .ToListAsync(ct);
 
         return new SyncServerChanges(
             heroChanged ? hero.ToDto() : null,
             quests.Select(q => q.ToDto()).ToList(),
-            journal.Select(j => j.ToDto()).ToList());
+            journal.Where(j => since is null || j.UpdatedAt > since).Select(j => j.ToDto()).ToList());
     }
 
     private bool CanActivateDailyQuest(Hero hero, Guid? currentQuestId)

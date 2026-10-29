@@ -1,3 +1,4 @@
+import { Button } from '../layout/Button';
 import { FantasyIcon } from './FantasyIcon';
 import React, { useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
@@ -10,6 +11,8 @@ import { getQuestDisplayTitle, getQuestDisplayDescription } from '../../config/q
 interface Props {
   quest: Quest;
   onComplete: (questId: string) => void;
+  onToggleActive?: (questId: string) => void;
+  resumeDisabled?: boolean;
   onDelete?: (questId: string) => void;
   contractAligned?: boolean;
   useFantasyNames?: boolean;
@@ -19,6 +22,8 @@ export function QuestCard({
   quest,
   onComplete,
   onDelete,
+  onToggleActive,
+  resumeDisabled = false,
   contractAligned = false,
   useFantasyNames = false,
 }: Props) {
@@ -143,6 +148,10 @@ export function QuestCard({
           </TouchableOpacity>
         )}
 
+        {quest.type === 'daily' && onToggleActive && <View style={{ marginTop: 10 }}>
+          <Button title={quest.isActive ? `Pause ${quest.title}` : `Resume ${quest.title}`} variant="secondary" disabled={!quest.isActive && resumeDisabled} onPress={() => onToggleActive(quest.id)} />
+          {!quest.isActive && resumeDisabled && <Text style={styles.description}>Active habit slots are full. Pause one of your other daily habits to resume this one.</Text>}
+        </View>}
         {quest.isCompleted && (
           <View style={styles.completedBanner}>
             <Text style={styles.completedText}>✓ Victorious</Text>
