@@ -1,9 +1,12 @@
+import { Button } from '../layout/Button';
+import { StoryFrame } from '../layout/StoryFrame';
+import { Text } from '../layout/StoryText';
 import { RPGIcon } from './RPGIcon';
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Modal, Animated, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, Modal, Animated, ScrollView } from 'react-native';
 import AppLottie from '../animated/AppLottie';
-import { StatName, STAT_COLORS, } from '../../types';
-import { colors, spacing, fontSize, radius } from '../../config/theme';
+import { StatName, STAT_COLORS } from '../../types';
+import { colors, spacing, fontSize, radius, fonts } from '../../config/theme';
 
 interface Props {
   visible: boolean;
@@ -19,8 +22,15 @@ export function DailyRewardModal({ visible, xp, stat, bonusType, loginDays, onCl
   const [error, setError] = useState('');
   const claim = async () => {
     if (busy) return;
-    setBusy(true); setError('');
-    try { await onClaim(); } catch { setError('Could not save your reward. Please try again.'); } finally { setBusy(false); }
+    setBusy(true);
+    setError('');
+    try {
+      await onClaim();
+    } catch {
+      setError('Could not save your reward. Please try again.');
+    } finally {
+      setBusy(false);
+    }
   };
   const scale = useRef(new Animated.Value(0.3)).current;
   const opacity = useRef(new Animated.Value(0)).current;
@@ -40,49 +50,67 @@ export function DailyRewardModal({ visible, xp, stat, bonusType, loginDays, onCl
   const statColor = STAT_COLORS[stat];
 
   return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={() => { void claim(); }}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="none"
+      onRequestClose={() => {
+        void claim();
+      }}
+    >
       <Animated.View style={[styles.overlay, { opacity }]}>
-        <Animated.View style={[styles.content, { transform: [{ scale }] }]}>
-          <AppLottie
-            source={require('../../../assets/animations/sparkle.json')}
-            autoPlay
-            loop={false}
-            speed={0.8}
-            style={styles.lottie}
-          />
-          <RPGIcon name="gift" size={76} style={{ marginBottom: 12 }} />
-          <Text style={styles.title}>DAILY REWARD</Text>
-          <Text style={styles.bonusType}>{bonusType}</Text>
+        <ScrollView
+          style={{ width: '100%' }}
+          contentContainerStyle={{
+            flexGrow: 1,
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingVertical: 24,
+          }}
+          showsVerticalScrollIndicator={false}
+        >
+          <Animated.View style={[styles.content, { transform: [{ scale }] }]}>
+            <StoryFrame />
+            <AppLottie
+              source={require('../../../assets/animations/sparkle.json')}
+              autoPlay
+              loop={false}
+              speed={0.8}
+              style={styles.lottie}
+            />
+            <RPGIcon name="gift" size={76} style={{ marginBottom: 12 }} />
+            <Text style={styles.title}>DAILY REWARD</Text>
+            <Text style={styles.bonusType}>{bonusType}</Text>
 
-          <View style={[styles.xpBox, { borderColor: statColor }]}>
-            <RPGIcon name={stat} size={28} />
-            <Text style={[styles.xpAmount, { color: statColor }]}>+{xp} XP</Text>
-          </View>
-
-          <Text style={styles.statLabel}>{stat.charAt(0).toUpperCase() + stat.slice(1)}</Text>
-
-          <View style={styles.daysRow}>
-            <Text style={styles.daysLabel}>Day {loginDays}</Text>
-            <View style={styles.daysBar}>
-              {[1, 2, 3, 4, 5, 6, 7].map((d) => (
-                <View
-                  key={d}
-                  style={[styles.dayDot, d <= (loginDays % 7 || 7) && styles.dayDotActive]}
-                />
-              ))}
+            <View style={[styles.xpBox, { borderColor: statColor }]}>
+              <RPGIcon name={stat} size={28} />
+              <Text style={[styles.xpAmount, { color: statColor }]}>+{xp} XP</Text>
             </View>
-          </View>
 
-          <TouchableOpacity
-            style={[styles.button, { backgroundColor: statColor }]}
-            accessibilityRole="button"
-            disabled={busy}
-            onPress={() => { void claim(); }}
-          >
-            <Text style={styles.buttonText}>{busy ? 'Saving…' : 'Claim!'}</Text>
-          </TouchableOpacity>
-          {!!error && <Text style={styles.statLabel}>{error}</Text>}
-        </Animated.View>
+            <Text style={styles.statLabel}>{stat.charAt(0).toUpperCase() + stat.slice(1)}</Text>
+
+            <View style={styles.daysRow}>
+              <Text style={styles.daysLabel}>Day {loginDays}</Text>
+              <View style={styles.daysBar}>
+                {[1, 2, 3, 4, 5, 6, 7].map((d) => (
+                  <View
+                    key={d}
+                    style={[styles.dayDot, d <= (loginDays % 7 || 7) && styles.dayDotActive]}
+                  />
+                ))}
+              </View>
+            </View>
+
+            <Button
+              title={busy ? 'Saving…' : 'Claim!'}
+              onPress={() => {
+                void claim();
+              }}
+              loading={busy}
+            />
+            {!!error && <Text style={styles.statLabel}>{error}</Text>}
+          </Animated.View>
+        </ScrollView>
       </Animated.View>
     </Modal>
   );
@@ -101,16 +129,19 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.gold,
     padding: spacing.xl,
-    width: '80%',
+    width: '90%',
+    maxWidth: 440,
     alignItems: 'center',
   },
   lottie: { position: 'absolute', width: 200, height: 200, top: -30 },
   gift: { fontSize: 56, marginBottom: spacing.sm },
   title: {
+    fontFamily: fonts.heading,
+    textAlign: 'center',
     color: colors.gold,
     fontSize: fontSize.title,
     fontWeight: '900',
-    letterSpacing: 3,
+    letterSpacing: 1,
     marginBottom: spacing.xs,
   },
   bonusType: {

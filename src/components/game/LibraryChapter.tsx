@@ -1,8 +1,9 @@
+import { Text, TextInput } from '../layout/StoryText';
 import { getActiveDailyQuestCapacityBonus } from '../../engine/skillEngine';
 import { useSkillStore } from '../../store/skillStore';
 import { syncManager } from '../../api/syncManager';
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Card } from '../layout/Card';
 import { Button } from '../layout/Button';

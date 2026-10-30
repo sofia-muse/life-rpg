@@ -1,5 +1,6 @@
+import { Text, TextInput } from '../../src/components/layout/StoryText';
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { Link, useLocalSearchParams, useRouter, Href } from 'expo-router';
 import { Button } from '../../src/components/layout/Button';
 import { useAuthStore } from '../../src/store/authStore';

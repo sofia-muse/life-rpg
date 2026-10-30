@@ -1,9 +1,10 @@
+import { Text, TextInput } from '../../src/components/layout/StoryText';
 import { RPGIcon } from '../../src/components/game/RPGIcon';
 import { useCompletionStore } from '../../src/store/completionStore';
 import { FantasyIcon } from '../../src/components/game/FantasyIcon';
 import { StoryHeader } from '../../src/components/layout/StoryHeader';
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ScreenWrapper } from '../../src/components/layout/ScreenWrapper';
 import { QuestCard } from '../../src/components/game/QuestCard';

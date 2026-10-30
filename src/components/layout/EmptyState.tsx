@@ -1,6 +1,7 @@
+import { Text } from './StoryText';
 import { LegacyRPGIcon } from '../game/RPGIcon';
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { colors, spacing, fontSize } from '../../config/theme';
 import { Button } from './Button';
 

@@ -1,6 +1,9 @@
+import { Button } from '../layout/Button';
+import { StoryFrame } from '../layout/StoryFrame';
+import { Text } from '../layout/StoryText';
 import { RPGIcon } from './RPGIcon';
 import React, { useEffect, useRef } from 'react';
-import { Modal, Animated, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { Modal, Animated, StyleSheet, ScrollView } from 'react-native';
 import { colors, spacing, fontSize, radius, typography } from '../../config/theme';
 
 interface Props {
@@ -29,17 +32,27 @@ export function EvolutionModal({ visible, rankName, nextTitle, onDismiss }: Prop
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onDismiss}>
       <Animated.View style={[styles.overlay, { opacity }]}>
-        <Animated.View style={[styles.content, { transform: [{ scale }] }]}>
-          <RPGIcon name="crown" size={72} style={{ marginBottom: 12 }} />
-          <Text style={styles.title}>Quest Evolved!</Text>
-          <Text style={styles.rank}>Rank: {rankName}</Text>
-          {nextTitle ? (
-            <Text style={styles.next}>Your quest has grown into: {nextTitle}</Text>
-          ) : null}
-          <TouchableOpacity style={styles.btn} onPress={onDismiss}>
-            <Text style={styles.btnText}>Continue</Text>
-          </TouchableOpacity>
-        </Animated.View>
+        <ScrollView
+          style={{ width: '100%' }}
+          contentContainerStyle={{
+            flexGrow: 1,
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingVertical: 24,
+          }}
+          showsVerticalScrollIndicator={false}
+        >
+          <Animated.View style={[styles.content, { transform: [{ scale }] }]}>
+            <StoryFrame />
+            <RPGIcon name="crown" size={72} style={{ marginBottom: 12 }} />
+            <Text style={styles.title}>Quest Evolved!</Text>
+            <Text style={styles.rank}>Rank: {rankName}</Text>
+            {nextTitle ? (
+              <Text style={styles.next}>Your quest has grown into: {nextTitle}</Text>
+            ) : null}
+            <Button title="Continue" onPress={onDismiss} />
+          </Animated.View>
+        </ScrollView>
       </Animated.View>
     </Modal>
   );
@@ -65,6 +78,7 @@ const styles = StyleSheet.create({
   },
   icon: { fontSize: 48, marginBottom: spacing.md },
   title: {
+    textAlign: 'center',
     color: colors.gold,
     fontSize: fontSize.xl,
     fontWeight: '900',

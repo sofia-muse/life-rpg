@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, ViewStyle, StyleProp } from 'react-native';
-import { colors, radius, spacing } from '../../config/theme';
-import { PanelCorner } from './PanelCorner';
+import { colors, spacing } from '../../config/theme';
+import { StoryFrame } from './StoryFrame';
 import { LinearGradient } from 'expo-linear-gradient';
 
 interface Props {
@@ -20,15 +20,7 @@ export function Card({ children, style, padded = true, tone = 'default' }: Props
         colors={['#1B382C', '#10271F']}
         style={StyleSheet.absoluteFillObject}
       />
-      <View pointerEvents="none" style={{ position: 'absolute', top: 4, left: 4 }}>
-        <PanelCorner />
-      </View>
-      <View
-        pointerEvents="none"
-        style={{ position: 'absolute', bottom: 4, right: 4, transform: [{ rotate: '180deg' }] }}
-      >
-        <PanelCorner />
-      </View>
+      <StoryFrame />
       <View style={padded && styles.padded}>{children}</View>
     </View>
   );
@@ -37,7 +29,7 @@ export function Card({ children, style, padded = true, tone = 'default' }: Props
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.bgCard,
-    borderRadius: radius.lg,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: '#796C47',
     overflow: 'hidden',

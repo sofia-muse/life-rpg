@@ -1,6 +1,7 @@
+import { Text } from '../src/components/layout/StoryText';
 import { RPGIcon } from '../src/components/game/RPGIcon';
 import { Link, Stack } from 'expo-router';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { colors, spacing, fontSize } from '../src/config/theme';
 
 export default function NotFoundScreen() {

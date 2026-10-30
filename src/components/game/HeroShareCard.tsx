@@ -1,8 +1,9 @@
+import { Text } from '../layout/StoryText';
 import { RPGIcon } from './RPGIcon';
 import { useCompletionStore } from '../../store/completionStore';
 import { SharePreview } from './SharePreview';
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Share, Platform } from 'react-native';
+import { View, StyleSheet, Share, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Hero, STAT_NAMES, STAT_COLORS } from '../../types';
 import { colors, spacing, fontSize, radius, typography } from '../../config/theme';
