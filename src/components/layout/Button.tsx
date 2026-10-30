@@ -1,7 +1,8 @@
-import React, { useRef } from 'react';
+import { StoryFrame } from './StoryFrame';
+import { Text } from './StoryText';
+import React, { useRef, useState } from 'react';
 import {
   TouchableOpacity,
-  Text,
   StyleSheet,
   ViewStyle,
   TextStyle,
@@ -10,7 +11,7 @@ import {
   View,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors, radius, spacing, fontSize, typography } from '../../config/theme';
+import { colors, spacing, typography } from '../../config/theme';
 
 interface Props {
   title: string;
@@ -20,6 +21,7 @@ interface Props {
   disabled?: boolean;
   loading?: boolean;
   style?: ViewStyle;
+  accessibilityLabel?: string;
   textStyle?: TextStyle;
 }
 
@@ -32,12 +34,14 @@ export function Button({
   loading = false,
   style,
   textStyle,
+  accessibilityLabel,
 }: Props) {
+  const [focused, setFocused] = useState(false);
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
     Animated.spring(scaleAnim, {
-      toValue: 0.95,
+      toValue: 0.98,
       friction: 8,
       useNativeDriver: true,
     }).start();
@@ -58,16 +62,19 @@ export function Button({
           styles.base,
           styles[`size_${size}`],
           styles[`frame_${variant}`],
-          disabled && styles.disabled,
+          (disabled || loading) && styles.disabled,
           style,
+          focused && styles.focused,
         ]}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
         onPress={onPress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         disabled={disabled || loading}
         activeOpacity={0.8}
         accessibilityRole="button"
-        accessibilityLabel={title}
+        accessibilityLabel={accessibilityLabel ?? title}
         accessibilityState={{ disabled: disabled || loading, busy: loading }}
       >
         {variant === 'primary' && (
@@ -79,6 +86,7 @@ export function Button({
           />
         )}
         {variant !== 'primary' && <View pointerEvents="none" style={styles.secondaryGlow} />}
+        {variant !== 'ghost' && <StoryFrame compact dark={variant === 'primary'} />}
         {loading ? (
           <ActivityIndicator color={variant === 'primary' ? colors.bgPrimary : colors.gold} />
         ) : (
@@ -94,7 +102,7 @@ export function Button({
 const styles = StyleSheet.create({
   base: {
     minHeight: 44,
-    borderRadius: radius.md,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -111,7 +119,7 @@ const styles = StyleSheet.create({
   frame_secondary: {
     backgroundColor: colors.bgSecondary,
     borderWidth: 1,
-    borderColor: colors.goldSoft,
+    borderColor: colors.goldDark,
   },
   frame_ghost: {
     backgroundColor: 'transparent',
@@ -128,12 +136,14 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.xl,
   },
+  focused: { borderWidth: 2, borderColor: colors.goldBright },
   disabled: {
     opacity: 0.5,
   },
   text: {
-    fontWeight: '700',
-    ...typography.body,
+    ...typography.heading,
+    textAlign: 'center',
+    flexShrink: 1,
   },
   text_primary: {
     color: colors.bgPrimary,
@@ -145,13 +155,13 @@ const styles = StyleSheet.create({
     color: colors.gold,
   },
   text_sm: {
-    fontSize: fontSize.sm,
+    fontSize: 18,
   },
   text_md: {
-    fontSize: fontSize.md,
+    fontSize: 20,
   },
   text_lg: {
-    fontSize: fontSize.lg,
+    fontSize: 22,
   },
   innerBorder: {
     position: 'absolute',
@@ -159,7 +169,7 @@ const styles = StyleSheet.create({
     right: 3,
     bottom: 3,
     left: 3,
-    borderRadius: radius.sm,
+    borderRadius: 5,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.14)',
   },

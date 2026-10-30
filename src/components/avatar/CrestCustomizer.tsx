@@ -1,3 +1,4 @@
+import { Text } from '../layout/StoryText';
 import { OrnamentIcon } from '../game/OrnamentIcon';
 import { RPGIcon } from '../game/RPGIcon';
 import React, { useEffect, useRef, useState } from 'react';
@@ -6,10 +7,8 @@ import {
   ScrollView,
   StyleSheet,
   Switch,
-  Text,
   TouchableOpacity,
-  View,
-} from 'react-native';
+  View} from 'react-native';
 import { useHeroStore } from '../../store/heroStore';
 import { HeroCrest } from './HeroCrest';
 import { StatRadar } from './StatRadar';

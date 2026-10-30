@@ -1,6 +1,7 @@
+import { Text } from '../layout/StoryText';
 import { RPGIcon } from './RPGIcon';
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Card } from '../layout/Card';
 import { colors, spacing, fontSize, radius } from '../../config/theme';
 import { guidanceApi, QuestSuggestionPackDto } from '../../api/guidanceApi';

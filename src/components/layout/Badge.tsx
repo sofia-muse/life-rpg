@@ -1,7 +1,8 @@
+import { Text } from './StoryText';
 import React from 'react';
-import { View, Text, StyleSheet, ViewStyle } from 'react-native';
+import { View, StyleSheet, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors, radius, spacing, fontSize, typography } from '../../config/theme';
+import { colors, spacing, fontSize, typography } from '../../config/theme';
 
 interface Props {
   label: string;
@@ -27,10 +28,10 @@ export function Badge({ label, color = colors.gold, size = 'md', style }: Props)
 const styles = StyleSheet.create({
   badge: {
     borderWidth: 1,
-    borderColor: colors.borderLight,
-    borderRadius: radius.full,
+    borderColor: colors.goldDark,
+    borderRadius: 5,
     paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm + 2,
+    paddingHorizontal: spacing.sm + 4,
     alignSelf: 'flex-start',
     overflow: 'hidden',
     backgroundColor: colors.bgSecondary,
@@ -45,7 +46,7 @@ const styles = StyleSheet.create({
     right: 3,
     bottom: 3,
     left: 3,
-    borderRadius: radius.full,
+    borderRadius: 5,
     borderWidth: 1,
   },
   text: {

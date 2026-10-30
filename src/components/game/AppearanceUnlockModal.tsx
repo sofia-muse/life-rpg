@@ -1,7 +1,10 @@
+import { Button } from '../layout/Button';
+import { StoryFrame } from '../layout/StoryFrame';
+import { Text } from '../layout/StoryText';
 import { RPGIcon } from './RPGIcon';
 import React, { useEffect, useRef } from 'react';
-import { Text, StyleSheet, Modal, Animated, TouchableOpacity } from 'react-native';
-import { colors, spacing, fontSize, radius } from '../../config/theme';
+import { StyleSheet, Modal, Animated, ScrollView } from 'react-native';
+import { colors, spacing, fontSize, radius, fonts } from '../../config/theme';
 
 interface Props {
   visible: boolean;
@@ -29,16 +32,28 @@ export function AppearanceUnlockModal({ visible, type, name, onDismiss }: Props)
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onDismiss}>
       <Animated.View style={[styles.overlay, { opacity }]}>
-        <Animated.View style={[styles.content, { transform: [{ scale }] }]}>
-          <RPGIcon name="crown" size={72} style={{ marginBottom: 12 }} />
-          <Text style={styles.title}>NEW UNLOCK!</Text>
-          <Text style={styles.subtitle}>{type === 'shape' ? 'Crest Shape' : 'Sigil'} Unlocked</Text>
-          <Text style={styles.name}>{name}</Text>
-          <Text style={styles.hint}>Visit the customization screen to try it out!</Text>
-          <TouchableOpacity style={styles.button} onPress={onDismiss}>
-            <Text style={styles.buttonText}>Awesome!</Text>
-          </TouchableOpacity>
-        </Animated.View>
+        <ScrollView
+          style={{ width: '100%' }}
+          contentContainerStyle={{
+            flexGrow: 1,
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingVertical: 24,
+          }}
+          showsVerticalScrollIndicator={false}
+        >
+          <Animated.View style={[styles.content, { transform: [{ scale }] }]}>
+            <StoryFrame />
+            <RPGIcon name="crown" size={72} style={{ marginBottom: 12 }} />
+            <Text style={styles.title}>NEW UNLOCK!</Text>
+            <Text style={styles.subtitle}>
+              {type === 'shape' ? 'Crest Shape' : 'Sigil'} Unlocked
+            </Text>
+            <Text style={styles.name}>{name}</Text>
+            <Text style={styles.hint}>Visit the customization screen to try it out!</Text>
+            <Button title="Awesome!" onPress={onDismiss} />
+          </Animated.View>
+        </ScrollView>
       </Animated.View>
     </Modal>
   );
@@ -57,7 +72,8 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.gold,
     padding: spacing.xl,
-    width: '80%',
+    width: '90%',
+    maxWidth: 440,
     alignItems: 'center',
   },
   icon: {
@@ -65,10 +81,12 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   title: {
+    fontFamily: fonts.heading,
+    textAlign: 'center',
     color: colors.gold,
     fontSize: fontSize.title,
     fontWeight: '900',
-    letterSpacing: 3,
+    letterSpacing: 1,
     marginBottom: spacing.sm,
   },
   subtitle: {

@@ -1,5 +1,6 @@
+import { Text } from '../layout/StoryText';
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { Card } from '../layout/Card';
 import { colors, spacing, fontSize, radius, typography } from '../../config/theme';
 import { WeeklyCupSummary } from '../../config/weeklyPaths';

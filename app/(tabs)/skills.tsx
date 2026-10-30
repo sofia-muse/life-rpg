@@ -1,7 +1,8 @@
+import { Text } from '../../src/components/layout/StoryText';
 import { RPGIcon } from '../../src/components/game/RPGIcon';
 import { StoryHeader } from '../../src/components/layout/StoryHeader';
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Modal, ScrollView, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, Modal, ScrollView, TouchableOpacity } from 'react-native';
 import { ScreenWrapper } from '../../src/components/layout/ScreenWrapper';
 import { SkillNode } from '../../src/components/game/SkillNode';
 import { Card } from '../../src/components/layout/Card';

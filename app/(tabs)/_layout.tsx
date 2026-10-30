@@ -1,7 +1,9 @@
+import { StoryFrame } from '../../src/components/layout/StoryFrame';
+import { Text } from '../../src/components/layout/StoryText';
 import { RPGIcon, RPGIconName } from '../../src/components/game/RPGIcon';
 import React from 'react';
 import { Tabs } from 'expo-router';
-import { View, Text, StyleSheet, Platform, useWindowDimensions } from 'react-native';
+import { View, StyleSheet, Platform, useWindowDimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, typography } from '../../src/config/theme';
 import { getTabDockWidth, getViewportSize } from '../../src/config/responsive';
@@ -19,6 +21,7 @@ function TabIcon({
 }) {
   return (
     <View style={[styles.tabItem, wide && styles.tabItemWide, focused && styles.tabItemActive]}>
+      {focused && <StoryFrame compact />}
       {focused && (
         <LinearGradient
           colors={['rgba(212, 184, 114, 0.28)', 'rgba(164, 137, 66, 0.14)']}
@@ -122,7 +125,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderWidth: 1,
     borderColor: colors.borderStrong,
-    borderRadius: 26,
+    borderRadius: 12,
     height: 84,
     paddingHorizontal: 12,
     backgroundColor: 'rgba(10,25,20,0.97)',
@@ -141,7 +144,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
     width: '100%',
     minHeight: 50,
-    borderRadius: 18,
+    borderRadius: 8,
     overflow: 'hidden',
   },
   tabItemWide: {
@@ -174,7 +177,7 @@ const styles = StyleSheet.create({
     color: colors.tabActive,
   },
   tabLabel: {
-    fontSize: 11,
+    fontSize: 12,
     color: colors.tabInactive,
     marginTop: 3,
     textTransform: 'none',

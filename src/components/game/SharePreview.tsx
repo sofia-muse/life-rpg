@@ -1,5 +1,6 @@
+import { Text } from '../layout/StoryText';
 import React, { useState } from 'react';
-import { Modal, ScrollView, View, Text, StyleSheet } from 'react-native';
+import { Modal, ScrollView, View, StyleSheet } from 'react-native';
 import { Button } from '../layout/Button';
 import { colors } from '../../config/theme';
 

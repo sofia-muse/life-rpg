@@ -1,7 +1,8 @@
+import { Text } from '../layout/StoryText';
 import { OrnamentIcon } from './OrnamentIcon';
 import { FantasyIcon } from './FantasyIcon';
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Skill, STAT_COLORS } from '../../types';
 import { colors, spacing, fontSize, radius } from '../../config/theme';
 

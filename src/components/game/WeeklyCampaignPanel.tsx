@@ -1,6 +1,7 @@
+import { Text } from '../layout/StoryText';
 import { useCompletionStore } from '../../store/completionStore';
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Card } from '../layout/Card';
 import { Badge } from '../layout/Badge';
 import { Button } from '../layout/Button';

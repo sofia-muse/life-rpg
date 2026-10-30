@@ -1,6 +1,7 @@
+import { Text } from '../layout/StoryText';
 import { FantasyIcon } from './FantasyIcon';
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, StyleSheet, Animated } from 'react-native';
 import { StatName, STAT_COLORS } from '../../types';
 import { colors, spacing, fontSize, radius } from '../../config/theme';
 
