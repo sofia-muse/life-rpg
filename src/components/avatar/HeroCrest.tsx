@@ -1,5 +1,6 @@
+import { Text } from '../layout/StoryText';
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, Animated, TouchableOpacity } from 'react-native';
 import Svg, { Path, Defs, RadialGradient, Stop } from 'react-native-svg';
 import { Hero, StatName, STAT_COLORS } from '../../types';
 import { CREST_SHAPES, SIGILS, getStatPipPositions, TIER_FRAMES } from './crestPaths';

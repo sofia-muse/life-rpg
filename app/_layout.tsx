@@ -2,6 +2,7 @@ import { useCompletionStore } from '../src/store/completionStore';
 import React, { useEffect } from 'react';
 import { DarkTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack, Redirect } from 'expo-router';
+import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { View, ActivityIndicator, AppState } from 'react-native';
 import { useHeroStore } from '../src/store/heroStore';
@@ -32,7 +33,17 @@ const rpgDarkTheme = {
   },
 };
 
+const storyFonts = {
+  CormorantGaramond: require('../assets/fonts/CormorantGaramond-SemiBold.ttf'),
+  AlegreyaSans: require('../assets/fonts/AlegreyaSans-Regular.ttf'),
+  AlegreyaSansMedium: require('../assets/fonts/AlegreyaSans-Medium.ttf'),
+  AlegreyaSansBold: require('../assets/fonts/AlegreyaSans-Bold.ttf'),
+  AlegreyaSansItalic: require('../assets/fonts/AlegreyaSans-Italic.ttf'),
+};
+
 export default function RootLayout() {
+  const [fontsLoaded, fontError] = useFonts(storyFonts);
+  const fontsReady = fontsLoaded || !!fontError;
   const completionHydrated = useCompletionStore((s) => s.hydrated);
   const hasHydrated = useHeroStore((s) => s._hasHydrated);
   const isOnboarded = useHeroStore((s) => s.isOnboarded);
@@ -48,10 +59,10 @@ export default function RootLayout() {
   }, [bootstrap]);
 
   useEffect(() => {
-    if (hasHydrated && authStatus !== 'loading') {
+    if (hasHydrated && authStatus !== 'loading' && fontsReady) {
       void SplashScreen.hideAsync();
     }
-  }, [hasHydrated, authStatus]);
+  }, [hasHydrated, authStatus, fontsReady]);
 
   // Reset daily availability on startup, UTC day changes, and return from the background.
   useEffect(() => {
@@ -61,15 +72,24 @@ export default function RootLayout() {
     let day = new Date().toISOString().slice(0, 10);
     const timer = setInterval(() => {
       const nextDay = new Date().toISOString().slice(0, 10);
-      if (nextDay !== day) { day = nextDay; run(); }
+      if (nextDay !== day) {
+        day = nextDay;
+        run();
+      }
     }, 30_000);
     const subscription = AppState.addEventListener('change', (state) => {
-      if (state === 'active') { day = new Date().toISOString().slice(0, 10); run(); }
+      if (state === 'active') {
+        day = new Date().toISOString().slice(0, 10);
+        run();
+      }
     });
-    return () => { clearInterval(timer); subscription.remove(); };
+    return () => {
+      clearInterval(timer);
+      subscription.remove();
+    };
   }, [hasHydrated, completionHydrated, authStatus, isOnboarded]);
 
-  if (!hasHydrated || authStatus === 'loading') {
+  if (!hasHydrated || authStatus === 'loading' || !fontsReady) {
     return (
       <View
         style={{

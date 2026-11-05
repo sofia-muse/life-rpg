@@ -1,6 +1,7 @@
+import { Text } from '../layout/StoryText';
 import { RPGIcon } from './RPGIcon';
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Animated, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, Animated, TouchableOpacity } from 'react-native';
 import { colors, spacing, fontSize, radius } from '../../config/theme';
 import {
   getStreakMultiplier,

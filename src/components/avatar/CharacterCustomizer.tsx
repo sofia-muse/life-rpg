@@ -1,5 +1,6 @@
+import { Text } from '../layout/StoryText';
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, useWindowDimensions } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, useWindowDimensions } from 'react-native';
 import { useHeroStore } from '../../store/heroStore';
 import { NiceAvatarCharacter } from './NiceAvatarCharacter';
 import { PortraitPicker } from './PortraitPicker';

@@ -1,7 +1,8 @@
+import { Text } from '../../src/components/layout/StoryText';
 import { RPGIcon } from '../../src/components/game/RPGIcon';
 import { StoryHeader } from '../../src/components/layout/StoryHeader';
 import React, { useEffect, useState, useMemo } from 'react';
-import { FlatList, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { FlatList, StyleSheet, View, TouchableOpacity } from 'react-native';
 import { Card } from '../../src/components/layout/Card';
 import { EmptyState } from '../../src/components/layout/EmptyState';
 import { ScreenWrapper } from '../../src/components/layout/ScreenWrapper';

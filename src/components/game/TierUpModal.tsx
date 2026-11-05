@@ -1,8 +1,11 @@
+import { Button } from '../layout/Button';
+import { StoryFrame } from '../layout/StoryFrame';
+import { Text } from '../layout/StoryText';
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Modal, Animated, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, Modal, Animated, ScrollView } from 'react-native';
 import { ClassTier } from '../../types';
 import { TIER_BADGES } from '../../config/avatarConfig';
-import { colors, spacing, fontSize, radius } from '../../config/theme';
+import { colors, spacing, fontSize, radius, fonts } from '../../config/theme';
 
 interface Props {
   visible: boolean;
@@ -38,27 +41,37 @@ export function TierUpModal({ visible, newTier, newClass, onDismiss }: Props) {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onDismiss}>
       <View style={styles.overlay}>
-        <Animated.View style={[styles.content, { transform: [{ scale }] }]}>
-          <Animated.Text style={[styles.badge, { transform: [{ rotate: spin }] }]}>
-            {TIER_BADGES[newTier]}
-          </Animated.Text>
-          <Text style={styles.title}>CLASS EVOLUTION!</Text>
-          <Text style={styles.className}>{newClass}</Text>
-          <Text style={styles.tierLabel}>Tier {newTier}</Text>
-          <View style={styles.stars}>
-            {Array.from({ length: newTier }, (_, i) => (
-              <Text key={i} style={styles.star}>
-                ⭐
-              </Text>
-            ))}
-          </View>
-          <Text style={styles.flavor}>
-            Your dedication has transformed you into something greater!
-          </Text>
-          <TouchableOpacity style={styles.button} onPress={onDismiss}>
-            <Text style={styles.buttonText}>Embrace Power!</Text>
-          </TouchableOpacity>
-        </Animated.View>
+        <ScrollView
+          style={{ width: '100%' }}
+          contentContainerStyle={{
+            flexGrow: 1,
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingVertical: 24,
+          }}
+          showsVerticalScrollIndicator={false}
+        >
+          <Animated.View style={[styles.content, { transform: [{ scale }] }]}>
+            <StoryFrame />
+            <Animated.Text style={[styles.badge, { transform: [{ rotate: spin }] }]}>
+              {TIER_BADGES[newTier]}
+            </Animated.Text>
+            <Text style={styles.title}>CLASS EVOLUTION!</Text>
+            <Text style={styles.className}>{newClass}</Text>
+            <Text style={styles.tierLabel}>Tier {newTier}</Text>
+            <View style={styles.stars}>
+              {Array.from({ length: newTier }, (_, i) => (
+                <Text key={i} style={styles.star}>
+                  ⭐
+                </Text>
+              ))}
+            </View>
+            <Text style={styles.flavor}>
+              Your dedication has transformed you into something greater!
+            </Text>
+            <Button title="Embrace Power!" onPress={onDismiss} />
+          </Animated.View>
+        </ScrollView>
       </View>
     </Modal>
   );
@@ -85,10 +98,12 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   title: {
+    fontFamily: fonts.heading,
+    textAlign: 'center',
     color: colors.gold,
     fontSize: fontSize.xxl,
     fontWeight: '900',
-    letterSpacing: 3,
+    letterSpacing: 1,
     marginBottom: spacing.md,
   },
   className: {

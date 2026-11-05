@@ -1,7 +1,10 @@
+import { Button } from '../layout/Button';
+import { StoryFrame } from '../layout/StoryFrame';
+import { Text } from '../layout/StoryText';
 import { RPGIcon } from './RPGIcon';
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Modal, Animated, TouchableOpacity } from 'react-native';
-import { colors, spacing, fontSize, radius } from '../../config/theme';
+import { View, StyleSheet, Modal, Animated, ScrollView } from 'react-native';
+import { colors, spacing, fontSize, radius, fonts } from '../../config/theme';
 
 interface Props {
   visible: boolean;
@@ -25,16 +28,26 @@ export function StreakMilestoneModal({ visible, days, title, multiplier, onDismi
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onDismiss}>
       <View style={styles.overlay}>
-        <Animated.View style={[styles.content, { transform: [{ scale }] }]}>
-          <RPGIcon name="flame" size={72} style={{ marginBottom: 12 }} />
-          <Text style={styles.title}>STREAK MILESTONE!</Text>
-          <Text style={styles.days}>{days} Days</Text>
-          <Text style={styles.name}>{title}</Text>
-          <Text style={styles.multiplier}>XP multiplier ×{multiplier}</Text>
-          <TouchableOpacity style={styles.button} onPress={onDismiss}>
-            <Text style={styles.buttonText}>Keep the Flame</Text>
-          </TouchableOpacity>
-        </Animated.View>
+        <ScrollView
+          style={{ width: '100%' }}
+          contentContainerStyle={{
+            flexGrow: 1,
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingVertical: 24,
+          }}
+          showsVerticalScrollIndicator={false}
+        >
+          <Animated.View style={[styles.content, { transform: [{ scale }] }]}>
+            <StoryFrame />
+            <RPGIcon name="flame" size={72} style={{ marginBottom: 12 }} />
+            <Text style={styles.title}>STREAK MILESTONE!</Text>
+            <Text style={styles.days}>{days} Days</Text>
+            <Text style={styles.name}>{title}</Text>
+            <Text style={styles.multiplier}>XP multiplier ×{multiplier}</Text>
+            <Button title="Keep the Flame" onPress={onDismiss} />
+          </Animated.View>
+        </ScrollView>
       </View>
     </Modal>
   );
@@ -53,11 +66,14 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.warning,
     padding: spacing.xl,
-    width: '80%',
+    width: '90%',
+    maxWidth: 440,
     alignItems: 'center',
   },
   fire: { fontSize: 56, marginBottom: spacing.sm },
   title: {
+    fontFamily: fonts.heading,
+    textAlign: 'center',
     color: colors.warning,
     fontSize: fontSize.xl,
     fontWeight: '900',

@@ -1,5 +1,7 @@
+import { StoryFrame } from './StoryFrame';
+import { Text } from './StoryText';
 import React from 'react';
-import { Image, View, Text, StyleSheet, useWindowDimensions } from 'react-native';
+import { Image, View, StyleSheet, useWindowDimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, fonts, spacing } from '../../config/theme';
 
@@ -37,6 +39,7 @@ export function StoryHeader({
   return (
     <View style={styles.header}>
       <ForestScene />
+      <StoryFrame />
       <View style={styles.copy}>
         <Text style={styles.chapter}>{chapter}</Text>
         <Text accessibilityRole="header" style={styles.title}>
@@ -49,7 +52,7 @@ export function StoryHeader({
 }
 const styles = StyleSheet.create({
   header: {
-    borderRadius: 20,
+    borderRadius: 12,
     overflow: 'hidden',
     marginBottom: spacing.lg,
     backgroundColor: colors.bgCanvas,

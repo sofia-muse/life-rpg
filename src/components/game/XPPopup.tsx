@@ -1,5 +1,6 @@
+import { Text } from '../layout/StoryText';
 import React, { useEffect, useRef } from 'react';
-import { Text, StyleSheet, Animated } from 'react-native';
+import { StyleSheet, Animated } from 'react-native';
 import { StatName, STAT_COLORS } from '../../types';
 import { fontSize } from '../../config/theme';
 

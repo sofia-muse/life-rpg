@@ -1,7 +1,9 @@
+import { Text } from '../src/components/layout/StoryText';
+import { StoryFrame } from '../src/components/layout/StoryFrame';
 import { RPGIcon } from '../src/components/game/RPGIcon';
 import { LibraryChapter } from '../src/components/game/LibraryChapter';
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ScreenWrapper } from '../src/components/layout/ScreenWrapper';
 import { ScreenHeader } from '../src/components/layout/ScreenHeader';
@@ -56,14 +58,13 @@ export default function MapScreen() {
         title="World Map"
         subtitle="Six regions of growth. Boss arcs mark the dungeons of your real life."
         action={
-          <TouchableOpacity
-            onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
-            accessibilityRole="button"
+          <Button
+            title="Return"
+            size="sm"
+            variant="secondary"
             accessibilityLabel="Return to previous screen"
-            style={styles.backBtn}
-          >
-            <Text style={styles.backText}>Return</Text>
-          </TouchableOpacity>
+            onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
+          />
         }
       />
 
@@ -86,7 +87,6 @@ export default function MapScreen() {
       <View style={styles.regionGrid}>
         {STAT_REGIONS.map((region) => {
           const level = hero.stats[region.stat];
-          const brightness = Math.min(level / 20, 1);
           const regionBosses = bossQuests.filter((q) => q.stat === region.stat);
           const isSelected = selectedRegion === region.stat;
 
@@ -98,12 +98,13 @@ export default function MapScreen() {
               accessibilityState={{ selected: isSelected }}
               style={[
                 styles.regionCard,
-                { borderColor: STAT_COLORS[region.stat], opacity: 0.5 + brightness * 0.5 },
+                { borderColor: STAT_COLORS[region.stat] },
                 isSelected && styles.regionCardSelected,
               ]}
               onPress={() => setSelectedRegion(isSelected ? null : region.stat)}
               activeOpacity={0.85}
             >
+              <StoryFrame compact />
               <FantasyIcon stat={region.stat} size={44} />
               <Text style={styles.regionLabel}>{region.label}</Text>
               <Text style={[styles.regionLevel, { color: STAT_COLORS[region.stat] }]}>
@@ -111,7 +112,10 @@ export default function MapScreen() {
               </Text>
               {regionBosses.length > 0 && (
                 <View style={styles.dungeonNode}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}><RPGIcon name="dragon" size={24} /><Text style={styles.dungeonText}>{regionBosses.length}</Text></View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <RPGIcon name="dragon" size={24} />
+                    <Text style={styles.dungeonText}>{regionBosses.length}</Text>
+                  </View>
                 </View>
               )}
             </TouchableOpacity>
@@ -125,9 +129,7 @@ export default function MapScreen() {
             const region = STAT_REGIONS.find((r) => r.stat === selectedRegion)!;
             return (
               <>
-                <Text style={styles.regionDetailTitle}>
-                  {region.label}
-                </Text>
+                <Text style={styles.regionDetailTitle}>{region.label}</Text>
                 <Text style={styles.regionDetailDesc}>{region.description}</Text>
                 <Button
                   title="View Adventures"

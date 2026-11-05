@@ -1,17 +1,15 @@
+import { Text, TextInput } from '../src/components/layout/StoryText';
 import { RPGIcon } from '../src/components/game/RPGIcon';
 import { PortraitPicker } from '../src/components/avatar/PortraitPicker';
 import { ForestScene, StoryHeader } from '../src/components/layout/StoryHeader';
 import React, { useState } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   ScrollView,
   Platform,
-  useWindowDimensions,
-} from 'react-native';
+  useWindowDimensions} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Button } from '../src/components/layout/Button';

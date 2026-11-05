@@ -1,5 +1,3 @@
-import { Platform } from 'react-native';
-
 export const colors = {
   // Backgrounds
   bgPrimary: '#0B1916',
@@ -63,24 +61,11 @@ export const colors = {
 };
 
 export const fonts = {
-  heading: Platform.select({
-    ios: 'Georgia',
-    android: 'serif',
-    web: 'Georgia',
-    default: 'Georgia',
-  }) as string,
-  body: Platform.select({
-    ios: 'System',
-    android: 'sans-serif',
-    web: 'system-ui',
-    default: 'System',
-  }) as string,
-  journal: Platform.select({
-    ios: 'Georgia',
-    android: 'serif',
-    web: 'Georgia',
-    default: 'serif',
-  }) as string,
+  heading: 'CormorantGaramond',
+  body: 'AlegreyaSans',
+  bodyMedium: 'AlegreyaSansMedium',
+  bodyBold: 'AlegreyaSansBold',
+  journal: 'AlegreyaSansItalic',
 };
 
 export const spacing = {
@@ -101,13 +86,13 @@ export const radius = {
 };
 
 export const fontSize = {
-  xs: 12,
-  sm: 14,
+  xs: 13,
+  sm: 15,
   md: 16,
   lg: 16,
   xl: 20,
   xxl: 24,
-  title: 28,
+  title: 32,
   hero: 36,
 };
 

@@ -1,8 +1,11 @@
+import { Button } from '../layout/Button';
+import { StoryFrame } from '../layout/StoryFrame';
+import { Text } from '../layout/StoryText';
 import { RPGIcon, LegacyRPGIcon } from './RPGIcon';
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Modal, Animated, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, Modal, Animated, ScrollView } from 'react-native';
 import { AchievementDefinition } from '../../config/achievements';
-import { colors, spacing, fontSize, radius } from '../../config/theme';
+import { colors, spacing, fontSize, radius, fonts } from '../../config/theme';
 
 interface Props {
   visible: boolean;
@@ -26,17 +29,27 @@ export function AchievementUnlockModal({ visible, achievement, onDismiss }: Prop
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onDismiss}>
       <View style={styles.overlay}>
-        <Animated.View style={[styles.content, { transform: [{ scale }] }]}>
-          <RPGIcon name="trophy" size={48} style={{ marginBottom: 10 }} />
-          <Text style={styles.title}>ACHIEVEMENT!</Text>
-          <LegacyRPGIcon symbol={achievement.icon} size={72} />
-          <Text style={styles.name}>{achievement.title}</Text>
-          <Text style={styles.description}>{achievement.description}</Text>
-          <Text style={styles.tier}>{achievement.tier.toUpperCase()}</Text>
-          <TouchableOpacity style={styles.button} onPress={onDismiss}>
-            <Text style={styles.buttonText}>Claim Glory</Text>
-          </TouchableOpacity>
-        </Animated.View>
+        <ScrollView
+          style={{ width: '100%' }}
+          contentContainerStyle={{
+            flexGrow: 1,
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingVertical: 24,
+          }}
+          showsVerticalScrollIndicator={false}
+        >
+          <Animated.View style={[styles.content, { transform: [{ scale }] }]}>
+            <StoryFrame />
+            <RPGIcon name="trophy" size={48} style={{ marginBottom: 10 }} />
+            <Text style={styles.title}>ACHIEVEMENT!</Text>
+            <LegacyRPGIcon symbol={achievement.icon} size={72} />
+            <Text style={styles.name}>{achievement.title}</Text>
+            <Text style={styles.description}>{achievement.description}</Text>
+            <Text style={styles.tier}>{achievement.tier.toUpperCase()}</Text>
+            <Button title="Claim Glory" onPress={onDismiss} />
+          </Animated.View>
+        </ScrollView>
       </View>
     </Modal>
   );
@@ -55,11 +68,14 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.gold,
     padding: spacing.xl,
-    width: '80%',
+    width: '90%',
+    maxWidth: 440,
     alignItems: 'center',
   },
   sparkle: { fontSize: 48, marginBottom: spacing.sm },
   title: {
+    fontFamily: fonts.heading,
+    textAlign: 'center',
     color: colors.gold,
     fontSize: fontSize.xl,
     fontWeight: '900',

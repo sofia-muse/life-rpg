@@ -1,6 +1,7 @@
+import { Text } from '../layout/StoryText';
 import { RPGIcon } from './RPGIcon';
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { Card } from '../layout/Card';
 import { colors, spacing, fontSize, typography } from '../../config/theme';
 import { Hero, STAT_COLORS, } from '../../types';

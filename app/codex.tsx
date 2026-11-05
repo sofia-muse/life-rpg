@@ -1,6 +1,7 @@
+import { Text } from '../src/components/layout/StoryText';
 import { RPGIcon, LegacyRPGIcon } from '../src/components/game/RPGIcon';
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter, Href } from 'expo-router';
 import { ScreenWrapper } from '../src/components/layout/ScreenWrapper';
 import { ScreenHeader } from '../src/components/layout/ScreenHeader';

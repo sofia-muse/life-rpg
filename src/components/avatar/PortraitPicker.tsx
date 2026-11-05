@@ -1,6 +1,7 @@
+import { Text } from '../layout/StoryText';
 import { OrnamentIcon } from '../game/OrnamentIcon';
 import React from 'react';
-import { Image, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Image, View, TouchableOpacity, StyleSheet } from 'react-native';
 import { CharacterAppearance } from '../../types';
 import { PAINTED_PORTRAITS, getPaintedPortrait } from '../../config/paintedPortraits';
 import { colors, spacing, typography } from '../../config/theme';

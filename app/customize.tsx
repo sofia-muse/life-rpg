@@ -1,5 +1,7 @@
+import { StoryFrame } from '../src/components/layout/StoryFrame';
+import { Text } from '../src/components/layout/StoryText';
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { CharacterCustomizer } from '../src/components/avatar/CharacterCustomizer';
 import { CrestCustomizer } from '../src/components/avatar/CrestCustomizer';
@@ -30,6 +32,7 @@ export default function CustomizeScreen() {
             accessibilityLabel={value === 'character' ? 'Character' : 'Crest'}
             style={[styles.tab, tab === value && styles.active]}
           >
+            <StoryFrame compact />
             <Text style={styles.text}>{value === 'character' ? 'Character' : 'Crest'}</Text>
           </TouchableOpacity>
         ))}

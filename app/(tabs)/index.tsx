@@ -1,3 +1,5 @@
+import { Button } from '../../src/components/layout/Button';
+import { Text } from '../../src/components/layout/StoryText';
 import { OrnamentIcon } from '../../src/components/game/OrnamentIcon';
 import { RPGIcon } from '../../src/components/game/RPGIcon';
 import { useCompletionStore } from '../../src/store/completionStore';
@@ -6,7 +8,6 @@ import { ForestScene } from '../../src/components/layout/StoryHeader';
 import React, { useEffect, useState } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
@@ -246,27 +247,24 @@ export default function DashboardScreen() {
               </View>
 
               <View style={styles.heroActions}>
-                <TouchableOpacity
+                <Button
+                  title="World Map"
+                  size="sm"
+                  variant="primary"
                   onPress={() => router.push('/map' as Href)}
-                  style={styles.primaryAction}
-                  activeOpacity={0.85}
-                >
-                  <Text style={styles.primaryActionText}>World Map</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
+                />
+                <Button
+                  title="Atelier"
+                  size="sm"
+                  variant="secondary"
                   onPress={() => router.push('/customize')}
-                  style={styles.secondaryAction}
-                  activeOpacity={0.85}
-                >
-                  <Text style={styles.secondaryActionText}>Atelier</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
+                />
+                <Button
+                  title="Trophies"
+                  size="sm"
+                  variant="secondary"
                   onPress={() => router.push('/achievements' as Href)}
-                  style={styles.secondaryAction}
-                  activeOpacity={0.85}
-                >
-                  <Text style={styles.secondaryActionText}>Trophies</Text>
-                </TouchableOpacity>
+                />
               </View>
 
               <View style={styles.profileMetrics}>
@@ -393,7 +391,10 @@ export default function DashboardScreen() {
               onPress={() => setShowShareCard(!showShareCard)}
               accessibilityRole="button"
               accessibilityState={{ expanded: showShareCard }}
-              style={[styles.shareToggle, { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }]}
+              style={[
+                styles.shareToggle,
+                { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+              ]}
             >
               <OrnamentIcon name={showShareCard ? 'close' : 'share'} size={18} />
               <Text style={styles.secondaryActionText}>

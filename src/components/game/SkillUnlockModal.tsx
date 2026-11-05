@@ -1,8 +1,11 @@
+import { Button } from '../layout/Button';
+import { StoryFrame } from '../layout/StoryFrame';
+import { Text } from '../layout/StoryText';
 import { RPGIcon } from './RPGIcon';
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Modal, Animated, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, Modal, Animated, ScrollView } from 'react-native';
 import { Skill, STAT_COLORS } from '../../types';
-import { colors, spacing, fontSize, radius } from '../../config/theme';
+import { colors, spacing, fontSize, radius, fonts } from '../../config/theme';
 
 interface Props {
   visible: boolean;
@@ -28,23 +31,32 @@ export function SkillUnlockModal({ visible, skill, onDismiss }: Props) {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onDismiss}>
       <View style={styles.overlay}>
-        <Animated.View style={[styles.content, { transform: [{ scale }], borderColor: statColor }]}>
-          <RPGIcon name="crystal" size={48} style={{ marginBottom: 10 }} />
-          <Text style={styles.title}>SKILL UNLOCKED!</Text>
-          <RPGIcon name={skill.requiredStat ?? "crystal"} size={72} />
-          <Text style={[styles.name, { color: statColor }]}>{skill.name}</Text>
-          <Text style={styles.description}>{skill.description}</Text>
-          <View style={styles.effectBox}>
-            <Text style={styles.effectLabel}>Effect:</Text>
-            <Text style={styles.effectText}>{skill.effect}</Text>
-          </View>
-          <TouchableOpacity
-            style={[styles.button, { backgroundColor: statColor }]}
-            onPress={onDismiss}
+        <ScrollView
+          style={{ width: '100%' }}
+          contentContainerStyle={{
+            flexGrow: 1,
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingVertical: 24,
+          }}
+          showsVerticalScrollIndicator={false}
+        >
+          <Animated.View
+            style={[styles.content, { transform: [{ scale }], borderColor: statColor }]}
           >
-            <Text style={styles.buttonText}>Excellent!</Text>
-          </TouchableOpacity>
-        </Animated.View>
+            <StoryFrame />
+            <RPGIcon name="crystal" size={48} style={{ marginBottom: 10 }} />
+            <Text style={styles.title}>SKILL UNLOCKED!</Text>
+            <RPGIcon name={skill.requiredStat ?? 'crystal'} size={72} />
+            <Text style={[styles.name, { color: statColor }]}>{skill.name}</Text>
+            <Text style={styles.description}>{skill.description}</Text>
+            <View style={styles.effectBox}>
+              <Text style={styles.effectLabel}>Effect:</Text>
+              <Text style={styles.effectText}>{skill.effect}</Text>
+            </View>
+            <Button title="Excellent!" onPress={onDismiss} />
+          </Animated.View>
+        </ScrollView>
       </View>
     </Modal>
   );
@@ -62,7 +74,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.xl,
     borderWidth: 2,
     padding: spacing.xl,
-    width: '80%',
+    width: '90%',
+    maxWidth: 440,
     alignItems: 'center',
   },
   sparkle: {
@@ -70,6 +83,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   title: {
+    fontFamily: fonts.heading,
+    textAlign: 'center',
     color: colors.gold,
     fontSize: fontSize.xl,
     fontWeight: '900',

@@ -149,3 +149,9 @@ The 18-icon storybook set uses three bundled WebP atlases: attributes-v2, advent
 ## License
 MIT — see [LICENSE](LICENSE).
 
+
+### Storybook controls and typography
+
+Buttons, cards, headers and region tiles share the engraved `StoryFrame` ornament. Decorative borders never handle touches or expose screen-reader content. Reward dialogs scroll on shorter screens. App text and inputs use the shared `StoryText` components; use those instead of importing native Text/TextInput for future screens.
+
+Fonts are bundled locally with SIL Open Font License notices in assets/fonts. Headings use a static semibold instance of [Cormorant Garamond](https://github.com/google/fonts/tree/main/ofl/cormorantgaramond); body text uses regular, medium, bold and italic [Alegreya Sans](https://github.com/google/fonts/tree/main/ofl/alegreyasans). Both include Cyrillic glyphs. The display file is instantiated at weight 600 from the upstream variable font. A font loading error releases the startup gate so the app can still open using platform fallback rendering.

@@ -1,15 +1,13 @@
+import { Text, TextInput } from '../layout/StoryText';
 import { RPGIcon } from './RPGIcon';
 import { FantasyIcon } from './FantasyIcon';
 import React, { useState } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   Modal,
-  TextInput,
   TouchableOpacity,
-  ScrollView,
-} from 'react-native';
+  ScrollView} from 'react-native';
 import { Button } from '../layout/Button';
 import { useQuestStore } from '../../store/questStore';
 import { useUIStore } from '../../store/uiStore';

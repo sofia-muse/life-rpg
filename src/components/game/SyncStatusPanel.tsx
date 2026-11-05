@@ -1,5 +1,6 @@
+import { Text } from '../layout/StoryText';
 import React, { useEffect, useState } from 'react';
-import { Text, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { syncManager } from '../../api/syncManager';
 import { env } from '../../config/env';
 import { Card } from '../layout/Card';

@@ -1,15 +1,13 @@
+import { Text, TextInput } from '../layout/StoryText';
 import { RPGIcon } from './RPGIcon';
 import React, { useState } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   Modal,
-  TextInput,
   TouchableOpacity,
   ActivityIndicator,
-  ScrollView,
-} from 'react-native';
+  ScrollView} from 'react-native';
 import { colors, spacing, fontSize, radius, typography } from '../../config/theme';
 import { guidanceApi } from '../../api/guidanceApi';
 import { STAT_NAMES, StatName } from '../../types';

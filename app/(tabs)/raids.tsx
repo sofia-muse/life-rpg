@@ -1,14 +1,12 @@
+import { Text, TextInput } from '../../src/components/layout/StoryText';
 import { RPGIcon } from '../../src/components/game/RPGIcon';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   Modal,
-  Pressable,
-} from 'react-native';
+  Pressable} from 'react-native';
 import { useRouter } from 'expo-router';
 import { ScreenWrapper } from '../../src/components/layout/ScreenWrapper';
 import { ScreenHeader } from '../../src/components/layout/ScreenHeader';

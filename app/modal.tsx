@@ -1,16 +1,14 @@
+import { Text, TextInput } from '../src/components/layout/StoryText';
 import { SyncStatusPanel } from '../src/components/game/SyncStatusPanel';
 import { env } from '../src/config/env';
 import React, { useState } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   Switch,
   TouchableOpacity,
   Modal,
-  Platform,
-  TextInput,
-} from 'react-native';
+  Platform} from 'react-native';
 import { useRouter, Href } from 'expo-router';
 import { ScreenWrapper } from '../src/components/layout/ScreenWrapper';
 import { ScreenHeader } from '../src/components/layout/ScreenHeader';

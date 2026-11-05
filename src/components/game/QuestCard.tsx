@@ -1,9 +1,10 @@
+import { Text } from '../layout/StoryText';
 import { OrnamentIcon } from './OrnamentIcon';
 import { RPGIcon } from './RPGIcon';
 import { Button } from '../layout/Button';
 import { FantasyIcon } from './FantasyIcon';
 import React, { useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { Quest, STAT_COLORS } from '../../types';
 import { colors, spacing, fontSize, radius } from '../../config/theme';
 import { Card } from '../layout/Card';
@@ -35,22 +36,6 @@ export function QuestCard({
   const saga = getBossSagaState(quest);
   const displayTitle = getQuestDisplayTitle(quest, useFantasyNames);
   const displayDescription = getQuestDisplayDescription(quest, useFantasyNames);
-
-  const handlePressIn = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 0.96,
-      friction: 8,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const handlePressOut = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 1,
-      friction: 4,
-      useNativeDriver: true,
-    }).start();
-  };
 
   const handlePress = () => {
     if (quest.isCompleted) return;
@@ -115,7 +100,12 @@ export function QuestCard({
               <FantasyIcon stat={quest.stat} size={28} />
               <Text style={styles.statBadge}>{quest.stat}</Text>
               <Text style={[styles.xpBadge, { color: statColor }]}>+{quest.xpReward} XP</Text>
-              {quest.streak > 0 && <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}><RPGIcon name="flame" size={22} /><Text style={styles.streak}>{quest.streak}</Text></View>}
+              {quest.streak > 0 && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <RPGIcon name="flame" size={22} />
+                  <Text style={styles.streak}>{quest.streak}</Text>
+                </View>
+              )}
             </View>
           </View>
 
@@ -129,34 +119,38 @@ export function QuestCard({
         </View>
 
         {!quest.isCompleted && (
-          <TouchableOpacity
-            style={[
-              styles.claimBtn,
-              { backgroundColor: colors.gold },
-              !quest.isActive && { opacity: 0.5 },
-            ]}
-            accessibilityRole="button"
+          <Button
+            title={quest.isActive ? 'Complete quest' : 'Paused quest'}
             accessibilityLabel={`Complete ${quest.title}`}
-            accessibilityState={{ disabled: !quest.isActive }}
             disabled={!quest.isActive}
             onPress={handlePress}
-            onPressIn={handlePressIn}
-            onPressOut={handlePressOut}
-            activeOpacity={0.9}
-          >
-            <Text style={styles.claimBtnText}>
-              {quest.isActive ? 'Complete quest' : 'Paused quest'}
-            </Text>
-          </TouchableOpacity>
+            size="sm"
+            style={{ marginTop: spacing.sm }}
+          />
         )}
 
-        {quest.type === 'daily' && onToggleActive && <View style={{ marginTop: 10 }}>
-          <Button title={quest.isActive ? `Pause ${quest.title}` : `Resume ${quest.title}`} variant="secondary" disabled={!quest.isActive && resumeDisabled} onPress={() => onToggleActive(quest.id)} />
-          {!quest.isActive && resumeDisabled && <Text style={styles.description}>Active habit slots are full. Pause one of your other daily habits to resume this one.</Text>}
-        </View>}
+        {quest.type === 'daily' && onToggleActive && (
+          <View style={{ marginTop: 10 }}>
+            <Button
+              title={quest.isActive ? `Pause ${quest.title}` : `Resume ${quest.title}`}
+              variant="secondary"
+              disabled={!quest.isActive && resumeDisabled}
+              onPress={() => onToggleActive(quest.id)}
+            />
+            {!quest.isActive && resumeDisabled && (
+              <Text style={styles.description}>
+                Active habit slots are full. Pause one of your other daily habits to resume this
+                one.
+              </Text>
+            )}
+          </View>
+        )}
         {quest.isCompleted && (
           <View style={styles.completedBanner}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><OrnamentIcon name="check" /><Text style={styles.completedText}>Victorious</Text></View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <OrnamentIcon name="check" />
+              <Text style={styles.completedText}>Victorious</Text>
+            </View>
           </View>
         )}
 

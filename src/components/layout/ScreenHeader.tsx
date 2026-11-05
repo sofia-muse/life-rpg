@@ -1,5 +1,7 @@
+import { StoryFrame } from './StoryFrame';
+import { Text } from './StoryText';
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { colors, spacing, fontSize, typography } from '../../config/theme';
 import { ForestScene } from './StoryHeader';
 
@@ -14,6 +16,7 @@ export function ScreenHeader({ eyebrow, title, subtitle, action }: Props) {
   return (
     <View style={styles.container}>
       <ForestScene />
+      <StoryFrame />
       <View style={styles.copy}>
         {eyebrow ? <Text style={styles.eyebrow}>{eyebrow}</Text> : null}
         <Text style={styles.title}>{title}</Text>
@@ -28,7 +31,7 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: colors.bgCanvas,
     padding: spacing.lg,
-    borderRadius: 20,
+    borderRadius: 12,
     overflow: 'hidden',
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -39,7 +42,8 @@ const styles = StyleSheet.create({
   },
   copy: {
     flex: 1,
-    minWidth: 190,
+    minWidth: 0,
+    flexBasis: 180,
   },
   eyebrow: {
     color: colors.textAccent,
