@@ -4,16 +4,15 @@
 
 **Turn real-life habits into an RPG.** Create a hero, complete quests across six stats, earn XP, level up, unlock skills, and evolve your class through five tiers.
 
-A full-stack project: a **React Native / Expo** mobile + web client backed by an **ASP.NET Core (.NET 8) + EF Core + SQL Server** API on **Azure**, with an offline-first sync layer.
+A full-stack project: a **React Native / Expo** mobile + web client backed by an **ASP.NET Core (.NET 8) + EF Core + SQL Server** API designed for **Azure**, with an offline-first sync layer.
 
 [![CI](https://github.com/sofia-muse/life-rpg/actions/workflows/ci.yml/badge.svg)](https://github.com/sofia-muse/life-rpg/actions/workflows/ci.yml)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
 ![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet&logoColor=white)
 ![Expo](https://img.shields.io/badge/Expo-52-000020?logo=expo&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-182%20passing-22C55E)
 ![License](https://img.shields.io/badge/license-MIT-C4A962)
 
-![Life RPG demo — onboarding (web)](docs/demo.png)
+
 
 ### ▶️ **[Try the live demo](https://life-rpg-opal-nine.vercel.app/)**  ·  📱 Android APK: [`eas build -p android --profile preview`](docs/AZURE_DEPLOY.md#client-builds-eas) _(needs live API)_
 
@@ -23,6 +22,14 @@ _The hosted demo runs fully local (no sign-in) so it's instant to try. AI-forged
 
 ---
 
+## Current status · 7 November 2026
+
+**Live browser demo:** [Open Life RPG](https://life-rpg-opal-nine.vercel.app/). Vercel reports the production deployment as READY, and the sanctuary screen was opened successfully. The hosted demo stores progress locally; this check does not verify a deployed .NET API, account sync or AI skill generation. [Vercel project](https://vercel.com/sofia-muses-projects/life-rpg).
+
+![Live Vercel sanctuary demo](docs/screenshots/life-rpg-live.jpg)
+
+Captures from 7 November 2026; existing portfolio captures are explicitly labeled above.
+
 ## Highlights
 
 - 🎮 **Complete RPG progression** — 6 stats, an XP curve (`100 × level^1.5`, max level 100), 24 unlockable skills (single-stat + cross-stat), and 30 class titles across 5 tiers.
@@ -30,7 +37,7 @@ _The hosted demo runs fully local (no sign-in) so it's instant to try. AI-forged
 - 🔥 **Streaks & daily rewards** with 8 milestone multipliers (up to 3×).
 - 🛡️ **Server-authoritative game logic** — XP, levels, class and skill unlocks are recomputed on the server (anti-cheat); the client computes the same values optimistically for instant, animated feedback.
 - 📴 **Offline-first** — local state is the source of truth; a persisted queue flushes to an **idempotent batch-sync** endpoint when back online.
-- ✅ **182 automated tests** (72 backend, 110 frontend) with the game engine ported identically to C# and TypeScript, proven equal by golden-value tests.
+- ✅ **Automated frontend and backend tests** cover progression and synchronization. See Testing below for commands; counts depend on the revision.
 
 ## Architecture
 
@@ -108,8 +115,8 @@ Runs against a local SQLite database out of the box; configured for SQL Server /
 npm run typecheck && npm run lint && npm run test:coverage   # frontend
 cd backend && dotnet test                                    # backend
 ```
-- **Frontend:** 125 tests (Jest + jest-expo), engine coverage gated at 80%.
-- **Backend:** 72 tests — domain golden-value tests + WebApplicationFactory integration tests (auth, full quest flow, anti-cheat, sync idempotency).
+- **Frontend:** Jest + jest-expo; engine coverage is gated at 80%.
+- **Backend:** domain golden-value tests + WebApplicationFactory integration tests (auth, full quest flow, anti-cheat, sync idempotency).
 
 ### Android preview build (EAS)
 
